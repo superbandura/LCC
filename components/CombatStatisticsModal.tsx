@@ -518,9 +518,16 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
             {sub.submarineName}
           </div>
 
-          {/* Type */}
-          <div className="font-mono text-xs text-gray-500 flex-shrink-0 w-20">
-            {sub.cardName?.split(' ')[0]}
+          {/* Type and Stats */}
+          <div className="font-mono text-xs text-gray-500 flex-shrink-0 w-32 flex items-center gap-2">
+            <span>{sub.cardName?.split(' ')[0]}</span>
+            {((sub.missionsCompleted ?? 0) > 0 || (sub.totalKills ?? 0) > 0) && (
+              <span className="text-gray-600">
+                {(sub.missionsCompleted ?? 0) > 0 && `M:${sub.missionsCompleted}`}
+                {(sub.missionsCompleted ?? 0) > 0 && (sub.totalKills ?? 0) > 0 && ' '}
+                {(sub.totalKills ?? 0) > 0 && <span className="text-red-500">K:{sub.totalKills}</span>}
+              </span>
+            )}
           </div>
 
           {/* Dropdown 1: Order Type */}
@@ -597,14 +604,6 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
             ⚠ {orderErrors[sub.id]}
           </div>
         )}
-
-        {/* Missions and Kills */}
-        {((sub.missionsCompleted ?? 0) > 0 || (sub.totalKills ?? 0) > 0) && (
-          <div className="mt-1 flex gap-4 font-mono text-xs text-gray-500">
-            {(sub.missionsCompleted ?? 0) > 0 && <span>M:{sub.missionsCompleted}</span>}
-            {(sub.totalKills ?? 0) > 0 && <span className="text-red-400">K:{sub.totalKills}</span>}
-          </div>
-        )}
       </div>
     );
   };
@@ -635,13 +634,13 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
         <div className="mb-3 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <h3 className="font-mono text-sm font-bold text-green-400 uppercase tracking-wider">
-              Submarine Campaign
+              {selectedFaction === 'us' ? 'USMC' : selectedFaction === 'china' ? 'PLAN' : ''} SUBMARINE OPERATIONS
             </h3>
             {selectedFaction && (
-              <span className="font-mono text-xs text-gray-600">
-                | COMMAND POINTS:{' '}
-                <span className={`font-bold text-lg px-2 py-1 rounded transition-all duration-300 ${
-                  isFlashing ? 'text-red-500 bg-red-900/50 scale-110 shadow-lg shadow-red-500/50' : 'text-green-400'
+              <span className="font-mono text-xs text-gray-400">
+                COMMAND POINTS:{' '}
+                <span className={`font-bold text-base transition-all duration-300 ${
+                  isFlashing ? 'text-red-500' : 'text-green-400'
                 }`}>
                   {selectedFaction === 'us' ? commandPoints.us : commandPoints.china}
                 </span>
@@ -775,6 +774,15 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Faction Summary */}
+            {selectedFaction && (
+              <div className="p-2 border-t border-gray-700 bg-gray-900">
+                <div className="font-mono text-xs text-gray-400">
+                  {selectedFaction === 'us' ? 'USMC' : 'PLAN'}: {factionSubmarines.length + factionASW.length + factionAssets.length} ACTIVOS
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

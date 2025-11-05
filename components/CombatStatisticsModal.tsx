@@ -587,15 +587,6 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
               </svg>
             </button>
           )}
-
-          {/* Confirmed indicator (Cyan Checkmark) */}
-          {sub.pendingOrder && (
-            <div className="flex-shrink-0 w-6 h-6 bg-cyan-600 rounded flex items-center justify-center" title="Order confirmed">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-          )}
         </div>
 
         {/* Error message */}
@@ -748,29 +739,38 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
                 </div>
               ) : (
                 <div className="space-y-0">
-                  {recentEvents.map((event, idx) => (
-                    <div
-                      key={`${event.eventId}-${idx}`}
-                      className="font-mono text-xs py-2 px-2 bg-gray-900 hover:bg-gray-800 transition-colors border-b border-gray-700 last:border-b-0"
-                    >
-                      <div className="flex items-start gap-2">
-                        <span className={`font-bold flex-shrink-0 ${event.faction === 'us' ? 'text-blue-400' : 'text-red-400'}`}>
-                          [{event.faction.toUpperCase()}]
-                        </span>
-                        <span className="text-gray-400 flex-shrink-0 w-24 truncate" title={event.submarineName}>
-                          {event.submarineName}
-                        </span>
-                        <span className="text-gray-300 flex-1">
-                          {event.description}
-                        </span>
-                      </div>
-                      {event.turn !== undefined && (
-                        <div className="text-gray-600 text-xs ml-2 mt-0.5">
-                          Turn {event.turn}{event.dayOfWeek ? `, Day ${event.dayOfWeek}` : ''}
+                  {recentEvents.map((event, idx) => {
+                    // Format date from timestamp
+                    const eventDate = new Date(event.timestamp);
+                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
+                    const dateStr = `${eventDate.getDate()} ${monthNames[eventDate.getMonth()]}`;
+                    const factionLabel = event.faction === 'us' ? 'USMC' : 'PLAN';
+
+                    return (
+                      <div
+                        key={`${event.eventId}-${idx}`}
+                        className="font-mono text-xs py-2 px-2 bg-gray-900 hover:bg-gray-800 transition-colors border-b border-gray-700 last:border-b-0"
+                      >
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-500 flex-shrink-0">
+                            [{dateStr}]
+                          </span>
+                          <span className={`font-bold flex-shrink-0 ${event.faction === 'us' ? 'text-blue-400' : 'text-red-400'}`}>
+                            {factionLabel}
+                          </span>
+                          <span className="text-gray-400 flex-shrink-0">
+                            {event.submarineName}
+                          </span>
+                          <span className="text-gray-500">
+                            -
+                          </span>
+                          <span className="text-gray-300 flex-1">
+                            {event.description}
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -801,7 +801,7 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col">
+      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-full max-w-[95vw] max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
           <h2 className="font-mono text-lg font-bold text-green-400 uppercase tracking-wider">

@@ -465,52 +465,6 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
           </div>
         </div>
 
-        {/* Admin Controls */}
-        {isAdmin && (
-          <div className="p-4 bg-gray-800 border border-gray-700 rounded">
-            <h3 className="font-mono text-sm font-bold text-green-400 uppercase tracking-wider mb-3">
-              Admin Controls
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => handleInfluenceChange(Math.max(-10, currentValue - 5))}
-                disabled={currentValue <= -10}
-                className="px-3 py-2 bg-red-600 text-white font-mono text-xs uppercase tracking-wide rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                -5 (China)
-              </button>
-              <button
-                onClick={() => handleInfluenceChange(Math.max(-10, currentValue - 1))}
-                disabled={currentValue <= -10}
-                className="px-3 py-2 bg-red-500 text-white font-mono text-xs uppercase tracking-wide rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                -1
-              </button>
-              <button
-                onClick={() => handleInfluenceChange(0)}
-                disabled={currentValue === 0}
-                className="px-3 py-2 bg-yellow-600 text-white font-mono text-xs uppercase tracking-wide rounded hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Reset
-              </button>
-              <button
-                onClick={() => handleInfluenceChange(Math.min(10, currentValue + 1))}
-                disabled={currentValue >= 10}
-                className="px-3 py-2 bg-blue-500 text-white font-mono text-xs uppercase tracking-wide rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                +1
-              </button>
-              <button
-                onClick={() => handleInfluenceChange(Math.min(10, currentValue + 5))}
-                disabled={currentValue >= 10}
-                className="px-3 py-2 bg-blue-600 text-white font-mono text-xs uppercase tracking-wide rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                +5 (US)
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* Influence Rules */}
         <div className="p-4 bg-gray-800 border border-gray-700 rounded">
           <h3 className="font-mono text-sm font-bold text-green-400 uppercase tracking-wider mb-3">
@@ -603,6 +557,15 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
     // Get recent events for operations log (last 30 events, newest first)
     const recentEvents = submarineCampaign?.events?.slice(-30).reverse() || [];
 
+    // Filter deployed elements by selected faction
+    const factionSubmarines = selectedFaction
+      ? deployedSubmarines[selectedFaction]
+      : [];
+
+    // TODO: Filter ASW elements and Assets by faction when implemented
+    const factionASW: any[] = []; // Placeholder
+    const factionAssets: any[] = []; // Placeholder
+
     return (
       <div className="flex flex-col h-full">
         {/* Header with Admin Report Button */}
@@ -620,51 +583,75 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
 
         {/* Two-column layout */}
         <div className="flex-1 flex gap-3 overflow-hidden">
-          {/* Left Column - Submarine/ASW/Assets List (40%) */}
-          <div className="w-2/5 flex flex-col space-y-3 overflow-y-auto">
-            {/* US Submarines Section */}
-            <div className="p-2 bg-gray-800 border border-gray-700 rounded">
-              <h4 className="font-mono text-xs font-bold text-blue-400 uppercase tracking-wider mb-2 border-b border-gray-700 pb-1">
-                US Submarines ({deployedSubmarines.us.length})
-              </h4>
-              {deployedSubmarines.us.length === 0 ? (
-                <div className="text-gray-500 font-mono text-xs py-2">-- NO DEPLOYED --</div>
-              ) : (
-                <div className="space-y-0">
-                  {deployedSubmarines.us.map(sub => renderSubmarineRow(sub))}
+          {/* Left Column - Unified List (40%) */}
+          <div className="w-2/5 flex flex-col overflow-y-auto bg-gray-800 border border-gray-700 rounded">
+            {!selectedFaction ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-gray-500 font-mono text-xs text-center p-4">
+                  -- SELECT A FACTION TO VIEW DEPLOYED ELEMENTS --
                 </div>
-              )}
-            </div>
-
-            {/* China Submarines Section */}
-            <div className="p-2 bg-gray-800 border border-gray-700 rounded">
-              <h4 className="font-mono text-xs font-bold text-red-400 uppercase tracking-wider mb-2 border-b border-gray-700 pb-1">
-                China Submarines ({deployedSubmarines.china.length})
-              </h4>
-              {deployedSubmarines.china.length === 0 ? (
-                <div className="text-gray-500 font-mono text-xs py-2">-- NO DEPLOYED --</div>
-              ) : (
-                <div className="space-y-0">
-                  {deployedSubmarines.china.map(sub => renderSubmarineRow(sub))}
+              </div>
+            ) : (
+              <div className="p-2">
+                {/* SUBMARINES Section */}
+                <div className="mb-2">
+                  <h4 className="font-mono text-xs font-bold text-green-400 uppercase tracking-wider mb-2">
+                    SUBMARINES
+                  </h4>
+                  {factionSubmarines.length === 0 ? (
+                    <div className="text-gray-500 font-mono text-xs py-2 pl-2">-- NO SUBMARINES DEPLOYED --</div>
+                  ) : (
+                    <div className="space-y-0">
+                      {factionSubmarines.map(sub => renderSubmarineRow(sub))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            {/* ASW Elements Section (placeholder) */}
-            <div className="p-2 bg-gray-800 border border-gray-700 rounded">
-              <h4 className="font-mono text-xs font-bold text-green-400 uppercase tracking-wider mb-2 border-b border-gray-700 pb-1">
-                ASW Elements (0)
-              </h4>
-              <div className="text-gray-500 font-mono text-xs py-2">-- NO ELEMENTS DEPLOYED --</div>
-            </div>
+                {/* Divider */}
+                <div className="border-t border-gray-700 my-3"></div>
 
-            {/* Assets Section (placeholder) */}
-            <div className="p-2 bg-gray-800 border border-gray-700 rounded">
-              <h4 className="font-mono text-xs font-bold text-yellow-400 uppercase tracking-wider mb-2 border-b border-gray-700 pb-1">
-                Assets (0)
-              </h4>
-              <div className="text-gray-500 font-mono text-xs py-2">-- NO ASSETS DEPLOYED --</div>
-            </div>
+                {/* ASW Section */}
+                <div className="mb-2">
+                  <h4 className="font-mono text-xs font-bold text-green-400 uppercase tracking-wider mb-2">
+                    ASW (ANTI-SUBMARINE WARFARE)
+                  </h4>
+                  {factionASW.length === 0 ? (
+                    <div className="text-gray-500 font-mono text-xs py-2 pl-2">-- NO ASW ELEMENTS DEPLOYED --</div>
+                  ) : (
+                    <div className="space-y-0">
+                      {/* TODO: Render ASW elements when implemented */}
+                      {factionASW.map((asw, idx) => (
+                        <div key={idx} className="font-mono text-xs text-gray-300">
+                          {asw.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-gray-700 my-3"></div>
+
+                {/* ASSETS Section */}
+                <div className="mb-2">
+                  <h4 className="font-mono text-xs font-bold text-green-400 uppercase tracking-wider mb-2">
+                    ASSETS
+                  </h4>
+                  {factionAssets.length === 0 ? (
+                    <div className="text-gray-500 font-mono text-xs py-2 pl-2">-- NO ASSETS DEPLOYED --</div>
+                  ) : (
+                    <div className="space-y-0">
+                      {/* TODO: Render assets when implemented */}
+                      {factionAssets.map((asset, idx) => (
+                        <div key={idx} className="font-mono text-xs text-gray-300">
+                          {asset.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right Column - Operations Log (60%) */}
@@ -731,7 +718,7 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
           <h2 className="font-mono text-lg font-bold text-green-400 uppercase tracking-wider">
@@ -776,7 +763,7 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
                 : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
             }`}
           >
-            Submarines
+            Submarine Campaign
           </button>
         </div>
 

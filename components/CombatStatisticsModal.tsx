@@ -14,6 +14,7 @@ import {
   TurnState
 } from '../types';
 import { CloseIcon } from './Icons';
+import InfluenceTrack from './InfluenceTrack';
 import SubmarineDetailedReportModal from './SubmarineDetailedReportModal';
 
 interface CombatStatisticsModalProps {
@@ -255,61 +256,122 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
   );
 
   // Render Influence Marker tab
-  const renderInfluenceTab = () => (
-    <div className="flex flex-col h-full">
-      <div className="mb-4 p-4 bg-gray-800 border border-gray-700 rounded">
-        <h3 className="font-mono text-sm font-bold text-green-400 uppercase tracking-wider mb-3">
-          Current Influence Marker
-        </h3>
-        {influenceMarker && influenceMarker.position.lat !== 0 && influenceMarker.position.lng !== 0 ? (
+  const renderInfluenceTab = () => {
+    const currentValue = influenceMarker?.value ?? 0;
+    const bonusCP = Math.floor(Math.abs(currentValue) / 2);
+    const favoredFaction = currentValue > 0 ? 'US' : currentValue < 0 ? 'China' : 'Neutral';
+
+    return (
+      <div className="flex flex-col h-full space-y-4">
+        {/* InfluenceTrack Component */}
+        <div className="p-4 bg-gray-800 border border-gray-700 rounded">
+          <h3 className="font-mono text-sm font-bold text-green-400 uppercase tracking-wider mb-4">
+            Influence Marker
+          </h3>
+          <InfluenceTrack
+            value={currentValue}
+            onChange={isAdmin ? handleInfluenceChange : undefined}
+          />
+        </div>
+
+        {/* Command Point Bonus Preview */}
+        <div className="p-4 bg-gray-800 border border-gray-700 rounded">
+          <h3 className="font-mono text-sm font-bold text-green-400 uppercase tracking-wider mb-3">
+            Command Point Effects
+          </h3>
           <div className="space-y-2 font-mono text-xs">
-            <div>
-              <span className="text-gray-400">Faction: </span>
-              <span className={`font-bold ${influenceMarker.faction === 'us' ? 'text-blue-400' : 'text-red-400'}`}>
-                {influenceMarker.faction === 'us' ? 'US' : 'China'}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400">Current Value:</span>
+              <span className={`font-bold text-lg ${
+                currentValue > 0 ? 'text-blue-400' :
+                currentValue < 0 ? 'text-red-400' :
+                'text-yellow-400'
+              }`}>
+                {currentValue > 0 ? `+${currentValue}` : currentValue}
               </span>
             </div>
-            <div>
-              <span className="text-gray-400">Position: </span>
-              <span className="text-green-400">
-                {influenceMarker.position.lat.toFixed(4)}, {influenceMarker.position.lng.toFixed(4)}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400">Favored Faction:</span>
+              <span className={`font-bold ${
+                currentValue > 0 ? 'text-blue-400' :
+                currentValue < 0 ? 'text-red-400' :
+                'text-gray-400'
+              }`}>
+                {favoredFaction}
               </span>
             </div>
-            <div>
-              <span className="text-gray-400">Last Updated: </span>
-              <span className="text-gray-300">
-                {new Date(influenceMarker.lastUpdated).toLocaleString()}
-              </span>
+            <div className="flex justify-between items-center pt-2 border-t border-gray-700">
+              <span className="text-gray-400">CP Bonus (End of Week):</span>
+              <span className="font-bold text-green-400">+{bonusCP} CP</span>
             </div>
-            {isAdmin && (
-              <button
-                onClick={handleRemoveInfluence}
-                className="mt-3 px-4 py-2 bg-red-600 text-white font-mono text-xs uppercase tracking-wide rounded hover:bg-red-700 transition-colors"
-              >
-                Remove Marker
-              </button>
-            )}
+            <div className="text-gray-500 text-xs pt-2">
+              Formula: Bonus = |value| / 2 (rounded down)
+            </div>
           </div>
-        ) : (
-          <div className="text-gray-500 font-mono text-xs">
-            No influence marker placed yet. Place marker on the map.
+        </div>
+
+        {/* Admin Controls */}
+        {isAdmin && (
+          <div className="p-4 bg-gray-800 border border-gray-700 rounded">
+            <h3 className="font-mono text-sm font-bold text-green-400 uppercase tracking-wider mb-3">
+              Admin Controls
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => handleInfluenceChange(Math.max(-10, currentValue - 5))}
+                disabled={currentValue <= -10}
+                className="px-3 py-2 bg-red-600 text-white font-mono text-xs uppercase tracking-wide rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                -5 (China)
+              </button>
+              <button
+                onClick={() => handleInfluenceChange(Math.max(-10, currentValue - 1))}
+                disabled={currentValue <= -10}
+                className="px-3 py-2 bg-red-500 text-white font-mono text-xs uppercase tracking-wide rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                -1
+              </button>
+              <button
+                onClick={() => handleInfluenceChange(0)}
+                disabled={currentValue === 0}
+                className="px-3 py-2 bg-yellow-600 text-white font-mono text-xs uppercase tracking-wide rounded hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Reset
+              </button>
+              <button
+                onClick={() => handleInfluenceChange(Math.min(10, currentValue + 1))}
+                disabled={currentValue >= 10}
+                className="px-3 py-2 bg-blue-500 text-white font-mono text-xs uppercase tracking-wide rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                +1
+              </button>
+              <button
+                onClick={() => handleInfluenceChange(Math.min(10, currentValue + 5))}
+                disabled={currentValue >= 10}
+                className="px-3 py-2 bg-blue-600 text-white font-mono text-xs uppercase tracking-wide rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                +5 (US)
+              </button>
+            </div>
           </div>
         )}
-      </div>
 
-      <div className="p-4 bg-gray-800 border border-gray-700 rounded">
-        <h3 className="font-mono text-sm font-bold text-green-400 uppercase tracking-wider mb-3">
-          Influence Rules
-        </h3>
-        <div className="font-mono text-xs text-gray-300 space-y-2">
-          <p>• Influence marker can be placed by either faction</p>
-          <p>• Position affects command point calculations</p>
-          <p>• Use influence cards to place/move marker</p>
-          <p>• Marker position visible to both players</p>
+        {/* Influence Rules */}
+        <div className="p-4 bg-gray-800 border border-gray-700 rounded">
+          <h3 className="font-mono text-sm font-bold text-green-400 uppercase tracking-wider mb-3">
+            Influence Rules
+          </h3>
+          <div className="font-mono text-xs text-gray-300 space-y-2">
+            <p>• Influence ranges from -10 (China) to +10 (US)</p>
+            <p>• Affects Command Point calculations at end of week</p>
+            <p>• Play influence cards to shift the marker</p>
+            <p>• Bonus CP = |value| / 2 (rounded down)</p>
+            <p>• Favored faction receives bonus at weekly reset</p>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Render Submarine Campaign tab
   const renderSubmarineTab = () => (

@@ -11,11 +11,13 @@ import {
   PendingDeployments,
   SubmarineDeployment,
   SubmarineEvent,
-  TurnState
+  TurnState,
+  CommandPoints
 } from '../types';
 import { CloseIcon } from './Icons';
 import InfluenceTrack from './InfluenceTrack';
 import SubmarineDetailedReportModal from './SubmarineDetailedReportModal';
+import { SubmarineService } from '../services/submarineService';
 
 interface CombatStatisticsModalProps {
   isOpen: boolean;
@@ -33,6 +35,7 @@ interface CombatStatisticsModalProps {
   operationalData: OperationalData[];
   selectedFaction: 'us' | 'china' | null;
   pendingDeployments: PendingDeployments;
+  commandPoints: CommandPoints;
 }
 
 type TabType = 'combat' | 'influence' | 'submarine';
@@ -52,7 +55,8 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
   operationalAreas,
   operationalData,
   selectedFaction,
-  pendingDeployments
+  pendingDeployments,
+  commandPoints
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('combat');
   const [factionFilter, setFactionFilter] = useState<'all' | 'us' | 'china'>('all');
@@ -69,6 +73,10 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
   const [selectedTargets, setSelectedTargets] = useState<Record<string, string>>({});
   const [orderErrors, setOrderErrors] = useState<Record<string, string>>({});
   const [isExecutingTurn, setIsExecutingTurn] = useState(false);
+
+  // Command Points animation state
+  const [isFlashing, setIsFlashing] = useState(false);
+  const [prevPoints, setPrevPoints] = useState<number>(0);
 
   // Command Point costs for submarine orders
   const PATROL_COST = 3;
@@ -126,6 +134,20 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
     }
   }, [isOpen]);
 
+  // Trigger flash animation when CP decreases
+  useEffect(() => {
+    if (!selectedFaction) return;
+
+    const currentPoints = selectedFaction === 'us' ? commandPoints.us : commandPoints.china;
+
+    if (prevPoints > 0 && currentPoints < prevPoints) {
+      setIsFlashing(true);
+      setTimeout(() => setIsFlashing(false), 600);
+    }
+
+    setPrevPoints(currentPoints);
+  }, [commandPoints, selectedFaction, prevPoints]);
+
   if (!isOpen) return null;
 
   // Influence value change handler (value-based, not position-based)
@@ -141,6 +163,22 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
   // Helper: Get submarine by ID
   const getSubmarineById = (subId: string): SubmarineDeployment | undefined => {
     return submarineCampaign?.deployedSubmarines?.find(s => s.id === subId);
+  };
+
+  // Helper: Convert operationalData array to Record for SubmarineService
+  const getOperationalDataRecord = (): Record<string, OperationalData> => {
+    const record: Record<string, OperationalData> = {};
+    operationalAreas.forEach(area => {
+      const areaData = operationalData.find(od => {
+        // operationalData might have an id property or we need to match by area somehow
+        // Assuming operationalData items have an id that matches area.id
+        return (od as any).id === area.id;
+      });
+      if (areaData) {
+        record[area.id] = areaData;
+      }
+    });
+    return record;
   };
 
   // Submarine Order Handlers
@@ -211,6 +249,24 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
       setOrderErrors(prev => ({...prev, [subId]: 'Submarine already has an active order'}));
       return;
     }
+
+    // ========== VALIDACIÓN RED TÁCTICA (CÓDIGO RESTAURADO) ==========
+    const opDataRecord = getOperationalDataRecord();
+    const avgDamage = SubmarineService.getAverageTacticalNetworkDamage(
+      opDataRecord,
+      sub.faction
+    );
+
+    const commCheck = SubmarineService.checkCommunicationFailure(avgDamage);
+
+    if (commCheck.failed) {
+      setOrderErrors(prev => ({
+        ...prev,
+        [subId]: `Communication failure! (Roll: ${commCheck.roll}/${commCheck.threshold}, Tactical Network Damage: ${avgDamage})`
+      }));
+      return; // Do NOT confirm order
+    }
+    // ========== FIN VALIDACIÓN RED TÁCTICA ==========
 
     // Update submarine with pending order (will be moved to currentOrder on execution)
     const updatedSubs = submarineCampaign.deployedSubmarines.map(s =>
@@ -446,8 +502,16 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
     const enemyFaction = sub.faction === 'us' ? 'China' : 'EE. UU.';
     const enemyBases = locations.filter(loc => loc.country === enemyFaction);
 
+    // Check if there are unconfirmed changes (order with target but not saved)
+    const hasChanges = !!pendingOrder && !!pendingOrder.targetId && !sub.pendingOrder;
+
+    // Check if order is incomplete (order without target)
+    const needsConfirmation = !!pendingOrder && !pendingOrder.targetId;
+
     return (
-      <div key={sub.id} className="mb-2 p-2 bg-gray-900 border border-gray-700 rounded hover:border-gray-600 transition-colors">
+      <div key={sub.id} className={`mb-2 p-2 rounded transition-colors ${
+        needsConfirmation ? 'bg-red-900/20 border border-red-600' : 'bg-gray-900 border border-gray-700 hover:border-gray-600'
+      }`}>
         <div className="flex items-center gap-2">
           {/* Submarine Name */}
           <div className={`font-mono text-xs font-bold ${factionColor} flex-shrink-0 w-28`}>
@@ -503,7 +567,36 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
               )}
             </select>
           )}
+
+          {/* Confirm Icon (Green Envelope with pulse animation) */}
+          {hasChanges && isAdmin && (
+            <button
+              onClick={() => handleConfirmOrder(sub.id)}
+              className="flex-shrink-0 w-6 h-6 bg-green-600 hover:bg-green-700 rounded flex items-center justify-center transition-colors animate-pulse"
+              title="Confirm order"
+            >
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </button>
+          )}
+
+          {/* Confirmed indicator (Cyan Checkmark) */}
+          {sub.pendingOrder && (
+            <div className="flex-shrink-0 w-6 h-6 bg-cyan-600 rounded flex items-center justify-center" title="Order confirmed">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          )}
         </div>
+
+        {/* Error message */}
+        {orderErrors[sub.id] && (
+          <div className="mt-1 text-xs text-red-400 font-mono">
+            ⚠ {orderErrors[sub.id]}
+          </div>
+        )}
 
         {/* Missions and Kills */}
         {((sub.missionsCompleted ?? 0) > 0 || (sub.totalKills ?? 0) > 0) && (
@@ -521,22 +614,40 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
     // Get recent events for operations log (last 30 events, newest first)
     const recentEvents = submarineCampaign?.events?.slice(-30).reverse() || [];
 
-    // Filter deployed elements by selected faction
+    // Filter deployed elements by selected faction and submarineType
     const factionSubmarines = selectedFaction
-      ? deployedSubmarines[selectedFaction]
+      ? deployedSubmarines[selectedFaction].filter(s =>
+          s.submarineType === 'submarine' || !s.submarineType // Backwards compatibility
+        )
       : [];
 
-    // TODO: Filter ASW elements and Assets by faction when implemented
-    const factionASW: any[] = []; // Placeholder
-    const factionAssets: any[] = []; // Placeholder
+    const factionASW = selectedFaction
+      ? deployedSubmarines[selectedFaction].filter(s => s.submarineType === 'asw')
+      : [];
+
+    const factionAssets = selectedFaction
+      ? deployedSubmarines[selectedFaction].filter(s => s.submarineType === 'asset')
+      : [];
 
     return (
       <div className="flex flex-col h-full">
         {/* Header with Admin Report Button */}
         <div className="mb-3 flex justify-between items-center">
-          <h3 className="font-mono text-sm font-bold text-green-400 uppercase tracking-wider">
-            Submarine Campaign
-          </h3>
+          <div className="flex items-center gap-4">
+            <h3 className="font-mono text-sm font-bold text-green-400 uppercase tracking-wider">
+              Submarine Campaign
+            </h3>
+            {selectedFaction && (
+              <span className="font-mono text-xs text-gray-600">
+                | COMMAND POINTS:{' '}
+                <span className={`font-bold text-lg px-2 py-1 rounded transition-all duration-300 ${
+                  isFlashing ? 'text-red-500 bg-red-900/50 scale-110 shadow-lg shadow-red-500/50' : 'text-green-400'
+                }`}>
+                  {selectedFaction === 'us' ? commandPoints.us : commandPoints.china}
+                </span>
+              </span>
+            )}
+          </div>
           <button
             onClick={() => setIsDetailedReportOpen(true)}
             className="px-3 py-1 bg-green-600 text-white font-mono text-xs uppercase tracking-wide rounded hover:bg-green-700 transition-colors"
@@ -637,11 +748,11 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
                   -- NO OPERATIONS YET --
                 </div>
               ) : (
-                <div className="space-y-1">
+                <div className="space-y-0">
                   {recentEvents.map((event, idx) => (
                     <div
                       key={`${event.eventId}-${idx}`}
-                      className="font-mono text-xs py-1 px-2 bg-gray-900 border border-gray-700 rounded hover:border-gray-600 transition-colors"
+                      className="font-mono text-xs py-2 px-2 bg-gray-900 hover:bg-gray-800 transition-colors border-b border-gray-700 last:border-b-0"
                     >
                       <div className="flex items-start gap-2">
                         <span className={`font-bold flex-shrink-0 ${event.faction === 'us' ? 'text-blue-400' : 'text-red-400'}`}>

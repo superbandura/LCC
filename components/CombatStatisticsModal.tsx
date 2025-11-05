@@ -58,9 +58,21 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
   const [factionFilter, setFactionFilter] = useState<'all' | 'us' | 'china'>('all');
   const [isDetailedReportOpen, setIsDetailedReportOpen] = useState(false);
 
-  // Submarine orders state
-  const [submarineOrders, setSubmarineOrders] = useState<Record<string, { order: string; targetId?: string }>>({});
-  const [selectedSubmarineForOrder, setSelectedSubmarineForOrder] = useState<string | null>(null);
+  // Submarine order management state
+  type OrderType = 'patrol' | 'attack' | 'none';
+  interface PendingOrder {
+    type: OrderType;
+    targetId?: string;
+  }
+
+  const [pendingOrders, setPendingOrders] = useState<Record<string, PendingOrder>>({});
+  const [selectedTargets, setSelectedTargets] = useState<Record<string, string>>({});
+  const [orderErrors, setOrderErrors] = useState<Record<string, string>>({});
+  const [isExecutingTurn, setIsExecutingTurn] = useState(false);
+
+  // Command Point costs for submarine orders
+  const PATROL_COST = 3;
+  const ATTACK_COST = 5;
 
   // Get turn state from submarine campaign or create default
   const turnState: TurnState = useMemo(() => {
@@ -108,7 +120,9 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
   // Reset orders when modal opens
   useEffect(() => {
     if (isOpen) {
-      setSubmarineOrders({});
+      setPendingOrders({});
+      setSelectedTargets({});
+      setOrderErrors({});
     }
   }, [isOpen]);
 
@@ -119,18 +133,159 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
     onInfluenceMarkerUpdate({ value: newValue });
   };
 
-  // Submarine order handlers
-  const handleAssignOrder = (submarineId: string, order: string, targetId?: string) => {
-    setSubmarineOrders(prev => ({
+  // Helper: Check if submarine has communication blocked
+  const isCommBlocked = (sub: SubmarineDeployment): boolean => {
+    return (sub.communicationBlockedUntilDay ?? 0) > 0;
+  };
+
+  // Helper: Get submarine by ID
+  const getSubmarineById = (subId: string): SubmarineDeployment | undefined => {
+    return submarineCampaign?.deployedSubmarines?.find(s => s.id === subId);
+  };
+
+  // Submarine Order Handlers
+  const handleOrderTypeChange = (subId: string, orderType: string) => {
+    // Clear any errors for this submarine
+    setOrderErrors(prev => {
+      const updated = {...prev};
+      delete updated[subId];
+      return updated;
+    });
+
+    if (orderType === 'none') {
+      setPendingOrders(prev => {
+        const updated = {...prev};
+        delete updated[subId];
+        return updated;
+      });
+      setSelectedTargets(prev => {
+        const updated = {...prev};
+        delete updated[subId];
+        return updated;
+      });
+      return;
+    }
+
+    setPendingOrders(prev => ({
       ...prev,
-      [submarineId]: { order, targetId }
+      [subId]: {
+        type: orderType as 'patrol' | 'attack',
+        targetId: orderType === 'attack' ? selectedTargets[subId] : undefined
+      }
     }));
   };
 
-  const handleExecuteSubmarineOrders = () => {
-    // This would be implemented later - for now just placeholder
-    console.log('Executing submarine orders:', submarineOrders);
-    alert('Submarine orders execution not yet implemented');
+  const handleTargetSelect = (subId: string, targetId: string) => {
+    setSelectedTargets(prev => ({...prev, [subId]: targetId}));
+
+    // Update pending order with target
+    if (pendingOrders[subId]?.type === 'attack') {
+      setPendingOrders(prev => ({
+        ...prev,
+        [subId]: {...prev[subId], targetId}
+      }));
+
+      // Clear error if target was selected
+      setOrderErrors(prev => {
+        const updated = {...prev};
+        delete updated[subId];
+        return updated;
+      });
+    }
+  };
+
+  const handleConfirmOrder = (subId: string) => {
+    const order = pendingOrders[subId];
+    const sub = getSubmarineById(subId);
+
+    if (!order || !sub) return;
+
+    // Validation
+    if (order.type === 'attack' && !order.targetId) {
+      setOrderErrors(prev => ({...prev, [subId]: 'Target required for attack orders'}));
+      return;
+    }
+
+    // Check if already has current order
+    if (sub.currentOrder) {
+      setOrderErrors(prev => ({...prev, [subId]: 'Submarine already has an active order'}));
+      return;
+    }
+
+    // Update submarine with pending order (will be moved to currentOrder on execution)
+    const updatedSubs = submarineCampaign.deployedSubmarines.map(s =>
+      s.id === subId ? {...s, pendingOrder: order} : s
+    );
+
+    onUpdateSubmarineCampaign({
+      ...submarineCampaign,
+      deployedSubmarines: updatedSubs
+    });
+
+    // Clear local pending state
+    setPendingOrders(prev => {
+      const updated = {...prev};
+      delete updated[subId];
+      return updated;
+    });
+
+    setOrderErrors(prev => {
+      const updated = {...prev};
+      delete updated[subId];
+      return updated;
+    });
+  };
+
+  const handleCancelOrder = (subId: string) => {
+    const sub = getSubmarineById(subId);
+    if (!sub) return;
+
+    // If order is confirmed (in pendingOrder), remove it from submarine
+    if (sub.pendingOrder) {
+      const updatedSubs = submarineCampaign.deployedSubmarines.map(s =>
+        s.id === subId ? {...s, pendingOrder: undefined} : s
+      );
+
+      onUpdateSubmarineCampaign({
+        ...submarineCampaign,
+        deployedSubmarines: updatedSubs
+      });
+    }
+
+    // Clear local pending state
+    setPendingOrders(prev => {
+      const updated = {...prev};
+      delete updated[subId];
+      return updated;
+    });
+
+    setSelectedTargets(prev => {
+      const updated = {...prev};
+      delete updated[subId];
+      return updated;
+    });
+
+    setOrderErrors(prev => {
+      const updated = {...prev};
+      delete updated[subId];
+      return updated;
+    });
+  };
+
+  const handleExecuteSubmarineTurn = async () => {
+    // Will be implemented with SubmarineService integration
+    setIsExecutingTurn(true);
+
+    try {
+      // Placeholder for now
+      console.log('Executing submarine turn...');
+      alert('Submarine turn execution - Service integration pending');
+    } catch (error) {
+      console.error('Submarine turn execution failed:', error);
+      alert('Failed to execute submarine turn. See console for details.');
+    } finally {
+      setIsExecutingTurn(false);
+    }
   };
 
   // Format timestamp for display
@@ -373,109 +528,287 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
     );
   };
 
-  // Render Submarine Campaign tab
-  const renderSubmarineTab = () => (
-    <div className="flex flex-col h-full">
-      <div className="mb-4 p-4 bg-gray-800 border border-gray-700 rounded">
-        <h3 className="font-mono text-sm font-bold text-green-400 uppercase tracking-wider mb-3">
-          Submarine Operations
-        </h3>
-        <div className="grid grid-cols-2 gap-4 font-mono text-xs mb-4">
-          <div>
-            <div className="text-blue-400 font-bold text-lg">{deployedSubmarines.us.length}</div>
-            <div className="text-gray-400 uppercase tracking-wide">US Submarines</div>
-          </div>
-          <div>
-            <div className="text-red-400 font-bold text-lg">{deployedSubmarines.china.length}</div>
-            <div className="text-gray-400 uppercase tracking-wide">China Submarines</div>
-          </div>
-        </div>
+  // Helper: Render individual submarine card with order UI
+  const renderSubmarineCard = (sub: SubmarineDeployment) => {
+    const pendingOrder = pendingOrders[sub.id];
+    const confirmedOrder = sub.pendingOrder;
+    const currentOrder = sub.currentOrder;
+    const selectedTarget = selectedTargets[sub.id];
+    const error = orderErrors[sub.id];
+    const commBlocked = isCommBlocked(sub);
+    const factionColor = sub.faction === 'us' ? 'text-blue-400' : 'text-red-400';
+    const bgColor = sub.faction === 'us' ? 'bg-blue-900' : 'bg-red-900';
 
-        <button
-          onClick={() => setIsDetailedReportOpen(true)}
-          className="w-full px-4 py-2 bg-green-600 text-white font-mono text-xs uppercase tracking-wide rounded hover:bg-green-700 transition-colors"
-        >
-          View Detailed Report
-        </button>
-      </div>
-
-      {/* Deployed Submarines List */}
-      <div className="flex-1 overflow-y-auto space-y-3">
-        <div className="p-3 bg-gray-800 border border-gray-700 rounded">
-          <h4 className="font-mono text-xs font-bold text-blue-400 uppercase tracking-wider mb-2">
-            US Submarines
-          </h4>
-          {deployedSubmarines.us.length === 0 ? (
-            <div className="text-gray-500 font-mono text-xs">No US submarines deployed</div>
-          ) : (
-            deployedSubmarines.us.map(sub => (
-              <div key={sub.id} className="mb-2 p-2 bg-gray-900 rounded">
-                <div className="font-mono text-xs text-white font-bold">{sub.submarineName}</div>
-                <div className="font-mono text-xs text-gray-400">Type: {sub.cardName}</div>
-                {sub.currentAreaId && (
-                  <div className="font-mono text-xs text-gray-400">
-                    Area: {operationalAreas.find(a => a.id === sub.currentAreaId)?.name || sub.currentAreaId}
-                  </div>
-                )}
-              </div>
-            ))
+    return (
+      <div key={sub.id} className={`mb-3 p-3 ${bgColor} bg-opacity-20 border border-gray-700 rounded`}>
+        {/* Submarine Header */}
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex-1">
+            <div className={`font-mono text-sm font-bold ${factionColor}`}>
+              {sub.submarineName}
+            </div>
+            <div className="font-mono text-xs text-gray-400 mt-1">
+              Type: {sub.cardName}
+            </div>
+          </div>
+          {commBlocked && (
+            <div className="px-2 py-1 bg-yellow-600 text-white font-mono text-xs uppercase rounded">
+              Comm Blocked ({sub.communicationBlockedUntilDay} days)
+            </div>
           )}
         </div>
 
-        <div className="p-3 bg-gray-800 border border-gray-700 rounded">
-          <h4 className="font-mono text-xs font-bold text-red-400 uppercase tracking-wider mb-2">
-            China Submarines
-          </h4>
-          {deployedSubmarines.china.length === 0 ? (
-            <div className="text-gray-500 font-mono text-xs">No China submarines deployed</div>
-          ) : (
-            deployedSubmarines.china.map(sub => (
-              <div key={sub.id} className="mb-2 p-2 bg-gray-900 rounded">
-                <div className="font-mono text-xs text-white font-bold">{sub.submarineName}</div>
-                <div className="font-mono text-xs text-gray-400">Type: {sub.cardName}</div>
-                {sub.currentAreaId && (
-                  <div className="font-mono text-xs text-gray-400">
-                    Area: {operationalAreas.find(a => a.id === sub.currentAreaId)?.name || sub.currentAreaId}
-                  </div>
-                )}
-              </div>
-            ))
+        {/* Submarine Stats */}
+        <div className="grid grid-cols-2 gap-2 mb-2 font-mono text-xs text-gray-400">
+          {sub.currentAreaId && (
+            <div>
+              Area: <span className="text-green-400">
+                {operationalAreas.find(a => a.id === sub.currentAreaId)?.name || sub.currentAreaId}
+              </span>
+            </div>
+          )}
+          {(sub.missionsCompleted ?? 0) > 0 && (
+            <div>
+              Missions: <span className="text-cyan-400">{sub.missionsCompleted}</span>
+            </div>
+          )}
+          {(sub.totalKills ?? 0) > 0 && (
+            <div>
+              Kills: <span className="text-red-400">{sub.totalKills}</span>
+            </div>
+          )}
+          {sub.status && (
+            <div>
+              Status: <span className={`${
+                sub.status === 'active' ? 'text-green-400' :
+                sub.status === 'destroyed' ? 'text-red-400' :
+                'text-yellow-400'
+              }`}>{sub.status}</span>
+            </div>
           )}
         </div>
-      </div>
 
-      {/* Recent Events Summary */}
-      <div className="mt-3 p-3 bg-gray-800 border border-gray-700 rounded">
-        <h4 className="font-mono text-xs font-bold text-green-400 uppercase tracking-wider mb-2">
-          Recent Events
-        </h4>
-        {submarineCampaign?.events?.length === 0 ? (
-          <div className="text-gray-500 font-mono text-xs">No submarine events yet</div>
-        ) : (
-          <div className="font-mono text-xs text-gray-300">
-            {(submarineCampaign?.events || []).slice(-3).reverse().map((event, idx) => (
-              <div key={`${event.eventId}-${idx}`} className="mb-1">
-                <span className={event.faction === 'us' ? 'text-blue-400' : 'text-red-400'}>
-                  [{event.faction.toUpperCase()}]
-                </span>{' '}
-                {event.description.split(' - ')[0]}
+        {/* Current Order Display */}
+        {currentOrder && (
+          <div className="mb-2 p-2 bg-gray-900 border border-yellow-600 rounded">
+            <div className="font-mono text-xs text-yellow-400 font-bold">
+              ACTIVE ORDER: {currentOrder.type?.toUpperCase()}
+              {currentOrder.targetId && ` → ${locations.find(l => l.id === currentOrder.targetId)?.name || currentOrder.targetId}`}
+            </div>
+          </div>
+        )}
+
+        {/* Confirmed Pending Order Display */}
+        {confirmedOrder && !currentOrder && (
+          <div className="mb-2 p-2 bg-gray-900 border border-cyan-600 rounded">
+            <div className="font-mono text-xs text-cyan-400 font-bold">
+              CONFIRMED ORDER: {confirmedOrder.type?.toUpperCase()}
+              {confirmedOrder.targetId && ` → ${locations.find(l => l.id === confirmedOrder.targetId)?.name || confirmedOrder.targetId}`}
+            </div>
+          </div>
+        )}
+
+        {/* Order Assignment UI */}
+        {!currentOrder && !commBlocked && isAdmin && (
+          <div className="space-y-2">
+            {/* Order Type Dropdown */}
+            <div>
+              <label className="font-mono text-xs text-gray-400 block mb-1">Assign Order:</label>
+              <select
+                value={pendingOrder?.type ?? confirmedOrder?.type ?? 'none'}
+                onChange={(e) => handleOrderTypeChange(sub.id, e.target.value)}
+                disabled={!!confirmedOrder}
+                className="w-full font-mono text-xs bg-gray-700 text-white border border-gray-600 rounded px-2 py-1 disabled:opacity-50"
+              >
+                <option value="none">No Order</option>
+                <option value="patrol">Patrol ({PATROL_COST} CP)</option>
+                <option value="attack">Attack Base ({ATTACK_COST} CP)</option>
+              </select>
+            </div>
+
+            {/* Target Selection for Attack */}
+            {pendingOrder?.type === 'attack' && !confirmedOrder && (
+              <div>
+                <label className="font-mono text-xs text-gray-400 block mb-1">Select Target Base:</label>
+                <select
+                  value={selectedTarget ?? pendingOrder.targetId ?? ''}
+                  onChange={(e) => handleTargetSelect(sub.id, e.target.value)}
+                  className="w-full font-mono text-xs bg-gray-700 text-white border border-gray-600 rounded px-2 py-1"
+                >
+                  <option value="">-- Select Base --</option>
+                  {locations
+                    .filter(loc => loc.faction !== sub.faction)
+                    .map(loc => (
+                      <option key={loc.id} value={loc.id}>
+                        {loc.name} ({loc.country})
+                      </option>
+                    ))}
+                </select>
               </div>
-            ))}
+            )}
+
+            {/* Error Display */}
+            {error && (
+              <div className="font-mono text-xs text-red-400 bg-red-900 bg-opacity-30 border border-red-600 rounded px-2 py-1">
+                ⚠ {error}
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            {pendingOrder && !confirmedOrder && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleConfirmOrder(sub.id)}
+                  className="flex-1 px-3 py-1 bg-green-600 text-white font-mono text-xs uppercase tracking-wide rounded hover:bg-green-700 transition-colors"
+                >
+                  Confirm
+                </button>
+                <button
+                  onClick={() => handleCancelOrder(sub.id)}
+                  className="flex-1 px-3 py-1 bg-gray-600 text-white font-mono text-xs uppercase tracking-wide rounded hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+
+            {/* Cancel Confirmed Order Button */}
+            {confirmedOrder && (
+              <button
+                onClick={() => handleCancelOrder(sub.id)}
+                className="w-full px-3 py-1 bg-red-600 text-white font-mono text-xs uppercase tracking-wide rounded hover:bg-red-700 transition-colors"
+              >
+                Cancel Confirmed Order
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Communication Blocked Message */}
+        {commBlocked && (
+          <div className="mt-2 font-mono text-xs text-yellow-400 bg-yellow-900 bg-opacity-20 border border-yellow-600 rounded px-2 py-1">
+            Cannot assign orders while communication is blocked
           </div>
         )}
       </div>
+    );
+  };
 
-      {/* Detailed Report Modal */}
-      {isDetailedReportOpen && (
-        <SubmarineDetailedReportModal
-          isOpen={isDetailedReportOpen}
-          onClose={() => setIsDetailedReportOpen(false)}
-          submarineCampaign={submarineCampaign}
-          turnState={turnState}
-        />
-      )}
-    </div>
-  );
+  // Render Submarine Campaign tab
+  const renderSubmarineTab = () => {
+    // Count confirmed orders
+    const confirmedOrders = submarineCampaign?.deployedSubmarines?.filter(s => s.pendingOrder) || [];
+    const confirmedOrdersCount = confirmedOrders.length;
+
+    return (
+      <div className="flex flex-col h-full">
+        {/* Header with Stats and Report Button */}
+        <div className="mb-4 p-4 bg-gray-800 border border-gray-700 rounded">
+          <h3 className="font-mono text-sm font-bold text-green-400 uppercase tracking-wider mb-3">
+            Submarine Operations
+          </h3>
+          <div className="grid grid-cols-3 gap-4 font-mono text-xs mb-4">
+            <div>
+              <div className="text-blue-400 font-bold text-lg">{deployedSubmarines.us.length}</div>
+              <div className="text-gray-400 uppercase tracking-wide">US Submarines</div>
+            </div>
+            <div>
+              <div className="text-red-400 font-bold text-lg">{deployedSubmarines.china.length}</div>
+              <div className="text-gray-400 uppercase tracking-wide">China Submarines</div>
+            </div>
+            <div>
+              <div className="text-green-400 font-bold text-lg">{confirmedOrdersCount}</div>
+              <div className="text-gray-400 uppercase tracking-wide">Confirmed Orders</div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setIsDetailedReportOpen(true)}
+            className="w-full px-4 py-2 bg-green-600 text-white font-mono text-xs uppercase tracking-wide rounded hover:bg-green-700 transition-colors"
+          >
+            View Detailed Report
+          </button>
+        </div>
+
+        {/* Deployed Submarines List with Order UI */}
+        <div className="flex-1 overflow-y-auto space-y-3">
+          {/* US Submarines */}
+          <div className="p-3 bg-gray-800 border border-gray-700 rounded">
+            <h4 className="font-mono text-xs font-bold text-blue-400 uppercase tracking-wider mb-3">
+              US Submarines
+            </h4>
+            {deployedSubmarines.us.length === 0 ? (
+              <div className="text-gray-500 font-mono text-xs">No US submarines deployed</div>
+            ) : (
+              deployedSubmarines.us.map(sub => renderSubmarineCard(sub))
+            )}
+          </div>
+
+          {/* China Submarines */}
+          <div className="p-3 bg-gray-800 border border-gray-700 rounded">
+            <h4 className="font-mono text-xs font-bold text-red-400 uppercase tracking-wider mb-3">
+              China Submarines
+            </h4>
+            {deployedSubmarines.china.length === 0 ? (
+              <div className="text-gray-500 font-mono text-xs">No China submarines deployed</div>
+            ) : (
+              deployedSubmarines.china.map(sub => renderSubmarineCard(sub))
+            )}
+          </div>
+        </div>
+
+        {/* Execute Turn Section */}
+        {isAdmin && confirmedOrdersCount > 0 && (
+          <div className="mt-3 p-4 bg-gray-800 border border-green-600 rounded">
+            <div className="flex items-center justify-between">
+              <div className="font-mono text-xs text-gray-300">
+                <div className="font-bold text-green-400 mb-1">Ready to Execute Turn</div>
+                <div>Confirmed Orders: <span className="text-cyan-400">{confirmedOrdersCount}</span></div>
+              </div>
+              <button
+                onClick={handleExecuteSubmarineTurn}
+                disabled={isExecutingTurn}
+                className="px-6 py-3 bg-green-600 text-white font-mono text-sm uppercase tracking-wide rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isExecutingTurn ? 'Executing...' : `Execute Turn (${confirmedOrdersCount} orders)`}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Recent Events Summary */}
+        <div className="mt-3 p-3 bg-gray-800 border border-gray-700 rounded">
+          <h4 className="font-mono text-xs font-bold text-green-400 uppercase tracking-wider mb-2">
+            Recent Events
+          </h4>
+          {submarineCampaign?.events?.length === 0 ? (
+            <div className="text-gray-500 font-mono text-xs">No submarine events yet</div>
+          ) : (
+            <div className="font-mono text-xs text-gray-300">
+              {(submarineCampaign?.events || []).slice(-3).reverse().map((event, idx) => (
+                <div key={`${event.eventId}-${idx}`} className="mb-1">
+                  <span className={event.faction === 'us' ? 'text-blue-400' : 'text-red-400'}>
+                    [{event.faction.toUpperCase()}]
+                  </span>{' '}
+                  {event.description.split(' - ')[0]}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Detailed Report Modal */}
+        {isDetailedReportOpen && (
+          <SubmarineDetailedReportModal
+            isOpen={isDetailedReportOpen}
+            onClose={() => setIsDetailedReportOpen(false)}
+            submarineCampaign={submarineCampaign}
+            turnState={turnState}
+          />
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">

@@ -413,12 +413,17 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
   // Render Influence Marker tab
   const renderInfluenceTab = () => {
     const currentValue = influenceMarker?.value ?? 0;
-    const bonusCP = Math.floor(Math.abs(currentValue) / 2);
-    const favoredFaction = currentValue > 0 ? 'US' : currentValue < 0 ? 'China' : 'Neutral';
 
     return (
-      <div className="flex flex-col h-full space-y-4">
+      <div className="flex flex-col h-full">
         {/* InfluenceTrack Component */}
+        {/*
+          INFLUENCE FORMULA:
+          - Each influence point = +5% CP for favored faction (applied at week start)
+          - Each influence point = -5% CP for disfavored faction (applied at week start)
+          - Range: -10 (China advantage) to +10 (US advantage)
+          - Example: +3 influence → US gets +15% CP, China gets -15% CP
+        */}
         <div className="p-4 bg-gray-800 border border-gray-700 rounded">
           <h3 className="font-mono text-sm font-bold text-green-400 uppercase tracking-wider mb-4">
             Influence Marker
@@ -428,56 +433,6 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
             onChange={isAdmin ? handleInfluenceChange : undefined}
           />
         </div>
-
-        {/* Command Point Bonus Preview */}
-        <div className="p-4 bg-gray-800 border border-gray-700 rounded">
-          <h3 className="font-mono text-sm font-bold text-green-400 uppercase tracking-wider mb-3">
-            Command Point Effects
-          </h3>
-          <div className="space-y-2 font-mono text-xs">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400">Current Value:</span>
-              <span className={`font-bold text-lg ${
-                currentValue > 0 ? 'text-blue-400' :
-                currentValue < 0 ? 'text-red-400' :
-                'text-yellow-400'
-              }`}>
-                {currentValue > 0 ? `+${currentValue}` : currentValue}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400">Favored Faction:</span>
-              <span className={`font-bold ${
-                currentValue > 0 ? 'text-blue-400' :
-                currentValue < 0 ? 'text-red-400' :
-                'text-gray-400'
-              }`}>
-                {favoredFaction}
-              </span>
-            </div>
-            <div className="flex justify-between items-center pt-2 border-t border-gray-700">
-              <span className="text-gray-400">CP Bonus (End of Week):</span>
-              <span className="font-bold text-green-400">+{bonusCP} CP</span>
-            </div>
-            <div className="text-gray-500 text-xs pt-2">
-              Formula: Bonus = |value| / 2 (rounded down)
-            </div>
-          </div>
-        </div>
-
-        {/* Influence Rules */}
-        <div className="p-4 bg-gray-800 border border-gray-700 rounded">
-          <h3 className="font-mono text-sm font-bold text-green-400 uppercase tracking-wider mb-3">
-            Influence Rules
-          </h3>
-          <div className="font-mono text-xs text-gray-300 space-y-2">
-            <p>• Influence ranges from -10 (China) to +10 (US)</p>
-            <p>• Affects Command Point calculations at end of week</p>
-            <p>• Play influence cards to shift the marker</p>
-            <p>• Bonus CP = |value| / 2 (rounded down)</p>
-            <p>• Favored faction receives bonus at weekly reset</p>
-          </div>
-        </div>
       </div>
     );
   };
@@ -485,59 +440,68 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
   // Helper: Render compact submarine row
   const renderSubmarineRow = (sub: SubmarineDeployment) => {
     const pendingOrder = pendingOrders[sub.id];
-    const confirmedOrder = sub.pendingOrder;
-    const selectedTarget = selectedTargets[sub.id];
-    const hasChanges = !!pendingOrder && !confirmedOrder;
     const factionColor = sub.faction === 'us' ? 'text-blue-400' : 'text-red-400';
+
+    // Get enemy bases (opposite faction)
+    const enemyFaction = sub.faction === 'us' ? 'China' : 'EE. UU.';
+    const enemyBases = locations.filter(loc => loc.country === enemyFaction);
 
     return (
       <div key={sub.id} className="mb-2 p-2 bg-gray-900 border border-gray-700 rounded hover:border-gray-600 transition-colors">
         <div className="flex items-center gap-2">
           {/* Submarine Name */}
-          <div className={`font-mono text-xs font-bold ${factionColor} flex-shrink-0 w-32`}>
+          <div className={`font-mono text-xs font-bold ${factionColor} flex-shrink-0 w-28`}>
             {sub.submarineName}
           </div>
 
           {/* Type */}
-          <div className="font-mono text-xs text-gray-500 flex-shrink-0 w-24">
+          <div className="font-mono text-xs text-gray-500 flex-shrink-0 w-20">
             {sub.cardName?.split(' ')[0]}
           </div>
 
-          {/* Patrol Zone Dropdown */}
+          {/* Dropdown 1: Order Type */}
           <select
-            value={pendingOrder?.targetId ?? confirmedOrder?.targetId ?? selectedTarget ?? sub.currentAreaId ?? ''}
-            onChange={(e) => handleTargetSelect(sub.id, e.target.value)}
-            disabled={!!confirmedOrder}
-            className="font-mono text-xs bg-gray-800 text-white border border-gray-600 rounded px-2 py-1 flex-1 disabled:opacity-50"
+            value={pendingOrder?.type || ''}
+            onChange={(e) => handleOrderTypeChange(sub.id, e.target.value)}
+            className="font-mono text-xs bg-gray-800 text-white border border-gray-600 rounded px-2 py-1 w-24"
           >
-            <option value="">-- ZONA PATRULLA --</option>
-            {operationalAreas.map(area => (
-              <option key={area.id} value={area.id}>
-                {area.name}
-              </option>
-            ))}
+            <option value="">-- ORDER --</option>
+            <option value="patrol">PATROL</option>
+            <option value="attack">ATTACK</option>
           </select>
 
-          {/* Confirm Icon (Green Envelope) */}
-          {hasChanges && isAdmin && (
-            <button
-              onClick={() => handleConfirmOrder(sub.id)}
-              className="flex-shrink-0 w-6 h-6 bg-green-600 hover:bg-green-700 rounded flex items-center justify-center transition-colors"
-              title="Confirm order (2 CP)"
+          {/* Dropdown 2: Target (conditional) */}
+          {pendingOrder && (
+            <select
+              value={pendingOrder.targetId || ''}
+              onChange={(e) => handleTargetSelect(sub.id, e.target.value)}
+              className="font-mono text-xs bg-gray-800 text-white border border-gray-600 rounded px-2 py-1 flex-1"
             >
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-            </button>
-          )}
+              <option value="">-- SELECT TARGET --</option>
 
-          {/* Confirmed indicator */}
-          {confirmedOrder && (
-            <div className="flex-shrink-0 w-6 h-6 bg-cyan-600 rounded flex items-center justify-center" title="Order confirmed">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
+              {/* Patrol targets: operational areas + Mar de China */}
+              {pendingOrder.type === 'patrol' && (
+                <>
+                  {operationalAreas.map(area => (
+                    <option key={area.id} value={area.id}>
+                      {area.name}
+                    </option>
+                  ))}
+                  <option value="south-china-sea">Mar de China</option>
+                </>
+              )}
+
+              {/* Attack targets: enemy bases */}
+              {pendingOrder.type === 'attack' && (
+                <>
+                  {enemyBases.map(base => (
+                    <option key={base.id} value={base.id}>
+                      {base.name}
+                    </option>
+                  ))}
+                </>
+              )}
+            </select>
           )}
         </div>
 
@@ -583,8 +547,8 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
 
         {/* Two-column layout */}
         <div className="flex-1 flex gap-3 overflow-hidden">
-          {/* Left Column - Unified List (40%) */}
-          <div className="w-2/5 flex flex-col overflow-y-auto bg-gray-800 border border-gray-700 rounded">
+          {/* Left Column - Unified List (60%) */}
+          <div className="w-3/5 flex flex-col overflow-y-auto bg-gray-800 border border-gray-700 rounded">
             {!selectedFaction ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-gray-500 font-mono text-xs text-center p-4">
@@ -654,8 +618,8 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
             )}
           </div>
 
-          {/* Right Column - Operations Log (60%) */}
-          <div className="w-3/5 flex flex-col bg-gray-800 border border-gray-700 rounded">
+          {/* Right Column - Operations Log (40%) */}
+          <div className="w-2/5 flex flex-col bg-gray-800 border border-gray-700 rounded">
             {/* Operations Log Header */}
             <div className="p-2 border-b border-gray-700">
               <h4 className="font-mono text-xs font-bold text-green-400 uppercase tracking-wider">
@@ -718,7 +682,7 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
           <h2 className="font-mono text-lg font-bold text-green-400 uppercase tracking-wider">

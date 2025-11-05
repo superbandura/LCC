@@ -9,7 +9,7 @@ import {
   OperationalArea,
   OperationalData,
   PendingDeployments,
-  Submarine,
+  SubmarineDeployment,
   SubmarineEvent,
   TurnState
 } from '../types';
@@ -113,23 +113,9 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Influence marker handlers
-  const handleInfluenceUpdate = (faction: 'us' | 'china', lat: number, lng: number) => {
-    onInfluenceMarkerUpdate({
-      position: { lat, lng },
-      faction,
-      lastUpdated: new Date().toISOString()
-    });
-  };
-
-  const handleRemoveInfluence = () => {
-    if (influenceMarker) {
-      onInfluenceMarkerUpdate({
-        ...influenceMarker,
-        position: { lat: 0, lng: 0 },
-        lastUpdated: new Date().toISOString()
-      });
-    }
+  // Influence value change handler (value-based, not position-based)
+  const handleInfluenceChange = (newValue: number) => {
+    onInfluenceMarkerUpdate({ value: newValue });
   };
 
   // Submarine order handlers
@@ -362,11 +348,11 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
           ) : (
             deployedSubmarines.us.map(sub => (
               <div key={sub.id} className="mb-2 p-2 bg-gray-900 rounded">
-                <div className="font-mono text-xs text-white font-bold">{sub.name}</div>
-                <div className="font-mono text-xs text-gray-400">Type: {sub.type}</div>
-                {sub.assignedAreaId && (
+                <div className="font-mono text-xs text-white font-bold">{sub.submarineName}</div>
+                <div className="font-mono text-xs text-gray-400">Type: {sub.cardName}</div>
+                {sub.currentAreaId && (
                   <div className="font-mono text-xs text-gray-400">
-                    Area: {operationalAreas.find(a => a.id === sub.assignedAreaId)?.name || sub.assignedAreaId}
+                    Area: {operationalAreas.find(a => a.id === sub.currentAreaId)?.name || sub.currentAreaId}
                   </div>
                 )}
               </div>
@@ -383,11 +369,11 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
           ) : (
             deployedSubmarines.china.map(sub => (
               <div key={sub.id} className="mb-2 p-2 bg-gray-900 rounded">
-                <div className="font-mono text-xs text-white font-bold">{sub.name}</div>
-                <div className="font-mono text-xs text-gray-400">Type: {sub.type}</div>
-                {sub.assignedAreaId && (
+                <div className="font-mono text-xs text-white font-bold">{sub.submarineName}</div>
+                <div className="font-mono text-xs text-gray-400">Type: {sub.cardName}</div>
+                {sub.currentAreaId && (
                   <div className="font-mono text-xs text-gray-400">
-                    Area: {operationalAreas.find(a => a.id === sub.assignedAreaId)?.name || sub.assignedAreaId}
+                    Area: {operationalAreas.find(a => a.id === sub.currentAreaId)?.name || sub.currentAreaId}
                   </div>
                 )}
               </div>

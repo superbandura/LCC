@@ -648,8 +648,8 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
 
         {/* Two-column layout */}
         <div className="flex-1 flex gap-3 overflow-hidden">
-          {/* Left Column - Unified List (60%) */}
-          <div className="w-3/5 flex flex-col overflow-y-auto bg-gray-800 border border-gray-700 rounded">
+          {/* Left Column - Unified List (50%) */}
+          <div className="w-1/2 flex flex-col overflow-y-auto bg-gray-800 border border-gray-700 rounded">
             {!selectedFaction ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-gray-500 font-mono text-xs text-center p-4">
@@ -719,8 +719,8 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
             )}
           </div>
 
-          {/* Right Column - Operations Log (40%) */}
-          <div className="w-2/5 flex flex-col bg-gray-800 border border-gray-700 rounded">
+          {/* Right Column - Operations Log (50%) */}
+          <div className="w-1/2 flex flex-col bg-gray-800 border border-gray-700 rounded">
             {/* Operations Log Header */}
             <div className="p-2 border-b border-gray-700">
               <h4 className="font-mono text-xs font-bold text-green-400 uppercase tracking-wider">
@@ -749,7 +749,7 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
                     return (
                       <div
                         key={`${event.eventId}-${idx}`}
-                        className="font-mono text-xs py-2 px-2 bg-gray-900 hover:bg-gray-800 transition-colors border-b border-gray-700 last:border-b-0"
+                        className="font-mono text-xs py-1 px-2"
                       >
                         <div className="flex items-start gap-2">
                           <span className="text-gray-500 flex-shrink-0">

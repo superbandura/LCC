@@ -1,0 +1,39 @@
+{
+  "name": "navegador-de-mapas",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "sync-units": "npx tsx syncUnitsFromFirestore.ts",
+    "translate": "npx tsx translateDescriptions.ts",
+    "apply-translations": "npx tsx translateDescriptions.ts --apply"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "firebase": "^12.4.0",
+    "leaflet": "^1.9.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-leaflet": "^5.0.0",
+    "react-rnd": "^10.5.2"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.21",
+    "@types/node": "^22.14.0",
+    "@types/react-leaflet": "^2.8.3",
+    "@vitejs/plugin-react": "^5.0.0",
+    "@vitest/ui": "^4.0.6",
+    "happy-dom": "^20.0.10",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0",
+    "vitest": "^4.0.6"
+  }
+}

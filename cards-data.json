@@ -1,0 +1,1396 @@
+{
+  "cards": [
+    {
+      "id": "us-001",
+      "name": "Tactical Network",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 01 Tactical Network.jpg",
+      "cost": 0
+    },
+    {
+      "id": "us-002",
+      "name": "Combat Air Patrols",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 02 Combat Air Patrols.jpg",
+      "cost": 0
+    },
+    {
+      "id": "us-003",
+      "name": "Deep Strike",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 03 Deep Strike.jpg",
+      "cost": 4
+    },
+    {
+      "id": "us-004",
+      "name": "Unmanned Helo",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 04 Unmanned Helo.jpg",
+      "cost": 1
+    },
+    {
+      "id": "us-005",
+      "name": "THAAD",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 05 THAAD.jpg",
+      "cost": 5
+    },
+    {
+      "id": "us-006",
+      "name": "Maritime Strike Tomahawk",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 06 Maritime Strike Tomahawk.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-007",
+      "name": "Space Satellites",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 07 Space Satellites.jpg",
+      "cost": 0
+    },
+    {
+      "id": "us-008",
+      "name": "B-1B Lancer",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 08 B-1B Lancer.jpg",
+      "cost": 4
+    },
+    {
+      "id": "us-009",
+      "name": "Electro-Magnetic Spectrum Jamming",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 09 Electro-Magnetic Spectrum Jamming.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-010",
+      "name": "Electro-Magnetic Spectrum Defense",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 10 Electro-Magnetic Spectrum Defense.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-011",
+      "name": "Attack on C2",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 11 Attack on C2.jpg",
+      "cost": 4
+    },
+    {
+      "id": "us-012",
+      "name": "Tactical Cyber Defenses",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 12 Tactical Cyber Defenses.jpg",
+      "cost": 0
+    },
+    {
+      "id": "us-013",
+      "name": "Defensive Cyber",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 13 Defensive Cyber.jpg",
+      "cost": 1
+    },
+    {
+      "id": "us-014",
+      "name": "Offensive Cyber",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 14 Offensive Cyber.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-015",
+      "name": "Military Deception",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 15 Military Deception (x2).jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-016",
+      "name": "Logistics Unmanned",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 16 Logistics Unmanned.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-017",
+      "name": "B-2 Bomber",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 17 B-2 Bomber.jpg",
+      "cost": 5
+    },
+    {
+      "id": "us-018",
+      "name": "B-52 Stratofortress",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 18 B-52 Stratofortress.jpg",
+      "cost": 5
+    },
+    {
+      "id": "us-019",
+      "name": "Network Resiliency",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 19 Network Resiliency.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-020",
+      "name": "Maritime Mines",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 20 Maritime Mines (x2).jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-021",
+      "name": "Submarine Strike",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 21 Submarine Strike.jpg",
+      "cost": 4
+    },
+    {
+      "id": "us-022",
+      "name": "Vertical Insertion",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 22 Vertical Insertion.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-023",
+      "name": "Mine Clearing Unmanned",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 23 Mine Clearing Unmanned.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-024",
+      "name": "Host Nation Logistics",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 24 Host Nation Logistics.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-025",
+      "name": "Behind Enemy Lines",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 25 Behind Enemy Lines.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-026",
+      "name": "Ground Sensors",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 26 Ground Sensors.jpg",
+      "cost": 1
+    },
+    {
+      "id": "us-027",
+      "name": "Stealth Helo",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 27 Stealth Helo.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-028",
+      "name": "GPS Spoofing",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 28 GPS Spoofing.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-029",
+      "name": "Precision Strike missile",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 29 Precision Strike missile (x2).jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-030",
+      "name": "G ATOR Radar",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 30 G ATOR Radar.jpg",
+      "cost": 1
+    },
+    {
+      "id": "us-031",
+      "name": "Open Source Intel",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 31 Open Source Intel.jpg",
+      "cost": 1
+    },
+    {
+      "id": "us-032",
+      "name": "Naval Swarm",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 32 Naval Swarm.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-033",
+      "name": "Aegis Ballistic Defense",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 33 Aegis Ballistic Defense (x2).jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-034",
+      "name": "Blindspot",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 34 Blindspot.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-035",
+      "name": "Quadcopter Drone",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 35 Quadcopter Drone.jpg",
+      "cost": 1
+    },
+    {
+      "id": "us-036",
+      "name": "Unmanned Underwater ISR",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 36 Unmanned Underwater ISR.jpg",
+      "cost": 1
+    },
+    {
+      "id": "us-037",
+      "name": "Scatterable Landmines",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 37 Scatterable Landmines.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-038",
+      "name": "Cut The Link",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 38 Cut The Link.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-039",
+      "name": "Unmanned Ground Vehicles (UGVS)",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 39 Unmanned Ground Vehicles (UGVS).jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-040",
+      "name": "Coordinated Deception",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 40 Coordinated Deception.jpg",
+      "cost": 1
+    },
+    {
+      "id": "us-041",
+      "name": "Anti-Tank Missile",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 41 Anti-Tank Missile.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-042",
+      "name": "Light Amphibious Warship (LAW)",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 42 Light Amphibious Warship (LAW).jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-043",
+      "name": "Raider Sabotage",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 43 Raider Sabotage.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-044",
+      "name": "Joint Fires",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 44 Joint Fires.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-045",
+      "name": "Signal Intelligence",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 45 Signal Intelligence.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-046",
+      "name": "Naval Deception",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 46 Naval Deception (x2).jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-047",
+      "name": "Riverine Squadron",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 47 Riverine Squadron.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-048",
+      "name": "F-22 Escorts",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 48 F-22 Escorts.jpg",
+      "cost": 4
+    },
+    {
+      "id": "us-049",
+      "name": "P-8A Surveillance",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 49 P-8A Surveillance (x2).jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-050",
+      "name": "V-BAT",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 50 V-BAT.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-051",
+      "name": "Torpedo Attack",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 51 Torpedo Attack.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-052",
+      "name": "Close Air Support",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 52 Close Air Support.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-053",
+      "name": "Combat Engineers",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 53 Combat Engineers.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-054",
+      "name": "Tactival Cyber Attack",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 54 Tactival Cyber Attack (x2).jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-055",
+      "name": "Anglico",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 55 Anglico.jpg",
+      "cost": 4
+    },
+    {
+      "id": "us-056",
+      "name": "Influence Operations",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 56 Influence Operations.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-057",
+      "name": "Humanitarian Operations",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 57 Humanitarian Operations.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-058",
+      "name": "Combat Camera",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 58 Combat Camera.jpg",
+      "cost": 1
+    },
+    {
+      "id": "us-059",
+      "name": "U-2 Recon",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 59 U-2 Recon.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-060",
+      "name": "SEAL Insertion",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 60 SEAL Insertion.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-061",
+      "name": "MARSOC HALO",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 61 MARSOC HALO.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-062",
+      "name": "False Death Notifications",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 62 False Death Notifications.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-063",
+      "name": "Attacking AI",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 63 Attacking AI.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-064",
+      "name": "Hypersonic Glide Vehicle",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 64 Hypersonic Glide Vehicle.jpg",
+      "cost": 5
+    },
+    {
+      "id": "us-065",
+      "name": "Helo ASW",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 65 Helo ASW.jpg",
+      "cost": 1
+    },
+    {
+      "id": "us-066",
+      "name": "Valkyrie Unmanned",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 66 Valkyrie Unmanned.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-067",
+      "name": "MUX Unmanned",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 67 MUX Unmanned (x2).jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-068",
+      "name": "Unmanned Boats",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 68 Unmanned Boats.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-069",
+      "name": "Virginia-Class Sub",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 69 Virginia-Class Sub (x2).jpg",
+      "cost": 4
+    },
+    {
+      "id": "us-070",
+      "name": "Ohio-Class Sub",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 70 Ohio-Class Sub.jpg",
+      "cost": 5
+    },
+    {
+      "id": "us-071",
+      "name": "Unmanned Hacking",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 71 Unmanned Hacking.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-072",
+      "name": "Littoral Movement",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 72 Littoral Movement.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-073",
+      "name": "Expeditionary Logistics",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 73 Expeditionary Logistics.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-074",
+      "name": "Multi-Domain Task Force",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 74 Multi-Domain Task Force.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-075",
+      "name": "Logistics Resiliency",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 75 Logistics Resiliency.jpg",
+      "cost": 5
+    },
+    {
+      "id": "us-076",
+      "name": "MEF Information Group",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 76 MEF Information Group.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-077",
+      "name": "EA-18G Growler",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 77 EA-18G Growler.jpg",
+      "cost": 4
+    },
+    {
+      "id": "us-078",
+      "name": "Coordinated Degradation",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 78 Coordinated Degradation.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-079",
+      "name": "Self-Healing Network",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 79 Self-Healing Network.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-080",
+      "name": "High Altitude Balloons",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 80 High Altitude Balloons.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-081",
+      "name": "Signal Management",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 81 Signal Management.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-082",
+      "name": "Heavy Lift",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 82 Heavy Lift.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-083",
+      "name": "NGAD Unmanned",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 83 NGAD Unmanned.jpg",
+      "cost": 4
+    },
+    {
+      "id": "us-084",
+      "name": "Military Intelligence",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 84 Military Intelligence.jpg",
+      "cost": 1
+    },
+    {
+      "id": "us-085",
+      "name": "Long-Range Hypersonic Weapon",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 85 Long-Range Hypersonic Weapon.jpg",
+      "cost": 5
+    },
+    {
+      "id": "us-086",
+      "name": "UUV Defense",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 86 UUV Defense.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-087",
+      "name": "Cyber Exploit",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 87 Cyber Exploit.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-088",
+      "name": "Patriot",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 88 Patriot.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-089",
+      "name": "C-130 Hercules",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 89 C-130 Hercules.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-090",
+      "name": "UUV Attack Unmanned",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 90 UUV Attack Unmanned.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-091",
+      "name": "Civil Affairs Group",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 91 Civil Affairs Group.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-092",
+      "name": "Security Forces Assistance Brigade",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 92 Security Forces Assistance Brigade.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-093",
+      "name": "LCU-2000",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 93 LCU-2000.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-094",
+      "name": "Glide Phase Interceptor",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 94 Glide Phase Interceptor.jpg",
+      "cost": 4
+    },
+    {
+      "id": "us-095",
+      "name": "Special Operations Forces Advisors",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 95 Special Operations Forces Advisors.jpg",
+      "cost": 4
+    },
+    {
+      "id": "us-096",
+      "name": "Seaplanes",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 96 Seaplanes.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-097",
+      "name": "Public Affairs Officer",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 97 Public Affairs Officer.jpg",
+      "cost": 1
+    },
+    {
+      "id": "us-098",
+      "name": "Counter-Mobility OPS",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 98 Counter-Mobility OPS.jpg",
+      "cost": 2
+    },
+    {
+      "id": "us-099",
+      "name": "JSTARS E-8C",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 99 JSTARS E-8C.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-100",
+      "name": "Psyop",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 100 Psyop.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-101",
+      "name": "AI-Enabled Targeting",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 101 AI-Enabled Targeting.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-102",
+      "name": "Active Denial System",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 102 Active Denial System.jpg",
+      "cost": 3
+    },
+    {
+      "id": "us-103",
+      "name": "Airborne Early Warning and Control",
+      "faction": "us",
+      "imagePath": "/images/Cartas USMC/LCC USMC 103 Airborne Early Warning and Control.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-001",
+      "name": "Tactical Network",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 01 Tactical Network.jpg",
+      "cost": 0
+    },
+    {
+      "id": "china-002",
+      "name": "Combat Air Patrols",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 02 Combat Air Patrols (x2).jpg",
+      "cost": 0
+    },
+    {
+      "id": "china-003",
+      "name": "Maritime Militia",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 03 Maritime Militia (x2).jpg",
+      "cost": 1
+    },
+    {
+      "id": "china-004",
+      "name": "DF-10A Long Sword",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 04 DF-10A Long Sword.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-005",
+      "name": "DF-21D Ballistic",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 05 DF-21D Ballistic (x2).jpg",
+      "cost": 4
+    },
+    {
+      "id": "china-006",
+      "name": "DF-16 Ballistic",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 06 DF-16 Ballistic.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-007",
+      "name": "GJ-11 Unmanned",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 07 GJ-11 Unmanned.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-008",
+      "name": "Space Satellites",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 08 Space Satellites.jpg",
+      "cost": 0
+    },
+    {
+      "id": "china-009",
+      "name": "Blindspot",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 09 Blindspot.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-010",
+      "name": "GPS Spoofing",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 10 GPS Spoofing.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-011",
+      "name": "Attack on C2",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 11 Attack on C2.jpg",
+      "cost": 4
+    },
+    {
+      "id": "china-012",
+      "name": "Tactical Cyber Defenses",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 12 Tactical Cyber Defenses.jpg",
+      "cost": 0
+    },
+    {
+      "id": "china-013",
+      "name": "Social Media Exploitation",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 13 Social Media Exploitation (x2).jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-014",
+      "name": "Strong-Arm Diplomacy",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 14 Strong-Arm Diplomacy.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-015",
+      "name": "SOF Sabotage",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 15 SOF Sabotage.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-016",
+      "name": "Behind Enemy Lines",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 16 Behind Enemy Lines.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-017",
+      "name": "HQ-22 IAMD",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 17 HQ-22 IAMD.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-018",
+      "name": "H-6K Cluster Bombs",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 18 H-6K Cluster Bombs.jpg",
+      "cost": 4
+    },
+    {
+      "id": "china-019",
+      "name": "H-6K Aerial Strike",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 19 H-6K Aerial Strike.jpg",
+      "cost": 4
+    },
+    {
+      "id": "china-020",
+      "name": "Tactical UAS",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 20 Tactical UAS (x2).jpg",
+      "cost": 1
+    },
+    {
+      "id": "china-021",
+      "name": "GJ-1D Unmaned",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 21 GJ-1D Unmaned.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-022",
+      "name": "Electro-Magnetic Sepctrum Defense",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 22 Electro-Magnetic Sepctrum Defense.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-023",
+      "name": "Electro-Magnetic Spectrum Jamming",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 23 Electro-Magnetic Spectrum Jamming.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-024",
+      "name": "Logistics Attack",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 24 Logistics Attack.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-025",
+      "name": "Intelligized Networks",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 25 Intelligized Networks.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-026",
+      "name": "GJ-2 Unmanned",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 26 GJ-2 Unmanned (x2).jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-027",
+      "name": "HQ-9B IAMD",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 27 HQ-9B IAMD.jpg",
+      "cost": 4
+    },
+    {
+      "id": "china-028",
+      "name": "Joint Fires",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 28 Joint Fires.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-029",
+      "name": "Human Intelligence",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 29 Human Intelligence (x2).jpg",
+      "cost": 1
+    },
+    {
+      "id": "china-030",
+      "name": "Torpedo Attack",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 30 Torpedo Attack.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-031",
+      "name": "Amphibious Assault",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 31 Amphibious Assault.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-032",
+      "name": "Naval Swarm",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 32 Naval Swarm (x2).jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-033",
+      "name": "Offensive Cyber",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 33 Offensive Cyber.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-034",
+      "name": "Defensive Cyber",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 34 Defensive Cyber.jpg",
+      "cost": 1
+    },
+    {
+      "id": "china-035",
+      "name": "Scatterable Landmines",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 35 Scatterable Landmines.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-036",
+      "name": "Cut the Link",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 36 Cut the Link.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-037",
+      "name": "Coordinated Deception",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 37 Coordinated Deception.jpg",
+      "cost": 1
+    },
+    {
+      "id": "china-038",
+      "name": "AI-Enabled Signal Intel",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 38 AI-Enabled Signal Intel.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-039",
+      "name": "Naval Deception",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 39 Naval Deception (x2).jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-040",
+      "name": "Quadcopter Drone",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 40 Quadcopter Drone.jpg",
+      "cost": 1
+    },
+    {
+      "id": "china-041",
+      "name": "Miilitary Deception",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 41 Miilitary Deception (x2).jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-042",
+      "name": "Combat Engineers",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 42 Combat Engineers.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-043",
+      "name": "Maritime Mines",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 43 Maritime Mines.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-044",
+      "name": "Disinformation Operations",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 44 Disinformation Operations.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-045",
+      "name": "Tactical Cyber Attack",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 45 Tactical Cyber Attack (x2).jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-046",
+      "name": "CH-7 Unmanned",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 46 CH-7 Unmanned.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-047",
+      "name": "Airborne Early Warning and Control",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 47 Airborne Early Warning and Control.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-048",
+      "name": "UUV Attack Unmanned",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 48 UUV Attack Unmanned.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-049",
+      "name": "Mine Clearing Unmanned",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 49 Mine Clearing Unmanned.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-050",
+      "name": "AI-Enabled Planning",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 50 AI-Enabled Planning.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-051",
+      "name": "Unmanned Ground Vehicles (UGVS)",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 51 Unmanned Ground Vehicles (UGVS)(x3).jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-052",
+      "name": "Unmanned Underwater ISR",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 52 Unmanned Underwater ISR.jpg",
+      "cost": 1
+    },
+    {
+      "id": "china-053",
+      "name": "YJ-12B Anti-Ship Missile",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 53 YJ-12B Anti-Ship Missile.jpg",
+      "cost": 4
+    },
+    {
+      "id": "china-054",
+      "name": "Hypersonic Glide Vehicle",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 54 Hypersonic Glide Vehicle.jpg",
+      "cost": 5
+    },
+    {
+      "id": "china-055",
+      "name": "HQ-16B IAMD",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 55 HQ-16B IAMD.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-056",
+      "name": "Patrol Boats",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 56 Patrol Boats (x2).jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-057",
+      "name": "Z-10 Attack",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 57 Z-10 Attack.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-058",
+      "name": "Breaking Link-16",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 58 Breaking Link-16.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-059",
+      "name": "Counter-Narratives",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 59 Counter-Narratives.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-060",
+      "name": "Censorship",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 60 Censorship.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-061",
+      "name": "Big Brother Is Watching",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 61 Big Brother Is Watching.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-062",
+      "name": "Submarine Insertion",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 62 Submarine Insertion.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-063",
+      "name": "HALO Insertion",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 63 HALO Insertion.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-064",
+      "name": "Deep Fakes",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 64 Deep Fakes.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-065",
+      "name": "False Death Notifications",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 65 False Death Notifications.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-066",
+      "name": "CH-901 Swarm",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 66 CH-901 Swarm.jpg",
+      "cost": 4
+    },
+    {
+      "id": "china-067",
+      "name": "UUV Defense",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 67 UUV Defense.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-068",
+      "name": "CH-901 Swarm",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 68 CH-901 Swarm.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-069",
+      "name": "SUI-Class Sub",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 69 SUI-Class Sub (x2).jpg",
+      "cost": 4
+    },
+    {
+      "id": "china-070",
+      "name": "Shang II-Class Sub",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 70 Shang II-Class Sub.jpg",
+      "cost": 5
+    },
+    {
+      "id": "china-071",
+      "name": "Y-8Q Surveillance",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 71 Y-8Q Surveillance.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-072",
+      "name": "Proxy Forces",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 72 Proxy Forces.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-073",
+      "name": "Expeditionary Logistics",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 73 Expeditionary Logistics.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-074",
+      "name": "Littoral Movement",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 74 Littoral Movement.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-075",
+      "name": "Ballistic Missile Defense",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 75 Ballistic Missile Defense (x3).jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-076",
+      "name": "PLA Strategic Support Force",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 76 PLA Strategic Support Force.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-077",
+      "name": "Logistics Resiliency",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 77 Logistics Resiliency.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-078",
+      "name": "YJ-18 Anti-Ship Missile",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 78 YJ-18 Anti-Ship Missile.jpg",
+      "cost": 4
+    },
+    {
+      "id": "china-079",
+      "name": "Shenyang J-15D",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 79 Shenyang J-15D.jpg",
+      "cost": 4
+    },
+    {
+      "id": "china-080",
+      "name": "Signal Management",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 80 Signal Management.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-081",
+      "name": "Coordinated Degradation",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 81 Coordinated Degradation.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-082",
+      "name": "Self-Healing Network",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 82 Self-Healing Network.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-083",
+      "name": "High Altitude Balloons",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 83 High Altitude Balloons.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-084",
+      "name": "Helo ASW",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 84 Helo ASW.jpg",
+      "cost": 1
+    },
+    {
+      "id": "china-085",
+      "name": "Logistics Unmanned",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 85 Logistics Unmanned.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-086",
+      "name": "Heavy Lift",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 86 Heavy Lift (x2).jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-087",
+      "name": "Active Denial System (ADS)",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 87 Active Denial System (ADS).jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-088",
+      "name": "Cyber Exploit",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 88 Cyber Exploit.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-089",
+      "name": "Military Intelligence",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 89 Military Intelligence.jpg",
+      "cost": 1
+    },
+    {
+      "id": "china-090",
+      "name": "Seaplanes",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 90 Seaplanes.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-091",
+      "name": "AI-Enabled Targeting",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 91 AI-Enabled Targeting.jpg",
+      "cost": 3
+    },
+    {
+      "id": "china-092",
+      "name": "Y-8F600 Transport",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 92 Y-8F600 Transport.jpg",
+      "cost": 2
+    },
+    {
+      "id": "china-093",
+      "name": "Xian H-20 Bomber",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 93 Xian H-20 Bomber.jpg",
+      "cost": 5
+    },
+    {
+      "id": "china-094",
+      "name": "Type 072A Landing",
+      "faction": "china",
+      "imagePath": "/images/Cartas PLAN/LCC PLAN 94 Type 072A Landing.jpg",
+      "cost": 3
+    }
+  ],
+  "stats": {
+    "total": 197,
+    "usmc": {
+      "count": 103,
+      "totalCost": 265,
+      "averageCost": 2.57
+    },
+    "plan": {
+      "count": 94,
+      "totalCost": 235,
+      "averageCost": 2.5
+    }
+  }
+}

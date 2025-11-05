@@ -1,0 +1,7 @@
+{
+  "name": "Navegador de Mapas",
+  "description": "Una aplicación web para explorar y navegar por un mapa interactivo de OpenStreetMap. Permite a los usuarios ver un mapa, hacer zoom, desplazarse y centrar el mapa en su ubicación actual.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

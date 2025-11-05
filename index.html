@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Littoral Commander Campaign</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+    <style>
+      .leaflet-container {
+        height: 100%;
+        width: 100%;
+      }
+      .custom-leaflet-icon {
+        border: 2px solid white;
+        border-radius: 4px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+      }
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      }
+      #root {
+        height: 100%;
+      }
+      .info-icon-marker {
+        background-color: rgba(22, 78, 99, 0.8); /* a dark cyan */
+        border: 1px solid #06b6d4; /* cyan-500 */
+        border-radius: 50%;
+        width: 24px !important;
+        height: 24px !important;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        box-shadow: 0 0 8px rgba(6, 182, 212, 0.7);
+        cursor: pointer;
+      }
+      .info-icon-marker:hover {
+        background-color: #0891b2; /* cyan-600 */
+      }
+      .info-icon-marker-destroyed {
+        background-color: rgba(185, 28, 28, 0.8); /* dark red */
+        border: 1px solid #ef4444; /* red-500 */
+        border-radius: 50%;
+        width: 24px !important;
+        height: 24px !important;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        box-shadow: 0 0 8px rgba(239, 68, 68, 0.7);
+        cursor: pointer;
+      }
+      .info-icon-marker-destroyed:hover {
+        background-color: #dc2626; /* red-600 */
+      }
+      .operational-data-popup .leaflet-popup-content-wrapper {
+        background-color: #1f2937; /* gray-800 */
+        color: #e5e7eb; /* gray-200 */
+        border: 1px solid #4b5563; /* gray-600 */
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      }
+       .operational-data-popup .leaflet-popup-tip {
+        background: #1f2937; /* gray-800 */
+      }
+      .operational-data-popup .leaflet-popup-content {
+        margin: 1rem;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        min-width: 200px;
+      }
+      /* Estilos personalizados para la escala del mapa */
+      .leaflet-control-scale-line {
+        border: 2px solid #333;
+        border-top: none;
+        background: linear-gradient(to right,
+          #f0f0f0 0%,
+          #f0f0f0 50%,
+          #1a1a1a 50%,
+          #1a1a1a 100%
+        ) !important;
+        color: #1a1a1a;
+        font-size: 11px;
+        line-height: 1.1;
+        padding: 2px 5px 1px;
+        text-shadow: 1px 1px 1px #fff, -1px -1px 1px #fff, 1px -1px 1px #fff, -1px 1px 1px #fff;
+        white-space: nowrap;
+        overflow: hidden;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        font-weight: bold;
+      }
+      .leaflet-control-scale-line:not(:first-child) {
+        border-top: 2px solid #333;
+        border-bottom: none;
+        margin-top: -1px;
+      }
+      /* Estilo alternativo 1 para la escala del mapa */
+      .leaflet-control-scale-line.alt-style-1 {
+        background: linear-gradient(to right,
+          #1a1a1a 0%,
+          #1a1a1a 50%,
+          #fbbf24 50%,
+          #fbbf24 100%
+        ) !important;
+        color: #ffffff;
+        text-shadow: 1px 1px 1px #000, -1px -1px 1px #000, 1px -1px 1px #000, -1px 1px 1px #000;
+        cursor: pointer;
+      }
+      /* Estilo alternativo 2 para la escala del mapa */
+      .leaflet-control-scale-line.alt-style-2 {
+        background: linear-gradient(to right,
+          #ffffff 0%,
+          #ffffff 50%,
+          #fbbf24 50%,
+          #fbbf24 100%
+        ) !important;
+        color: #1a1a1a;
+        text-shadow: none;
+        cursor: pointer;
+        border: 2px solid #1a1a1a;
+      }
+      .leaflet-control-scale-line {
+        cursor: pointer;
+      }
+    </style>
+</head>
+  <body class="bg-gray-900">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

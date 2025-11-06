@@ -68,7 +68,7 @@ import {
 } from './firestoreService';
 
 // Import services for business logic
-import { SubmarineService } from './services/submarineService';
+import { SubmarineCampaignOrchestrator } from './services/submarineCampaignOrchestrator';
 import { TurnService } from './services/turnService';
 import { DeploymentService } from './services/deploymentService';
 import { DestructionService } from './services/destructionService';
@@ -614,55 +614,30 @@ function App() {
     };
   }, [pendingDeployments, isDeploymentActive, cards, taskForces, units]);
 
-  // Process submarine patrol orders - NOW USING SubmarineService
-  const processSubmarinePatrols = async (currentTurnState: TurnState, submarines?: SubmarineDeployment[]) => {
-    // Use SubmarineService for all patrol logic
-    const result = await SubmarineService.processPatrols(
+  // Process complete submarine campaign turn - NOW USING SubmarineCampaignOrchestrator
+  const processSubmarineCampaignTurn = async (currentTurnState: TurnState) => {
+    // Use orchestrator to execute all three phases in correct sequence:
+    // 1. ASW Phase - detect and eliminate submarines
+    // 2. Attack Phase - execute missile attacks on bases
+    // 3. Patrol Phase - conduct patrol operations
+    const result = await SubmarineCampaignOrchestrator.executeFullTurn(
       submarineCampaign,
       currentTurnState,
       commandPoints,
       operationalAreas,
-      submarines
+      taskForces,
+      units,
+      cards,
+      locations
     );
 
-    // Update command points if changed
+    // Update command points if changed by patrols
     if (result.updatedCommandPoints.us !== commandPoints.us ||
         result.updatedCommandPoints.china !== commandPoints.china) {
       await updateCommandPoints(result.updatedCommandPoints);
     }
 
-    // Return result WITHOUT updating submarine campaign (will be done in batch)
-    return result;
-  };
-
-  // Process ASW (Anti-Submarine Warfare) phase - Location-based system
-  const processASWPhase = async (currentTurnState: TurnState, submarines?: SubmarineDeployment[]) => {
-    // Use SubmarineService for ASW logic (includes cards, ships, and patrol submarines)
-    const result = await SubmarineService.processASWPhase(
-      submarineCampaign,
-      currentTurnState,
-      operationalAreas,
-      taskForces,
-      units,
-      cards,
-      submarines
-    );
-
-    // Return result WITHOUT updating submarine campaign (will be done in batch)
-    return result;
-  };
-
-  // Process submarine attack orders - NOW USING SubmarineService
-  const processSubmarineAttacks = async (currentTurnState: TurnState, submarines?: SubmarineDeployment[]) => {
-    // Use SubmarineService for all attack logic
-    const result = await SubmarineService.processAttacks(
-      submarineCampaign,
-      currentTurnState,
-      locations,
-      submarines
-    );
-
-    // Update locations if damage was applied
+    // Update locations if damage was applied by attacks
     if (result.updatedLocations.length > 0) {
       await updateLocations(result.updatedLocations);
     }
@@ -823,7 +798,7 @@ function App() {
 
     // STEP 0: Snapshot ASW ships at turn start (locked until next turn)
     if (submarineCampaign) {
-      const aswShips = SubmarineService.snapshotAswShips(units, taskForces, operationalAreas);
+      const aswShips = SubmarineCampaignOrchestrator.snapshotAswShips(units, taskForces, operationalAreas);
       await updateSubmarineCampaign({
         ...submarineCampaign,
         aswShips
@@ -831,16 +806,12 @@ function App() {
       console.log(`  ✅ ASW ships snapshot: ${aswShips.length} ships locked for this turn`);
     }
 
-    // STEP 1: Process ASW phase FIRST (eliminate submarines before they can attack/patrol)
-    const aswResult = await processASWPhase(newTurnState);
-    console.log(`  ✅ ASW events: ${aswResult.events.length}`);
+    // STEP 1: Process complete submarine campaign turn (ASW → Attack → Patrol)
+    // The orchestrator handles phase chaining automatically
+    const submarineResult = await processSubmarineCampaignTurn(newTurnState);
+    console.log(`  ✅ Submarine campaign events: ${submarineResult.events.length}`);
 
-    // STEP 2: Process submarine attack orders (damage bases before CP calculation)
-    // NOTE: Use ASW result submarines (reflects eliminations)
-    const attackResult = await processSubmarineAttacks(newTurnState, aswResult.updatedSubmarines);
-    console.log(`  ✅ Attack events: ${attackResult.events.length}`);
-
-    // STEP 3: If week completed, recalculate command points (considers damaged bases from attacks)
+    // STEP 2: If week completed, recalculate command points (considers damaged bases from attacks)
     if (completedWeek) {
       // Save previous command points before recalculating
       setPreviousCommandPoints({ ...commandPoints });
@@ -856,23 +827,18 @@ function App() {
       console.log('  - Influence modifier:', influenceMarker.value);
     }
 
-    // STEP 4: Process submarine patrol orders AFTER CP reset (damage fresh budget)
-    // NOTE: Use attack result submarines (reflects any state changes)
-    const patrolResult = await processSubmarinePatrols(newTurnState, attackResult.updatedSubmarines);
-    console.log(`  ✅ Patrol events: ${patrolResult.events.length}`);
-
-    // STEP 5: Combine ALL events and do ONE atomic update to submarine campaign
-    const allEvents = [...aswResult.events, ...attackResult.events, ...patrolResult.events];
+    // STEP 3: Combine ALL events and do ONE atomic update to submarine campaign
+    const allEvents = submarineResult.events;
 
     if (allEvents.length > 0 && submarineCampaign) {
       console.log(`📋 Total submarine events: ${allEvents.length}`);
       console.log(`🔵 [BATCH UPDATE] Current events in campaign: ${submarineCampaign.events.length}`);
       console.log(`🔵 [BATCH UPDATE] Adding events: ${allEvents.length}`);
 
-      // Use patrol result submarines (they have all accumulated changes from ASW → Attack → Patrol)
+      // Use orchestrator result submarines (they have all accumulated changes from ASW → Attack → Patrol)
       await updateSubmarineCampaign({
         ...submarineCampaign,
-        deployedSubmarines: patrolResult.updatedSubmarines,
+        deployedSubmarines: submarineResult.updatedSubmarines,
         events: [...submarineCampaign.events, ...allEvents]
       });
 

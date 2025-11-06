@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { SubmarineService } from './submarineService';
+import { PatrolService } from './patrol/patrolService';
+import { AttackService } from './attack/attackService';
+import { ASWService } from './asw/aswService';
 import {
   SubmarineCampaignState,
   SubmarineDeployment,
@@ -63,7 +65,7 @@ describe('SubmarineService', () => {
       const commandPoints = createMockCommandPoints();
       const areas = createMockOperationalAreas();
 
-      const result = await SubmarineService.processPatrols(
+      const result = await PatrolService.processPatrols(
         null,
         turnState,
         commandPoints,
@@ -81,7 +83,7 @@ describe('SubmarineService', () => {
         events: [],
       };
 
-      const result = await SubmarineService.processPatrols(
+      const result = await PatrolService.processPatrols(
         submarineCampaign,
         createMockTurnState(),
         createMockCommandPoints(),
@@ -121,7 +123,7 @@ describe('SubmarineService', () => {
       // Mock roll to fail (>18) so we don't process the patrol
       Math.random = () => 0.95; // Will result in roll of 20
 
-      const result = await SubmarineService.processPatrols(
+      const result = await PatrolService.processPatrols(
         submarineCampaign,
         createMockTurnState(),
         createMockCommandPoints(),
@@ -169,7 +171,7 @@ describe('SubmarineService', () => {
         return 0.5;
       };
 
-      const result = await SubmarineService.processPatrols(
+      const result = await PatrolService.processPatrols(
         submarineCampaign,
         createMockTurnState(),
         commandPoints,
@@ -218,15 +220,15 @@ describe('SubmarineService', () => {
       // Mock roll to fail (19)
       Math.random = () => 0.9; // Results in roll of 19
 
-      const result = await SubmarineService.processPatrols(
+      const result = await PatrolService.processPatrols(
         submarineCampaign,
         createMockTurnState(),
         commandPoints,
         createMockOperationalAreas()
       );
 
-      // No events for failed patrols
-      expect(result.events).toHaveLength(0);
+      // Failed patrols now create 2 events (attacker + defender) for admin detailed report
+      expect(result.events).toHaveLength(2);
 
       // Command points unchanged
       expect(result.updatedCommandPoints).toEqual(commandPoints);
@@ -272,7 +274,7 @@ describe('SubmarineService', () => {
         return 0.5;
       };
 
-      const result = await SubmarineService.processPatrols(
+      const result = await PatrolService.processPatrols(
         submarineCampaign,
         createMockTurnState(),
         commandPoints,
@@ -289,7 +291,7 @@ describe('SubmarineService', () => {
       const turnState = createMockTurnState();
       const locations = createMockLocations();
 
-      const result = await SubmarineService.processAttacks(null, turnState, locations);
+      const result = await AttackService.processAttacks(null, turnState, locations);
 
       expect(result.events).toHaveLength(0);
       expect(result.updatedSubmarines).toHaveLength(0);
@@ -302,7 +304,7 @@ describe('SubmarineService', () => {
         events: [],
       };
 
-      const result = await SubmarineService.processAttacks(
+      const result = await AttackService.processAttacks(
         submarineCampaign,
         createMockTurnState(),
         createMockLocations()
@@ -329,7 +331,9 @@ describe('SubmarineService', () => {
           targetId: 'base-1',
           targetType: 'base',
           assignedTurn: 1,
+          assignedDate: '2030-06-01',
           executionTurn: 3, // Executes on turn 3
+          executionDate: '2030-06-10', // Future date - should not execute
         },
       };
 
@@ -340,7 +344,7 @@ describe('SubmarineService', () => {
 
       const turnState = createMockTurnState(); // Turn 1
 
-      const result = await SubmarineService.processAttacks(
+      const result = await AttackService.processAttacks(
         submarineCampaign,
         turnState,
         createMockLocations()
@@ -368,7 +372,9 @@ describe('SubmarineService', () => {
           targetId: 'base-1',
           targetType: 'base',
           assignedTurn: 1,
+          assignedDate: '2030-06-01',
           executionTurn: 1,
+          executionDate: '2030-06-03', // Current date - should execute
         },
       };
 
@@ -388,7 +394,7 @@ describe('SubmarineService', () => {
         return 0.5;
       };
 
-      const result = await SubmarineService.processAttacks(
+      const result = await AttackService.processAttacks(
         submarineCampaign,
         createMockTurnState(),
         locations
@@ -424,7 +430,9 @@ describe('SubmarineService', () => {
           targetId: 'base-1',
           targetType: 'base',
           assignedTurn: 1,
+          assignedDate: '2030-06-01',
           executionTurn: 1,
+          executionDate: '2030-06-03', // Current date - should execute
         },
       };
 
@@ -438,7 +446,7 @@ describe('SubmarineService', () => {
       // Mock roll to fail (15)
       Math.random = () => 0.7; // Results in roll of 15
 
-      const result = await SubmarineService.processAttacks(
+      const result = await AttackService.processAttacks(
         submarineCampaign,
         createMockTurnState(),
         locations
@@ -474,7 +482,9 @@ describe('SubmarineService', () => {
           targetId: 'base-1',
           targetType: 'base',
           assignedTurn: 1,
+          assignedDate: '2030-06-01',
           executionTurn: 1,
+          executionDate: '2030-06-03', // Current date - should execute
         },
       };
 
@@ -504,7 +514,7 @@ describe('SubmarineService', () => {
         return 0.5;
       };
 
-      const result = await SubmarineService.processAttacks(
+      const result = await AttackService.processAttacks(
         submarineCampaign,
         createMockTurnState(),
         locations
@@ -534,7 +544,9 @@ describe('SubmarineService', () => {
           targetId: 'base-1',
           targetType: 'base',
           assignedTurn: 1,
+          assignedDate: '2030-06-01',
           executionTurn: 1,
+          executionDate: '2030-06-03', // Current date - should execute
         },
       };
 
@@ -564,7 +576,7 @@ describe('SubmarineService', () => {
         return 0.5;
       };
 
-      const result = await SubmarineService.processAttacks(
+      const result = await AttackService.processAttacks(
         submarineCampaign,
         createMockTurnState(),
         locations
@@ -592,7 +604,9 @@ describe('SubmarineService', () => {
           targetId: 'base-1',
           targetType: 'base',
           assignedTurn: 1,
+          assignedDate: '2030-06-01',
           executionTurn: 1,
+          executionDate: '2030-06-03', // Current date - should execute
         },
       };
 
@@ -613,7 +627,9 @@ describe('SubmarineService', () => {
           targetId: 'base-1',
           targetType: 'base',
           assignedTurn: 1,
+          assignedDate: '2030-06-01',
           executionTurn: 1,
+          executionDate: '2030-06-03', // Current date - should execute
         },
       };
 
@@ -637,7 +653,7 @@ describe('SubmarineService', () => {
         return 0.5;
       };
 
-      const result = await SubmarineService.processAttacks(
+      const result = await AttackService.processAttacks(
         submarineCampaign,
         createMockTurnState(),
         locations
@@ -660,7 +676,7 @@ describe('SubmarineService', () => {
       const turnState = createMockTurnState();
       const areas = createMockOperationalAreas();
 
-      const result = await SubmarineService.processASWPhase(
+      const result = await ASWService.processASWPhase(
         null,
         turnState,
         areas,
@@ -696,7 +712,7 @@ describe('SubmarineService', () => {
         usedSubmarineNames: { us: [], china: [] },
       };
 
-      const result = await SubmarineService.processASWPhase(
+      const result = await ASWService.processASWPhase(
         submarineCampaign,
         createMockTurnState(),
         createMockOperationalAreas(),
@@ -731,7 +747,7 @@ describe('SubmarineService', () => {
         usedSubmarineNames: { us: [], china: [] },
       };
 
-      const result = await SubmarineService.processASWPhase(
+      const result = await ASWService.processASWPhase(
         submarineCampaign,
         createMockTurnState(),
         createMockOperationalAreas(),
@@ -792,7 +808,7 @@ describe('SubmarineService', () => {
       // Mock failed detection (roll !== 1)
       Math.random = () => 0.1; // Roll 3 (not 1)
 
-      const result = await SubmarineService.processASWPhase(
+      const result = await ASWService.processASWPhase(
         submarineCampaign,
         createMockTurnState(),
         createMockOperationalAreas(),
@@ -864,7 +880,7 @@ describe('SubmarineService', () => {
         return 0.5;
       };
 
-      const result = await SubmarineService.processASWPhase(
+      const result = await ASWService.processASWPhase(
         submarineCampaign,
         createMockTurnState(),
         createMockOperationalAreas(),
@@ -939,7 +955,7 @@ describe('SubmarineService', () => {
         return 0.5;
       };
 
-      const result = await SubmarineService.processASWPhase(
+      const result = await ASWService.processASWPhase(
         submarineCampaign,
         createMockTurnState(),
         createMockOperationalAreas(),
@@ -1043,7 +1059,7 @@ describe('SubmarineService', () => {
         return 0.5;
       };
 
-      const result = await SubmarineService.processASWPhase(
+      const result = await ASWService.processASWPhase(
         submarineCampaign,
         createMockTurnState(),
         createMockOperationalAreas(),
@@ -1099,7 +1115,7 @@ describe('SubmarineService', () => {
         usedSubmarineNames: { us: [], china: [] },
       };
 
-      const result = await SubmarineService.processASWPhase(
+      const result = await ASWService.processASWPhase(
         submarineCampaign,
         createMockTurnState(),
         createMockOperationalAreas(),

@@ -73,10 +73,9 @@ export class AssetDeployService {
     }
 
     const deployedAssets: Array<{ assetId: string; assetName: string; areaId: string; areaName: string }> = [];
-    let updatedOperationalAreas = operationalAreas.map(area => ({
-      ...area,
-      assignedCards: [...(area.assignedCards || [])]
-    }));
+    // Assets are invisible infrastructure - do NOT add them to assignedCards
+    const updatedOperationalAreas = [...operationalAreas];
+
     const updatedSubmarines = sourceSubmarines.map(sub => {
       // Check if this submarine has a pending deploy order
       const hasPendingDeploy = pendingDeploys.some(deploy => deploy.id === sub.id);
@@ -86,30 +85,20 @@ export class AssetDeployService {
 
       // Find target operational area
       const targetAreaId = sub.currentOrder!.targetId;
-      const targetAreaIndex = updatedOperationalAreas.findIndex(area => area.id === targetAreaId);
+      const targetArea = operationalAreas.find(area => area.id === targetAreaId);
 
-      if (targetAreaIndex === -1) {
+      if (!targetArea) {
         console.error(`❌ Asset Deploy: Area ${targetAreaId} not found for ${sub.submarineName}`);
         return sub;
       }
 
-      // Create card instance ID: {cardId}_{deploymentId}
-      const cardInstanceId = `${sub.cardId}_${sub.id}`;
-
-      // Add asset to operational area's assignedCards (prevent duplicates)
-      if (!updatedOperationalAreas[targetAreaIndex].assignedCards!.includes(cardInstanceId)) {
-        updatedOperationalAreas[targetAreaIndex].assignedCards!.push(cardInstanceId);
-
-        // Record deployment
-        deployedAssets.push({
-          assetId: sub.id,
-          assetName: sub.submarineName,
-          areaId: targetAreaId,
-          areaName: updatedOperationalAreas[targetAreaIndex].name
-        });
-      } else {
-        console.warn(`⚠️ Asset Deploy: ${cardInstanceId} already deployed to ${targetAreaId} - skipping duplicate`);
-      }
+      // Record deployment for logging (assets remain invisible to players)
+      deployedAssets.push({
+        assetId: sub.id,
+        assetName: sub.submarineName,
+        areaId: targetAreaId,
+        areaName: targetArea.name
+      });
 
       // Mark order as completed
       return {

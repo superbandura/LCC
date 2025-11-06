@@ -958,12 +958,16 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
     // Filter deployed elements by selected faction and submarineType
     const factionSubmarines = selectedFaction
       ? deployedSubmarines[selectedFaction].filter(s =>
-          s.submarineType === 'submarine' || !s.submarineType // Backwards compatibility
+          (s.submarineType === 'submarine' || !s.submarineType) && // Backwards compatibility
+          s.status !== 'destroyed' // Exclude destroyed submarines
         )
       : [];
 
     const factionASW = selectedFaction
-      ? deployedSubmarines[selectedFaction].filter(s => s.submarineType === 'asw')
+      ? deployedSubmarines[selectedFaction].filter(s =>
+          s.submarineType === 'asw' &&
+          s.status !== 'destroyed' // Exclude destroyed ASW units
+        )
       : [];
 
     // Filter ASW ships by selected faction
@@ -972,7 +976,10 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
       : [];
 
     const factionAssets = selectedFaction
-      ? deployedSubmarines[selectedFaction].filter(s => s.submarineType === 'asset')
+      ? deployedSubmarines[selectedFaction].filter(s =>
+          s.submarineType === 'asset' &&
+          s.status !== 'destroyed' // Exclude destroyed assets
+        )
       : [];
 
     return (

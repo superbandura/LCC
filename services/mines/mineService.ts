@@ -81,10 +81,10 @@ export class MineService {
     // Use provided submarines or fall back to campaign submarines
     const sourceSubmarines = submarines || submarineCampaign.deployedSubmarines;
 
-    // Collect all mine cards from operational areas
+    // Collect all mine assets from operational areas (search in deployed submarines)
     const allMines: MineElement[] = [];
     for (const area of operationalAreas) {
-      const minesInArea = this.getMineCardsInArea(area, cards);
+      const minesInArea = this.getMineCardsInArea(area, cards, sourceSubmarines);
       allMines.push(...minesInArea);
     }
 
@@ -114,18 +114,15 @@ export class MineService {
       taskForces,
       units,
       eliminatedSubmarineIds,
-      eliminatedUnitIds
+      eliminatedUnitIds,
+      operationalAreas
     );
 
     // For each mine, each vulnerable unit rolls for detection
     for (const mine of allMines) {
       // Filter units to only those that can be affected by this mine
       const unitsInRange = allVulnerableUnits.filter(unit => {
-        // Submarines in South China Sea can be hit by any mine
-        if (unit.type === 'submarine') {
-          return unit.faction !== mine.faction;
-        }
-        // Ships can only be hit by mines in their area
+        // Both submarines and ships can only be hit by mines in their area
         return unit.faction !== mine.faction && unit.areaId === mine.areaId;
       });
 
@@ -218,24 +215,33 @@ export class MineService {
   }
 
   /**
-   * Get Maritime Mines cards deployed in an operational area
+   * Get Maritime Mines assets deployed in an operational area
+   * Searches in deployed submarines (assets) instead of assignedCards
    */
-  private static getMineCardsInArea(area: OperationalArea, cards: Card[]): MineElement[] {
-    if (!area.assignedCards || area.assignedCards.length === 0) return [];
+  private static getMineCardsInArea(
+    area: OperationalArea,
+    cards: Card[],
+    deployedSubmarines: SubmarineDeployment[]
+  ): MineElement[] {
+    // Filter assets deployed in this area
+    const minesInArea = deployedSubmarines.filter(sub =>
+      sub.submarineType === 'asset' &&
+      sub.currentOrder &&
+      sub.currentOrder.status === 'completed' &&
+      sub.currentOrder.targetId === area.id
+    );
 
-    return area.assignedCards
-      .map(instanceId => {
-        const cardId = instanceId.split('_')[0];
-        const card = cards.find(c => c.id === cardId);
-        return card && card.submarineType === 'asset' && card.name === 'Maritime Mines' ? {
-          id: instanceId,
-          name: card.name,
-          faction: card.faction,
-          areaId: area.id,
-          areaName: area.name
-        } : null;
-      })
-      .filter((element): element is MineElement => element !== null);
+    // Map to MineElement structure
+    return minesInArea.map(sub => {
+      const card = cards.find(c => c.id === sub.cardId);
+      return {
+        id: sub.id,
+        name: sub.submarineName,
+        faction: sub.faction,
+        areaId: area.id,
+        areaName: area.name
+      };
+    });
   }
 
   /**
@@ -248,7 +254,8 @@ export class MineService {
     taskForces: TaskForce[],
     units: Unit[],
     eliminatedSubmarineIds: string[],
-    eliminatedUnitIds: string[]
+    eliminatedUnitIds: string[],
+    operationalAreas: OperationalArea[]
   ): VulnerableUnit[] {
     const vulnerableUnits: VulnerableUnit[] = [];
 
@@ -261,16 +268,19 @@ export class MineService {
              (sub.currentOrder.orderType === 'attack' || sub.currentOrder.orderType === 'patrol')
     );
 
-    // Add submarines as vulnerable units
+    // Add submarines as vulnerable units (using their current target area)
     for (const sub of activeSubmarines) {
+      const targetAreaId = sub.currentOrder?.targetId || 'south-china-sea';
+      const targetArea = operationalAreas.find(area => area.id === targetAreaId);
+
       vulnerableUnits.push({
         id: sub.id,
         name: sub.submarineName,
         faction: sub.faction,
         type: 'submarine',
         unitType: 'Submarine',
-        areaId: 'south-china-sea', // Special area for submarines
-        areaName: 'South China Sea'
+        areaId: targetAreaId,
+        areaName: targetArea?.name || 'South China Sea'
       });
     }
 

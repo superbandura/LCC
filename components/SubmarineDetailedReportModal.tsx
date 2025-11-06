@@ -30,12 +30,17 @@ const SubmarineDetailedReportModal: React.FC<SubmarineDetailedReportModalProps> 
   );
   const patrolEvents = currentTurnEvents.filter(e =>
     e.targetInfo?.targetType === 'area' &&
-    e.submarineType?.toLowerCase() !== 'asw'
+    e.submarineType?.toLowerCase() !== 'asw' &&
+    !e.description?.includes('Enemy patrol')  // Only show attacker's perspective
   );
 
   // Calculate summary statistics for ASW Phase
-  const aswTotalAttempts = aswEvents.length;
-  const aswSuccessfulDetections = aswEvents.filter(e =>
+  // Separate detection attempts from elimination events
+  const aswDetectionAttempts = aswEvents.filter(e =>
+    e.submarineType?.toLowerCase() === 'asw' && e.eventType !== 'destroyed'
+  );
+  const aswTotalAttempts = aswDetectionAttempts.length;
+  const aswSuccessfulDetections = aswDetectionAttempts.filter(e =>
     e.rollDetails?.primaryRoll === 1
   ).length;
   const aswEliminations = aswEvents.filter(e =>
@@ -55,15 +60,17 @@ const SubmarineDetailedReportModal: React.FC<SubmarineDetailedReportModalProps> 
 
   // Calculate summary statistics for Patrol Phase
   const patrolTotal = patrolEvents.length;
-  const patrolSuccessful = patrolEvents.filter(e =>
+  const successfulPatrols = patrolEvents.filter(e =>
     e.rollDetails?.primaryRoll !== undefined &&
     e.rollDetails?.primaryThreshold !== undefined &&
     e.rollDetails.primaryRoll <= e.rollDetails.primaryThreshold
-  ).length;
-  const patrolDamageUS = patrolEvents
+  );
+  const patrolSuccessful = successfulPatrols.length;
+  // Only successful patrols cause damage
+  const patrolDamageUS = successfulPatrols
     .filter(e => e.faction === 'china') // China's patrols damage US CP
     .reduce((sum, e) => sum + (e.targetInfo?.damageDealt || 0), 0);
-  const patrolDamageChina = patrolEvents
+  const patrolDamageChina = successfulPatrols
     .filter(e => e.faction === 'us') // US patrols damage China CP
     .reduce((sum, e) => sum + (e.targetInfo?.damageDealt || 0), 0);
 
@@ -71,10 +78,12 @@ const SubmarineDetailedReportModal: React.FC<SubmarineDetailedReportModalProps> 
     const rolls = event.rollDetails;
     if (!rolls) return null;
 
+    // Determine if operation was successful
+    // ASW detection requires EXACTLY 1 (5% chance), other operations use <= threshold
     const isSuccess = rolls.primaryRoll !== undefined && rolls.primaryThreshold !== undefined &&
       (rolls.primaryThreshold === 1
-        ? rolls.primaryRoll === rolls.primaryThreshold
-        : rolls.primaryRoll <= rolls.primaryThreshold);
+        ? rolls.primaryRoll === rolls.primaryThreshold  // ASW: must roll exactly 1
+        : rolls.primaryRoll <= rolls.primaryThreshold); // Others: roll must be <= threshold
 
     const factionColor = event.faction === 'us' ? 'text-blue-400' : 'text-red-400';
     const resultColor = isSuccess ? 'text-green-400' : 'text-yellow-500';

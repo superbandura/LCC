@@ -12,7 +12,8 @@ import {
   SubmarineDeployment,
   SubmarineEvent,
   TurnState,
-  CommandPoints
+  CommandPoints,
+  AswShipDeployment
 } from '../types';
 import { CloseIcon } from './Icons';
 import InfluenceTrack from './InfluenceTrack';
@@ -137,9 +138,28 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
       setPendingOrders({});
       setSelectedTargets({});
       setOrderErrors({});
+
+      // Hydrate from Firestore: populate local state from confirmed orders
+      const hydrated: Record<string, PendingOrder> = {};
+      const targets: Record<string, string> = {};
+
+      submarineCampaign?.deployedSubmarines?.forEach(sub => {
+        if (sub.currentOrder) {
+          hydrated[sub.id] = {
+            type: sub.currentOrder.orderType as OrderType,
+            targetId: sub.currentOrder.targetId
+          };
+          if (sub.currentOrder.targetId) {
+            targets[sub.id] = sub.currentOrder.targetId;
+          }
+        }
+      });
+
+      setPendingOrders(hydrated);
+      setSelectedTargets(targets);
     }
     prevIsOpenRef.current = isOpen;
-  }, [isOpen]);
+  }, [isOpen, submarineCampaign]);
 
   // Trigger flash animation when CP decreases
   useEffect(() => {
@@ -341,10 +361,27 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
     }
     // ========== FIN VALIDACIÓN RED TÁCTICA ==========
 
-    // Update submarine with pending order (will be moved to currentOrder on execution)
-    const updatedSubs = submarineCampaign.deployedSubmarines.map(s =>
-      s.id === subId ? {...s, pendingOrder: order} : s
-    );
+    // Update submarine with confirmed order (active and ready for execution)
+    const updatedSubs = submarineCampaign.deployedSubmarines.map(s => {
+      if (s.id === subId) {
+        // Remove pendingOrder field by destructuring (Firestore doesn't accept undefined)
+        const { pendingOrder, ...rest } = s;
+        return {
+          ...rest,
+          currentOrder: {
+            orderId: `${subId}-${Date.now()}`,           // Unique order ID
+            submarineId: subId,                          // Submarine executing the order
+            orderType: order.type,                       // Transform 'type' to 'orderType' for Firestore
+            status: 'pending',                           // Order status
+            targetId: order.targetId,                    // Target area or base
+            assignedTurn: turnState.turnNumber,          // Turn when order was assigned
+            // For attacks, set execution turn to current + 2
+            ...(order.type === 'attack' && { executionTurn: turnState.turnNumber + 2 })
+          }
+        };
+      }
+      return s;
+    });
 
     console.log('🔄 [FIRESTORE] Updating campaign');
     console.log('🔄 Updated sub:', updatedSubs.find(s => s.id === subId));
@@ -354,31 +391,39 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
       deployedSubmarines: updatedSubs
     });
 
-    // Clear local pending state
-    setPendingOrders(prev => {
-      const updated = {...prev};
-      delete updated[subId];
-      return updated;
-    });
+    // Update local state to reflect confirmed order (keep dropdowns populated)
+    setPendingOrders(prev => ({
+      ...prev,
+      [subId]: {
+        type: order.type,
+        targetId: order.targetId
+      }
+    }));
 
+    // Clear any errors
     setOrderErrors(prev => {
       const updated = {...prev};
       delete updated[subId];
       return updated;
     });
 
-    console.log('🧹 [CLEANUP] State cleared for:', subId);
+    console.log('✅ [CONFIRMED] Order saved and reflected in dropdowns for:', subId);
   };
 
   const handleCancelOrder = (subId: string) => {
     const sub = getSubmarineById(subId);
     if (!sub) return;
 
-    // If order is confirmed (in pendingOrder), remove it from submarine
-    if (sub.pendingOrder) {
-      const updatedSubs = submarineCampaign.deployedSubmarines.map(s =>
-        s.id === subId ? {...s, pendingOrder: undefined} : s
-      );
+    // If order is confirmed (in currentOrder), remove it from submarine
+    if (sub.currentOrder) {
+      const updatedSubs = submarineCampaign.deployedSubmarines.map(s => {
+        if (s.id === subId) {
+          // Remove currentOrder field by destructuring (Firestore doesn't accept undefined)
+          const { currentOrder, ...rest } = s;
+          return rest;
+        }
+        return s;
+      });
 
       onUpdateSubmarineCampaign({
         ...submarineCampaign,
@@ -576,24 +621,29 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
     const pendingOrder = pendingOrders[sub.id];
     const factionColor = sub.faction === 'us' ? 'text-blue-400' : 'text-red-400';
 
-    console.log('🎨 [RENDER]', sub.id, 'localPending:', pendingOrder, 'subPending:', sub.pendingOrder);
+    console.log('🎨 [RENDER]', sub.id, 'localPending:', pendingOrder, 'currentOrder:', sub.currentOrder);
 
     // Get enemy bases (opposite faction)
     const enemyFaction = sub.faction === 'us' ? 'China' : 'EE. UU.';
     const enemyBases = locations.filter(loc => loc.country === enemyFaction);
 
-    // Check if there are unconfirmed changes (order with target but not saved)
-    const hasChanges = !!pendingOrder && !!pendingOrder.targetId && !sub.pendingOrder;
+    // Check if there are unconfirmed changes (order with target but not saved OR different from confirmed)
+    const hasChanges = !!pendingOrder && !!pendingOrder.targetId && (
+      !sub.currentOrder ||
+      sub.currentOrder.orderType !== pendingOrder.type ||
+      sub.currentOrder.targetId !== pendingOrder.targetId
+    );
 
     console.log('🔍 [HASCHANGES]', sub.id, '=', hasChanges,
-      '(local:', !!pendingOrder, 'target:', !!pendingOrder?.targetId, '!sub:', !sub.pendingOrder, ')');
+      '(local:', !!pendingOrder, 'target:', !!pendingOrder?.targetId, 'different:',
+      sub.currentOrder ? (sub.currentOrder.orderType !== pendingOrder?.type || sub.currentOrder.targetId !== pendingOrder?.targetId) : true, ')');
 
     // Check if order is incomplete (order without target)
     const needsConfirmation = !!pendingOrder && !pendingOrder.targetId;
 
     return (
       <div key={sub.id} className={`mb-2 p-2 rounded transition-colors ${
-        hasChanges ? 'bg-red-900/20 border border-red-600' : 'bg-gray-900 border border-gray-700 hover:border-gray-600'
+        hasChanges ? 'bg-red-900/20 border border-gray-700' : 'bg-gray-900 border border-gray-700 hover:border-gray-600'
       }`}>
         {console.log(`🎨 [PANEL] ${sub.id}: ${hasChanges ? 'RED' : 'GRAY'}`)}
         <div className="flex items-center gap-2">
@@ -691,12 +741,16 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
     const pendingOrder = pendingOrders[asw.id];
     const factionColor = asw.faction === 'us' ? 'text-blue-400' : 'text-red-400';
 
-    // Check if there are unconfirmed changes (order with target but not saved)
-    const hasChanges = !!pendingOrder && !!pendingOrder.targetId && !asw.pendingOrder;
+    // Check if there are unconfirmed changes (order with target but not saved OR different from confirmed)
+    const hasChanges = !!pendingOrder && !!pendingOrder.targetId && (
+      !asw.currentOrder ||
+      asw.currentOrder.orderType !== pendingOrder.type ||
+      asw.currentOrder.targetId !== pendingOrder.targetId
+    );
 
     return (
       <div key={asw.id} className={`mb-2 p-2 rounded transition-colors ${
-        hasChanges ? 'bg-red-900/20 border border-red-600' : 'bg-gray-900 border border-gray-700 hover:border-gray-600'
+        hasChanges ? 'bg-red-900/20 border border-gray-700' : 'bg-gray-900 border border-gray-700 hover:border-gray-600'
       }`}>
         <div className="flex items-center gap-2">
           {/* ASW Name */}
@@ -767,17 +821,47 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
     );
   };
 
+  // Helper: Render ASW Ship row (surface ships with ASW capability)
+  const renderASWShipRow = (ship: AswShipDeployment) => {
+    const factionColor = ship.faction === 'us' ? 'text-blue-400' : 'text-red-400';
+
+    return (
+      <div key={ship.unitId} className="mb-2 p-2 rounded bg-gray-900 border border-gray-700">
+        <div className="flex items-center gap-2">
+          {/* Ship Name */}
+          <div className={`font-mono text-xs font-bold ${factionColor} flex-shrink-0 w-48 truncate`}>
+            {ship.unitName}
+          </div>
+
+          {/* Task Force */}
+          <div className="font-mono text-xs text-gray-400 flex-shrink-0 w-32 truncate">
+            TF: {ship.taskForceName}
+          </div>
+
+          {/* Operational Area */}
+          <div className="font-mono text-xs text-gray-500 flex-1 truncate">
+            AREA: {ship.operationalAreaName}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Helper: Render Asset row
   const renderAssetRow = (asset: SubmarineDeployment) => {
     const pendingOrder = pendingOrders[asset.id];
     const factionColor = asset.faction === 'us' ? 'text-blue-400' : 'text-red-400';
 
-    // Check if there are unconfirmed changes (order with target but not saved)
-    const hasChanges = !!pendingOrder && !!pendingOrder.targetId && !asset.pendingOrder;
+    // Check if there are unconfirmed changes (order with target but not saved OR different from confirmed)
+    const hasChanges = !!pendingOrder && !!pendingOrder.targetId && (
+      !asset.currentOrder ||
+      asset.currentOrder.orderType !== pendingOrder.type ||
+      asset.currentOrder.targetId !== pendingOrder.targetId
+    );
 
     return (
       <div key={asset.id} className={`mb-2 p-2 rounded transition-colors ${
-        hasChanges ? 'bg-red-900/20 border border-red-600' : 'bg-gray-900 border border-gray-700 hover:border-gray-600'
+        hasChanges ? 'bg-red-900/20 border border-gray-700' : 'bg-gray-900 border border-gray-700 hover:border-gray-600'
       }`}>
         <div className="flex items-center gap-2">
           {/* Asset Name */}
@@ -864,6 +948,11 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
       ? deployedSubmarines[selectedFaction].filter(s => s.submarineType === 'asw')
       : [];
 
+    // Filter ASW ships by selected faction
+    const factionASWShips = selectedFaction && submarineCampaign?.aswShips
+      ? submarineCampaign.aswShips.filter(ship => ship.faction === selectedFaction)
+      : [];
+
     const factionAssets = selectedFaction
       ? deployedSubmarines[selectedFaction].filter(s => s.submarineType === 'asset')
       : [];
@@ -929,10 +1018,14 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
                   <h4 className="font-mono text-xs font-bold text-green-400 uppercase tracking-wider mb-2">
                     ASW (ANTI-SUBMARINE WARFARE)
                   </h4>
-                  {factionASW.length === 0 ? (
+                  {factionASWShips.length === 0 && factionASW.length === 0 ? (
                     <div className="text-gray-500 font-mono text-xs py-2 pl-2">-- NO ASW ELEMENTS DEPLOYED --</div>
                   ) : (
                     <div className="space-y-0">
+                      {/* ASW Ships (displayed first) */}
+                      {factionASWShips.map(ship => renderASWShipRow(ship))}
+
+                      {/* ASW Cards (displayed after ships) */}
                       {factionASW.map(asw => renderASWRow(asw))}
                     </div>
                   )}
@@ -1039,7 +1132,7 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999] p-4">
       <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-full max-w-[95vw] max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700">

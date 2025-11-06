@@ -1,4 +1,4 @@
-import { doc, getDoc, onSnapshot, setDoc, updateDoc, Unsubscribe } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, setDoc, updateDoc, deleteField, Unsubscribe } from "firebase/firestore";
 import { db } from "./firebase";
 import { OperationalArea, OperationalData, Location, TaskForce, Unit, Card, CommandPoints, PurchaseHistory, CardPurchaseHistory, PurchasedCards, DestructionRecord, DrawingAnnotation, TurnState, PendingDeployments, InfluenceMarker, SubmarineCampaignState, PlayedCardNotification, PlayerAssignment, RegisteredPlayer } from "./types";
 
@@ -64,6 +64,18 @@ export const subscribeToOperationalAreas = (
         // Convert from Firestore format to app format
         const fsAreas = data.operationalAreas as FirestoreOperationalArea[];
         const areas = fsAreas.map(areaFromFirestore);
+
+        // 🔍 LOG G: Debug Firestore subscription callback
+        console.log('🔍 [FIRESTORE-SUBSCRIPTION] Received operational areas update from Firestore');
+        console.log('  ⏰ Timestamp:', new Date().toISOString());
+        console.log('  📦 Areas received:', areas.length);
+        areas.forEach(area => {
+          if (area.assignedCards && area.assignedCards.length > 0) {
+            console.log(`  📍 ${area.name}: ${area.assignedCards.length} cards`, area.assignedCards);
+          }
+        });
+        console.log('  🎯 Calling callback to update React state...');
+
         callback(areas);
       }
     }
@@ -102,7 +114,21 @@ export const updateOperationalAreas = async (
   try {
     // Convert to Firestore-compatible format (flatten nested arrays) and remove undefined fields
     const fsAreas = areas.map(areaToFirestore).map(removeUndefinedFields);
+
+    // 🔍 LOG E: Debug Firestore write operation
+    console.log('🔍 [FIRESTORE-WRITE] Writing operational areas to Firestore');
+    fsAreas.forEach(area => {
+      if (area.assignedCards && area.assignedCards.length > 0) {
+        console.log(`  📍 ${area.name}: ${area.assignedCards.length} cards`, area.assignedCards);
+      }
+    });
+    console.log('  ⏰ Write timestamp:', new Date().toISOString());
+
     await setDoc(GAME_DOC_REF, { operationalAreas: fsAreas }, { merge: true });
+
+    // 🔍 LOG F: Debug Firestore write completed
+    console.log('🔍 [FIRESTORE-WRITE] ✅ Write successful');
+    console.log('  ⏰ Completed at:', new Date().toISOString());
   } catch (error) {
     console.error("Error updating operational areas:", error);
     throw error;
@@ -424,6 +450,47 @@ export const updateCommandPoints = async (
     console.error("Error updating command points:", error);
     throw error;
   }
+};
+
+/**
+ * Update previous command points (for end-of-week comparison)
+ */
+export const updatePreviousCommandPoints = async (
+  points: CommandPoints | null
+): Promise<void> => {
+  try {
+    if (points === null) {
+      // Reset: eliminar el campo completamente de Firestore
+      await updateDoc(GAME_DOC_REF, { previousCommandPoints: deleteField() });
+    } else {
+      // Guardar el valor
+      await setDoc(GAME_DOC_REF, { previousCommandPoints: points }, { merge: true });
+    }
+  } catch (error) {
+    console.error("Error updating previous command points:", error);
+    throw error;
+  }
+};
+
+/**
+ * Subscribe to previous command points changes in real-time
+ */
+export const subscribeToPreviousCommandPoints = (
+  callback: (points: CommandPoints | undefined) => void
+): Unsubscribe => {
+  return onSnapshot(GAME_DOC_REF, (docSnapshot) => {
+    if (docSnapshot.exists()) {
+      const data = docSnapshot.data();
+      const points = data.previousCommandPoints;
+      // Si es null o undefined, siempre retornar undefined
+      // Nullish coalescing (??) convierte null a undefined
+      callback(points ?? undefined);
+    } else {
+      callback(undefined);
+    }
+  }, (error) => {
+    console.error("Error listening to previous command points:", error);
+  });
 };
 
 /**

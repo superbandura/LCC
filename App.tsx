@@ -48,6 +48,7 @@ import {
   updateUnits,
   updateCards,
   updateCommandPoints,
+  updatePreviousCommandPoints,
   updatePurchaseHistory,
   updateCardPurchaseHistory,
   updatePurchasedCards,
@@ -142,6 +143,7 @@ function App() {
     units,
     cards,
     commandPoints,
+    previousCommandPoints,
     purchaseHistory,
     cardPurchaseHistory,
     purchasedCards,
@@ -156,7 +158,6 @@ function App() {
   } = gameState;
 
   // Local state (not synced with Firestore)
-  const [previousCommandPoints, setPreviousCommandPoints] = useState<CommandPoints | undefined>(undefined);
 
   const [previewArea, setPreviewArea] = useState<OperationalArea | null>(null);
   const [currentTileLayer, setCurrentTileLayer] = useState<MapLayer>(mapLayers[0]);
@@ -615,7 +616,7 @@ function App() {
   }, [pendingDeployments, isDeploymentActive, cards, taskForces, units]);
 
   // Process complete submarine campaign turn - NOW USING SubmarineCampaignOrchestrator
-  const processSubmarineCampaignTurn = async (currentTurnState: TurnState) => {
+  const processSubmarineCampaignTurn = async (currentTurnState: TurnState, updatedAreas?: OperationalArea[]) => {
     // Use orchestrator to execute all five phases in correct sequence:
     // -1. Asset Deploy Phase - deploy assets (mines, sensors) to areas
     // 0. Mine Phase - maritime mines eliminate submarines/ships
@@ -626,7 +627,7 @@ function App() {
       submarineCampaign,
       currentTurnState,
       commandPoints,
-      operationalAreas,
+      updatedAreas || operationalAreas, // Use updated areas if provided (includes newly arrived cards)
       taskForces,
       units,
       cards,
@@ -736,7 +737,33 @@ function App() {
       taskForces: remainingTaskForces,
       units: remainingUnits,
     };
-    updatePendingDeployments(updatedPending);
+
+    // 🔍 LOG A: Debug card deployment cleanup
+    console.log('🔍 [DEPLOY-1] About to remove arrived cards from pending deployments');
+    console.log('  📦 Arrived cards:', arrivedCardsList.map(c => ({ id: c.id, name: c.name })));
+    if (arrivedCardsList.length > 0) {
+      const cardDeploymentsPreview = pendingDeployments.cards.filter(p =>
+        arrivedCardsList.some(c => c.id === p.cardId)
+      );
+      console.log('  📋 Card deployments:', cardDeploymentsPreview.map(d => ({
+        cardId: d.cardId,
+        cardInstanceId: d.cardInstanceId,
+        areaId: d.areaId
+      })));
+    }
+    console.log('  🗑️ Pending before cleanup:', {
+      cardsCount: pendingDeployments.cards.length,
+      cardIds: pendingDeployments.cards.map(c => c.cardInstanceId)
+    });
+    console.log('  ✅ Remaining after cleanup:', {
+      cardsCount: remainingCards.length,
+      cardIds: remainingCards.map(c => c.cardInstanceId)
+    });
+
+    await updatePendingDeployments(updatedPending);
+
+    // Track updated operational areas with newly arrived cards
+    let areasWithArrivedCards = operationalAreas;
 
     // Activate arrived cards (add to area.assignedCards)
     if (arrivedCardsList.length > 0) {
@@ -757,13 +784,27 @@ function App() {
           }
           return card;
         });
-        updateCards(updatedCards);
+        await updateCards(updatedCards);
       }
+
+      // 🔍 LOG B: Debug card assignment to areas
+      console.log('🔍 [DEPLOY-2] About to add arrived cards to area.assignedCards');
+      console.log('  📦 Card deployments to process:', cardDeployments.map(d => ({
+        cardInstanceId: d.cardInstanceId,
+        areaId: d.areaId,
+        cardName: cards.find(c => c.id === d.cardId)?.name
+      })));
+      console.log('  🗺️ Current operational areas assignedCards:');
+      operationalAreas.forEach(area => {
+        if (area.assignedCards && area.assignedCards.length > 0) {
+          console.log(`    - ${area.name}: ${area.assignedCards.length} cards`, area.assignedCards);
+        }
+      });
 
       const updatedAreas = operationalAreas.map(area => {
         const cardsForThisArea = cardDeployments
           .filter(p => p.areaId === area.id)
-          .map(p => p.cardId);
+          .map(p => p.cardInstanceId);
 
         if (cardsForThisArea.length > 0) {
           const currentCards = area.assignedCards || [];
@@ -774,7 +815,31 @@ function App() {
         }
         return area;
       });
-      updateOperationalAreas(updatedAreas);
+
+      // 🔍 LOG C: Debug updatedAreas built with new cards
+      console.log('🔍 [DEPLOY-3] Built updatedAreas with new assignedCards');
+      updatedAreas.forEach(area => {
+        const original = operationalAreas.find(a => a.id === area.id);
+        const originalCount = original?.assignedCards?.length || 0;
+        const newCount = area.assignedCards?.length || 0;
+        if (originalCount !== newCount) {
+          console.log(`  📍 ${area.name}:`);
+          console.log(`    - Before: ${originalCount} cards`, original?.assignedCards || []);
+          console.log(`    - After: ${newCount} cards`, area.assignedCards || []);
+          console.log(`    - Added: ${newCount - originalCount} cards`);
+        }
+      });
+      console.log('  🚀 Calling updateOperationalAreas with', updatedAreas.length, 'areas');
+
+      await updateOperationalAreas(updatedAreas);
+
+      // Save for submarine orchestrator (prevents overwrite with stale data)
+      areasWithArrivedCards = updatedAreas;
+
+      // 🔍 LOG D: Debug Firestore write completed
+      console.log('🔍 [DEPLOY-4] updateOperationalAreas completed');
+      console.log('  ⏰ Timestamp:', new Date().toISOString());
+      console.log('  🎯 Next: Wait for Firestore subscription to fire...');
     }
 
     // Activate arrived Task Forces (remove isPendingDeployment flag)
@@ -785,7 +850,7 @@ function App() {
         }
         return tf;
       });
-      updateTaskForces(updatedTFs);
+      await updateTaskForces(updatedTFs);
     }
 
     // Activate arrived units (remove isPendingDeployment flag)
@@ -796,7 +861,7 @@ function App() {
         }
         return u;
       });
-      updateUnits(updatedUnits);
+      await updateUnits(updatedUnits);
     }
 
     // CRITICAL: Process submarine operations in correct order for end-of-week
@@ -815,13 +880,14 @@ function App() {
 
     // STEP 1: Process complete submarine campaign turn (ASW → Attack → Patrol)
     // The orchestrator handles phase chaining automatically
-    const submarineResult = await processSubmarineCampaignTurn(newTurnState);
+    // Pass areasWithArrivedCards to prevent overwriting newly arrived cards with stale data
+    const submarineResult = await processSubmarineCampaignTurn(newTurnState, areasWithArrivedCards);
     console.log(`  ✅ Submarine campaign events: ${submarineResult.events.length}`);
 
     // STEP 2: If week completed, recalculate command points (considers damaged bases from attacks)
     if (completedWeek) {
       // Save previous command points before recalculating
-      setPreviousCommandPoints({ ...commandPoints });
+      await updatePreviousCommandPoints({ ...commandPoints });
 
       // Recalculate with influence bonus (uses current base states, including newly damaged)
       // IMPORTANT: Influence bonus is ONLY applied here (end of week), not during planning phase or mid-week
@@ -859,6 +925,13 @@ function App() {
     // Sync submarineCampaign.currentTurn with turnState.turnNumber (atomic partial update)
     await updateSubmarineCampaignTurn(newTurnState.turnNumber);
     console.log('🔄 Submarine campaign turn synchronized:', newTurnState.turnNumber);
+
+    // Auto-reset previousCommandPoints after Monday (day 1) ends
+    // This ensures the detailed breakdown only shows on Monday after end of week
+    if (!completedWeek && newTurnState.dayOfWeek === 2 && previousCommandPoints !== undefined) {
+      console.log('🧹 Auto-resetting previousCommandPoints after Monday');
+      await updatePreviousCommandPoints(null);
+    }
 
     if (!completedWeek) {
       console.log('Day advanced:', newTurnState.dayOfWeek, '/', 7);

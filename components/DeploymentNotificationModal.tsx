@@ -79,10 +79,41 @@ const DeploymentNotificationModal: React.FC<DeploymentNotificationModalProps> = 
   const currentCommandPoints = faction === 'us' ? commandPoints.us : commandPoints.china;
   const previousPoints = previousCommandPoints
     ? (faction === 'us' ? previousCommandPoints.us : previousCommandPoints.china)
-    : currentCommandPoints;
-  const commandPointsDelta = currentCommandPoints - previousPoints;
+    : undefined;
+  const commandPointsDelta = previousPoints !== undefined ? currentCommandPoints - previousPoints : 0;
   const influenceValue = influenceMarker.value;
-  const hasCommandPointsData = previousCommandPoints !== undefined;
+
+  // Show detailed breakdown ONLY at end of week (when previousCommandPoints is defined)
+  const isEndOfWeek = previousCommandPoints !== undefined;
+
+  // Calculate base CP (before influence) by reverse-engineering from final CP
+  // Only calculate this for end-of-week display
+  const influenceMultiplier = Math.abs(influenceValue) * 0.05;
+  let baseCP = currentCommandPoints;
+
+  if (influenceValue !== 0 && isEndOfWeek) {
+    if (influenceValue > 0) {
+      // US advantage: US gets bonus, China gets penalty
+      if (faction === 'us') {
+        baseCP = Math.floor(currentCommandPoints / (1 + influenceMultiplier));
+      } else {
+        baseCP = Math.floor(currentCommandPoints / (1 - influenceMultiplier));
+      }
+    } else {
+      // China advantage: China gets bonus, US gets penalty
+      if (faction === 'china') {
+        baseCP = Math.floor(currentCommandPoints / (1 + influenceMultiplier));
+      } else {
+        baseCP = Math.floor(currentCommandPoints / (1 - influenceMultiplier));
+      }
+    }
+  }
+
+  // Calculate influence percentage for display
+  const influencePercentage = Math.abs(influenceValue) * 5; // 5% per influence point
+  const isInfluenceBeneficial =
+    (influenceValue > 0 && faction === 'us') || (influenceValue < 0 && faction === 'china');
+  const influenceSign = isInfluenceBeneficial ? '+' : '-';
 
   const hasArrivals = arrivedCards.length > 0 || arrivedTaskForces.length > 0 || filteredArrivedUnits.length > 0;
 
@@ -127,41 +158,66 @@ const DeploymentNotificationModal: React.FC<DeploymentNotificationModalProps> = 
           {/* 1. Command Points Summary - Always shown */}
           <div className="bg-black/40 border border-gray-800 p-3">
             <h3 className="text-green-400 font-bold mb-2 uppercase tracking-wide border-b border-green-900 pb-1.5 text-sm">
-              COMMAND POINTS
+              YOUR COMMAND POINTS ({factionName})
             </h3>
-            <div className="flex items-center gap-4 text-xs pt-1">
-              <div className="flex items-center gap-2">
+
+            {/* End of week: Show full breakdown. Mid-week: Show only current CP */}
+            {isEndOfWeek ? (
+              <div className="space-y-2 pt-1">
+                {/* Base CP */}
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-gray-500 uppercase w-24">Base CP:</span>
+                  <span className="text-white font-mono font-bold">{baseCP}</span>
+                  <span className="text-gray-600 text-xs">(from controlled bases)</span>
+                </div>
+
+                {/* Influence Modifier */}
+                {influenceValue !== 0 && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-gray-500 uppercase w-24">Influence:</span>
+                    <span className={`font-mono font-bold ${isInfluenceBeneficial ? 'text-green-400' : 'text-red-400'}`}>
+                      {influenceSign}{influencePercentage}%
+                    </span>
+                    <span className="text-gray-600 text-xs">
+                      ({Math.abs(influenceValue)} influence × 5%)
+                    </span>
+                  </div>
+                )}
+
+                {/* Divider */}
+                <div className="border-t border-gray-700 my-1"></div>
+
+                {/* Final CP */}
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-gray-500 uppercase w-24">Final CP:</span>
+                  <span className="text-white font-mono font-bold text-lg">{currentCommandPoints}</span>
+                  {influenceValue !== 0 && (
+                    <span className="text-gray-600 text-xs">
+                      (after influence)
+                    </span>
+                  )}
+                </div>
+
+                {/* Change from last week */}
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-gray-500 uppercase w-24">Weekly Change:</span>
+                  <span className={`font-mono font-bold ${
+                    commandPointsDelta > 0 ? 'text-green-400' : commandPointsDelta < 0 ? 'text-red-400' : 'text-gray-400'
+                  }`}>
+                    {commandPointsDelta > 0 ? '+' : ''}{commandPointsDelta} CP
+                  </span>
+                  <span className="text-gray-600 text-xs">
+                    (vs. last week)
+                  </span>
+                </div>
+              </div>
+            ) : (
+              /* Mid-week: Only show current CP, no breakdown */
+              <div className="flex items-center gap-2 text-xs pt-1">
                 <span className="text-gray-500 uppercase">Current:</span>
                 <span className="text-white font-bold text-lg">{currentCommandPoints}</span>
               </div>
-              {hasCommandPointsData && (
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-600">|</span>
-                  <span className="text-gray-500 uppercase">Change:</span>
-                  <span className={`font-bold ${
-                    commandPointsDelta > 0 ? 'text-green-400' : commandPointsDelta < 0 ? 'text-red-400' : 'text-gray-400'
-                  }`}>
-                    {commandPointsDelta > 0 ? '+' : ''}{commandPointsDelta}
-                  </span>
-                </div>
-              )}
-              {hasCommandPointsData && influenceValue !== 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-600">|</span>
-                  <span className="text-gray-500 uppercase">Influence:</span>
-                  <span className={`font-bold ${
-                    (influenceValue > 0 && faction === 'us') || (influenceValue < 0 && faction === 'china')
-                      ? 'text-green-400'
-                      : 'text-red-400'
-                  }`}>
-                    {(influenceValue > 0 && faction === 'us') || (influenceValue < 0 && faction === 'china')
-                      ? `+${Math.abs(influenceValue * 10)}%`
-                      : `-${Math.abs(influenceValue * 10)}%`
-                    }
-                  </span>
-                </div>
-              )}
-            </div>
+            )}
           </div>
 
           {/* 2. Deployments & Reinforcements */}

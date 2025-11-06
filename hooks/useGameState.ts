@@ -40,6 +40,7 @@ import {
   subscribeToUnits,
   subscribeToCards,
   subscribeToCommandPoints,
+  subscribeToPreviousCommandPoints,
   subscribeToPurchaseHistory,
   subscribeToCardPurchaseHistory,
   subscribeToPurchasedCards,
@@ -64,6 +65,7 @@ export interface GameState {
   units: Unit[];
   cards: Card[];
   commandPoints: CommandPoints;
+  previousCommandPoints: CommandPoints | undefined;
   purchaseHistory: PurchaseHistory;
   cardPurchaseHistory: CardPurchaseHistory;
   purchasedCards: PurchasedCards;
@@ -101,6 +103,7 @@ export function useGameState(
   const [units, setUnits] = useState<Unit[]>(initialUnits);
   const [cards, setCards] = useState<Card[]>(initialCards);
   const [commandPoints, setCommandPoints] = useState<CommandPoints>(initialCommandPoints);
+  const [previousCommandPoints, setPreviousCommandPoints] = useState<CommandPoints | undefined>(undefined);
   const [purchaseHistory, setPurchaseHistory] = useState<PurchaseHistory>(initialPurchaseHistory);
   const [cardPurchaseHistory, setCardPurchaseHistory] = useState<CardPurchaseHistory>({ us: {}, china: {} });
   const [purchasedCards, setPurchasedCards] = useState<PurchasedCards>({ us: [], china: [] });
@@ -143,7 +146,19 @@ export function useGameState(
 
     // Subscribe to operational areas changes
     const unsubscribeAreas = subscribeToOperationalAreas((areas) => {
+      // 🔍 LOG H: Debug React state update from Firestore subscription
+      console.log('🔍 [HOOK-STATE] useGameState callback triggered');
+      console.log('  ⏰ Timestamp:', new Date().toISOString());
+      console.log('  📦 Areas to set in React state:', areas.length);
+      areas.forEach(area => {
+        if (area.assignedCards && area.assignedCards.length > 0) {
+          console.log(`  📍 ${area.name}: ${area.assignedCards.length} cards`, area.assignedCards);
+        }
+      });
+
       setOperationalAreas(areas);
+
+      console.log('  ✅ React state updated');
     });
 
     // Subscribe to operational data changes
@@ -174,6 +189,11 @@ export function useGameState(
     // Subscribe to command points changes
     const unsubscribeCommandPoints = subscribeToCommandPoints((points) => {
       setCommandPoints(points);
+    });
+
+    // Subscribe to previous command points changes
+    const unsubscribePreviousCommandPoints = subscribeToPreviousCommandPoints((points) => {
+      setPreviousCommandPoints(points);
     });
 
     // Subscribe to purchase history changes
@@ -246,6 +266,7 @@ export function useGameState(
       unsubscribeUnits();
       unsubscribeCards();
       unsubscribeCommandPoints();
+      unsubscribePreviousCommandPoints();
       unsubscribePurchaseHistory();
       unsubscribeCardPurchaseHistory();
       unsubscribePurchasedCards();
@@ -269,6 +290,7 @@ export function useGameState(
     units,
     cards,
     commandPoints,
+    previousCommandPoints,
     purchaseHistory,
     cardPurchaseHistory,
     purchasedCards,

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Unit,
   TaskForce,
@@ -36,6 +36,7 @@ interface CombatStatisticsModalProps {
   selectedFaction: 'us' | 'china' | null;
   pendingDeployments: PendingDeployments;
   commandPoints: CommandPoints;
+  onCommandPointsUpdate: (points: CommandPoints) => void;
 }
 
 type TabType = 'combat' | 'influence' | 'submarine';
@@ -56,7 +57,8 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
   operationalData,
   selectedFaction,
   pendingDeployments,
-  commandPoints
+  commandPoints,
+  onCommandPointsUpdate
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('combat');
   const [factionFilter, setFactionFilter] = useState<'all' | 'us' | 'china'>('all');
@@ -79,8 +81,9 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
   const [prevPoints, setPrevPoints] = useState<number>(0);
 
   // Command Point costs for submarine orders
-  const PATROL_COST = 3;
-  const ATTACK_COST = 5;
+  const SUBMARINE_COST = 2;  // Cost for submarines (patrol and attack)
+  const ASW_COST = 2;         // Cost for ASW patrol orders
+  const ASSET_COST = 1;       // Cost for asset deploy orders
 
   // Get turn state from submarine campaign or create default
   const turnState: TurnState = useMemo(() => {
@@ -125,13 +128,17 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
     };
   }, [submarineCampaign]);
 
-  // Reset orders when modal opens
+  // Reset orders when modal opens (track transition to avoid race condition)
+  const prevIsOpenRef = useRef(isOpen);
+
   useEffect(() => {
-    if (isOpen) {
+    // Only clear state when modal transitions from closed → open
+    if (isOpen && !prevIsOpenRef.current) {
       setPendingOrders({});
       setSelectedTargets({});
       setOrderErrors({});
     }
+    prevIsOpenRef.current = isOpen;
   }, [isOpen]);
 
   // Trigger flash animation when CP decreases
@@ -147,6 +154,16 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
 
     setPrevPoints(currentPoints);
   }, [commandPoints, selectedFaction, prevPoints]);
+
+  // Track submarine campaign props updates
+  useEffect(() => {
+    console.log('🔄 [PROPS] Campaign updated, subs with pending orders:',
+      submarineCampaign?.deployedSubmarines?.filter(s => s.pendingOrder).map(s => ({
+        id: s.id,
+        name: s.submarineName,
+        pendingOrder: s.pendingOrder
+      })));
+  }, [submarineCampaign]);
 
   if (!isOpen) return null;
 
@@ -165,20 +182,32 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
     return submarineCampaign?.deployedSubmarines?.find(s => s.id === subId);
   };
 
-  // Helper: Convert operationalData array to Record for SubmarineService
+  // Helper: Convert operationalData to Record for SubmarineService
   const getOperationalDataRecord = (): Record<string, OperationalData> => {
-    const record: Record<string, OperationalData> = {};
-    operationalAreas.forEach(area => {
-      const areaData = operationalData.find(od => {
-        // operationalData might have an id property or we need to match by area somehow
-        // Assuming operationalData items have an id that matches area.id
-        return (od as any).id === area.id;
+    // Check if operationalData is already a Record (object)
+    if (operationalData && typeof operationalData === 'object' && !Array.isArray(operationalData)) {
+      console.log('📊 [OPERATIONAL DATA] Already a Record, using as-is');
+      return operationalData as Record<string, OperationalData>;
+    }
+
+    // If it's an array, convert to Record
+    if (Array.isArray(operationalData)) {
+      console.log('📊 [OPERATIONAL DATA] Is array with', operationalData.length, 'items, converting to Record');
+      const record: Record<string, OperationalData> = {};
+      operationalAreas.forEach(area => {
+        const areaData = operationalData.find(od => {
+          return (od as any).id === area.id;
+        });
+        if (areaData) {
+          record[area.id] = areaData;
+        }
       });
-      if (areaData) {
-        record[area.id] = areaData;
-      }
-    });
-    return record;
+      return record;
+    }
+
+    // Fallback: return empty record
+    console.warn('⚠️ [OPERATIONAL DATA] Unexpected type:', typeof operationalData);
+    return {};
   };
 
   // Submarine Order Handlers
@@ -207,8 +236,8 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
     setPendingOrders(prev => ({
       ...prev,
       [subId]: {
-        type: orderType as 'patrol' | 'attack',
-        targetId: orderType === 'attack' ? selectedTargets[subId] : undefined
+        type: orderType as 'patrol' | 'attack' | 'deploy',
+        targetId: selectedTargets[subId]
       }
     }));
   };
@@ -217,7 +246,7 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
     setSelectedTargets(prev => ({...prev, [subId]: targetId}));
 
     // Update pending order with target
-    if (pendingOrders[subId]?.type === 'attack') {
+    if (pendingOrders[subId]) {
       setPendingOrders(prev => ({
         ...prev,
         [subId]: {...prev[subId], targetId}
@@ -236,6 +265,10 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
     const order = pendingOrders[subId];
     const sub = getSubmarineById(subId);
 
+    console.log('🟢 [CONFIRM] Started:', subId);
+    console.log('🟢 Local order:', order);
+    console.log('🟢 Sub.pendingOrder:', sub?.pendingOrder);
+
     if (!order || !sub) return;
 
     // Validation
@@ -244,11 +277,36 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
       return;
     }
 
-    // Check if already has current order
-    if (sub.currentOrder) {
-      setOrderErrors(prev => ({...prev, [subId]: 'Submarine already has an active order'}));
+    if (!order.targetId) {
+      setOrderErrors(prev => ({...prev, [subId]: 'Target required'}));
       return;
     }
+
+    // Check if already has current order
+    if (sub.currentOrder) {
+      setOrderErrors(prev => ({...prev, [subId]: 'Already has an active order'}));
+      return;
+    }
+
+    // Determine command point cost based on submarine type
+    const cost = sub.submarineType === 'asset' ? ASSET_COST :
+                 sub.submarineType === 'asw' ? ASW_COST :
+                 SUBMARINE_COST;
+
+    // Check if faction has enough command points
+    const currentPoints = sub.faction === 'us' ? commandPoints.us : commandPoints.china;
+    if (currentPoints < cost) {
+      setOrderErrors(prev => ({...prev, [subId]: `Insufficient CP (need ${cost}, have ${currentPoints})`}));
+      return;
+    }
+
+    // Deduct command points
+    const newCommandPoints = {
+      ...commandPoints,
+      [sub.faction]: currentPoints - cost
+    };
+    onCommandPointsUpdate(newCommandPoints);
+    console.log('💰 [CP] Deducted:', cost, 'New points:', newCommandPoints);
 
     // ========== VALIDACIÓN RED TÁCTICA (CÓDIGO RESTAURADO) ==========
     const opDataRecord = getOperationalDataRecord();
@@ -258,12 +316,27 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
     );
 
     const commCheck = SubmarineService.checkCommunicationFailure(avgDamage);
+    console.log('📡 [TACTICAL] Result:', commCheck);
 
     if (commCheck.failed) {
       setOrderErrors(prev => ({
         ...prev,
         [subId]: `Communication failure! (Roll: ${commCheck.roll}/${commCheck.threshold}, Tactical Network Damage: ${avgDamage})`
       }));
+
+      // Clear local pending state (CP already deducted as penalty)
+      setPendingOrders(prev => {
+        const updated = {...prev};
+        delete updated[subId];
+        return updated;
+      });
+
+      setSelectedTargets(prev => {
+        const updated = {...prev};
+        delete updated[subId];
+        return updated;
+      });
+
       return; // Do NOT confirm order
     }
     // ========== FIN VALIDACIÓN RED TÁCTICA ==========
@@ -272,6 +345,9 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
     const updatedSubs = submarineCampaign.deployedSubmarines.map(s =>
       s.id === subId ? {...s, pendingOrder: order} : s
     );
+
+    console.log('🔄 [FIRESTORE] Updating campaign');
+    console.log('🔄 Updated sub:', updatedSubs.find(s => s.id === subId));
 
     onUpdateSubmarineCampaign({
       ...submarineCampaign,
@@ -290,6 +366,8 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
       delete updated[subId];
       return updated;
     });
+
+    console.log('🧹 [CLEANUP] State cleared for:', subId);
   };
 
   const handleCancelOrder = (subId: string) => {
@@ -498,6 +576,8 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
     const pendingOrder = pendingOrders[sub.id];
     const factionColor = sub.faction === 'us' ? 'text-blue-400' : 'text-red-400';
 
+    console.log('🎨 [RENDER]', sub.id, 'localPending:', pendingOrder, 'subPending:', sub.pendingOrder);
+
     // Get enemy bases (opposite faction)
     const enemyFaction = sub.faction === 'us' ? 'China' : 'EE. UU.';
     const enemyBases = locations.filter(loc => loc.country === enemyFaction);
@@ -505,21 +585,25 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
     // Check if there are unconfirmed changes (order with target but not saved)
     const hasChanges = !!pendingOrder && !!pendingOrder.targetId && !sub.pendingOrder;
 
+    console.log('🔍 [HASCHANGES]', sub.id, '=', hasChanges,
+      '(local:', !!pendingOrder, 'target:', !!pendingOrder?.targetId, '!sub:', !sub.pendingOrder, ')');
+
     // Check if order is incomplete (order without target)
     const needsConfirmation = !!pendingOrder && !pendingOrder.targetId;
 
     return (
       <div key={sub.id} className={`mb-2 p-2 rounded transition-colors ${
-        needsConfirmation ? 'bg-red-900/20 border border-red-600' : 'bg-gray-900 border border-gray-700 hover:border-gray-600'
+        hasChanges ? 'bg-red-900/20 border border-red-600' : 'bg-gray-900 border border-gray-700 hover:border-gray-600'
       }`}>
+        {console.log(`🎨 [PANEL] ${sub.id}: ${hasChanges ? 'RED' : 'GRAY'}`)}
         <div className="flex items-center gap-2">
           {/* Submarine Name */}
-          <div className={`font-mono text-xs font-bold ${factionColor} flex-shrink-0 w-28`}>
+          <div className={`font-mono text-xs font-bold ${factionColor} flex-shrink-0 w-48 truncate`}>
             {sub.submarineName}
           </div>
 
           {/* Type and Stats */}
-          <div className="font-mono text-xs text-gray-500 flex-shrink-0 w-32 flex items-center gap-2">
+          <div className="font-mono text-xs text-gray-500 flex-shrink-0 w-28 flex items-center gap-2">
             <span>{sub.cardName?.split(' ')[0]}</span>
             {((sub.missionsCompleted ?? 0) > 0 || (sub.totalKills ?? 0) > 0) && (
               <span className="text-gray-600">
@@ -546,7 +630,7 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
             <select
               value={pendingOrder.targetId || ''}
               onChange={(e) => handleTargetSelect(sub.id, e.target.value)}
-              className="font-mono text-xs bg-gray-800 text-white border border-gray-600 rounded px-2 py-1 flex-1"
+              className="font-mono text-xs bg-gray-800 text-white border border-gray-600 rounded px-2 py-1 w-40"
             >
               <option value="">-- SELECT TARGET --</option>
 
@@ -577,8 +661,92 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
 
           {/* Confirm Icon (Green Envelope with pulse animation) */}
           {hasChanges && isAdmin && (
+            <>
+              {console.log(`✉️ [ENVELOPE] ${sub.id}: VISIBLE (hasChanges=${hasChanges}, isAdmin=${isAdmin})`)}
+              <button
+                onClick={() => handleConfirmOrder(sub.id)}
+                className="flex-shrink-0 w-6 h-6 bg-green-600 hover:bg-green-700 rounded flex items-center justify-center transition-colors animate-pulse"
+                title="Confirm order"
+              >
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </button>
+            </>
+          )}
+        </div>
+
+        {/* Error message */}
+        {orderErrors[sub.id] && (
+          <div className="mt-1 text-xs text-red-400 font-mono">
+            ⚠ {orderErrors[sub.id]}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Helper: Render ASW row
+  const renderASWRow = (asw: SubmarineDeployment) => {
+    const pendingOrder = pendingOrders[asw.id];
+    const factionColor = asw.faction === 'us' ? 'text-blue-400' : 'text-red-400';
+
+    // Check if there are unconfirmed changes (order with target but not saved)
+    const hasChanges = !!pendingOrder && !!pendingOrder.targetId && !asw.pendingOrder;
+
+    return (
+      <div key={asw.id} className={`mb-2 p-2 rounded transition-colors ${
+        hasChanges ? 'bg-red-900/20 border border-red-600' : 'bg-gray-900 border border-gray-700 hover:border-gray-600'
+      }`}>
+        <div className="flex items-center gap-2">
+          {/* ASW Name */}
+          <div className={`font-mono text-xs font-bold ${factionColor} flex-shrink-0 w-48 truncate`}>
+            {asw.submarineName}
+          </div>
+
+          {/* Type and Stats */}
+          <div className="font-mono text-xs text-gray-500 flex-shrink-0 w-28 flex items-center gap-2">
+            <span>{asw.cardName?.split(' ')[0]}</span>
+            {((asw.missionsCompleted ?? 0) > 0 || (asw.totalKills ?? 0) > 0) && (
+              <span className="text-gray-600">
+                {(asw.missionsCompleted ?? 0) > 0 && `M:${asw.missionsCompleted}`}
+                {(asw.missionsCompleted ?? 0) > 0 && (asw.totalKills ?? 0) > 0 && ' '}
+                {(asw.totalKills ?? 0) > 0 && <span className="text-red-500">K:{asw.totalKills}</span>}
+              </span>
+            )}
+          </div>
+
+          {/* Order Type Dropdown - Only PATROL for ASW */}
+          <select
+            value={pendingOrder?.type || ''}
+            onChange={(e) => handleOrderTypeChange(asw.id, e.target.value)}
+            className="font-mono text-xs bg-gray-800 text-white border border-gray-600 rounded px-2 py-1 w-24"
+          >
+            <option value="">-- ORDER --</option>
+            <option value="patrol">PATROL</option>
+          </select>
+
+          {/* Target Dropdown */}
+          {pendingOrder && (
+            <select
+              value={pendingOrder.targetId || ''}
+              onChange={(e) => handleTargetSelect(asw.id, e.target.value)}
+              className="font-mono text-xs bg-gray-800 text-white border border-gray-600 rounded px-2 py-1 w-40"
+            >
+              <option value="">-- SELECT TARGET --</option>
+              {operationalAreas.map(area => (
+                <option key={area.id} value={area.id}>
+                  {area.name}
+                </option>
+              ))}
+              <option value="south-china-sea">Mar de China</option>
+            </select>
+          )}
+
+          {/* Confirm Icon */}
+          {hasChanges && isAdmin && (
             <button
-              onClick={() => handleConfirmOrder(sub.id)}
+              onClick={() => handleConfirmOrder(asw.id)}
               className="flex-shrink-0 w-6 h-6 bg-green-600 hover:bg-green-700 rounded flex items-center justify-center transition-colors animate-pulse"
               title="Confirm order"
             >
@@ -590,9 +758,90 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
         </div>
 
         {/* Error message */}
-        {orderErrors[sub.id] && (
+        {orderErrors[asw.id] && (
           <div className="mt-1 text-xs text-red-400 font-mono">
-            ⚠ {orderErrors[sub.id]}
+            ⚠ {orderErrors[asw.id]}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Helper: Render Asset row
+  const renderAssetRow = (asset: SubmarineDeployment) => {
+    const pendingOrder = pendingOrders[asset.id];
+    const factionColor = asset.faction === 'us' ? 'text-blue-400' : 'text-red-400';
+
+    // Check if there are unconfirmed changes (order with target but not saved)
+    const hasChanges = !!pendingOrder && !!pendingOrder.targetId && !asset.pendingOrder;
+
+    return (
+      <div key={asset.id} className={`mb-2 p-2 rounded transition-colors ${
+        hasChanges ? 'bg-red-900/20 border border-red-600' : 'bg-gray-900 border border-gray-700 hover:border-gray-600'
+      }`}>
+        <div className="flex items-center gap-2">
+          {/* Asset Name */}
+          <div className={`font-mono text-xs font-bold ${factionColor} flex-shrink-0 w-48 truncate`}>
+            {asset.submarineName}
+          </div>
+
+          {/* Type and Stats */}
+          <div className="font-mono text-xs text-gray-500 flex-shrink-0 w-28 flex items-center gap-2">
+            <span>{asset.cardName?.split(' ')[0]}</span>
+            {((asset.missionsCompleted ?? 0) > 0 || (asset.totalKills ?? 0) > 0) && (
+              <span className="text-gray-600">
+                {(asset.missionsCompleted ?? 0) > 0 && `M:${asset.missionsCompleted}`}
+                {(asset.missionsCompleted ?? 0) > 0 && (asset.totalKills ?? 0) > 0 && ' '}
+                {(asset.totalKills ?? 0) > 0 && <span className="text-red-500">K:{asset.totalKills}</span>}
+              </span>
+            )}
+          </div>
+
+          {/* Order Type Dropdown - Only DEPLOY for Assets */}
+          <select
+            value={pendingOrder?.type || ''}
+            onChange={(e) => handleOrderTypeChange(asset.id, e.target.value)}
+            className="font-mono text-xs bg-gray-800 text-white border border-gray-600 rounded px-2 py-1 w-24"
+          >
+            <option value="">-- ORDER --</option>
+            <option value="deploy">DEPLOY</option>
+          </select>
+
+          {/* Target Dropdown */}
+          {pendingOrder && (
+            <select
+              value={pendingOrder.targetId || ''}
+              onChange={(e) => handleTargetSelect(asset.id, e.target.value)}
+              className="font-mono text-xs bg-gray-800 text-white border border-gray-600 rounded px-2 py-1 w-40"
+            >
+              <option value="">-- SELECT TARGET --</option>
+              {operationalAreas.map(area => (
+                <option key={area.id} value={area.id}>
+                  {area.name}
+                </option>
+              ))}
+              <option value="south-china-sea">Mar de China</option>
+            </select>
+          )}
+
+          {/* Confirm Icon */}
+          {hasChanges && isAdmin && (
+            <button
+              onClick={() => handleConfirmOrder(asset.id)}
+              className="flex-shrink-0 w-6 h-6 bg-green-600 hover:bg-green-700 rounded flex items-center justify-center transition-colors animate-pulse"
+              title="Confirm order"
+            >
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Error message */}
+        {orderErrors[asset.id] && (
+          <div className="mt-1 text-xs text-red-400 font-mono">
+            ⚠ {orderErrors[asset.id]}
           </div>
         )}
       </div>
@@ -684,12 +933,7 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
                     <div className="text-gray-500 font-mono text-xs py-2 pl-2">-- NO ASW ELEMENTS DEPLOYED --</div>
                   ) : (
                     <div className="space-y-0">
-                      {/* TODO: Render ASW elements when implemented */}
-                      {factionASW.map((asw, idx) => (
-                        <div key={idx} className="font-mono text-xs text-gray-300">
-                          {asw.name}
-                        </div>
-                      ))}
+                      {factionASW.map(asw => renderASWRow(asw))}
                     </div>
                   )}
                 </div>
@@ -706,12 +950,7 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
                     <div className="text-gray-500 font-mono text-xs py-2 pl-2">-- NO ASSETS DEPLOYED --</div>
                   ) : (
                     <div className="space-y-0">
-                      {/* TODO: Render assets when implemented */}
-                      {factionAssets.map((asset, idx) => (
-                        <div key={idx} className="font-mono text-xs text-gray-300">
-                          {asset.name}
-                        </div>
-                      ))}
+                      {factionAssets.map(asset => renderAssetRow(asset))}
                     </div>
                   )}
                 </div>

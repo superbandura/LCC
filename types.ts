@@ -262,7 +262,7 @@ export interface InfluenceThreshold {
 export type OrderStatus = 'pending' | 'executing' | 'completed' | 'failed';
 
 // Types of submarine orders
-export type SubmarineOrderType = 'patrol' | 'attack';
+export type SubmarineOrderType = 'patrol' | 'attack' | 'deploy';
 
 // Types of submarine events
 export type SubmarineEventType = 'deployment' | 'attack_success' | 'attack_failure' | 'detected' | 'destroyed' | 'return' | 'communication_failure';
@@ -338,7 +338,7 @@ export interface SubmarineEvent {
   faction: 'us' | 'china';              // Faction
   cardId: string;                       // Original card ID
   cardName: string;                     // Original card name
-  submarineType?: SubmarineType;        // Submarine type (Submarino, ASW, Asset)
+  submarineType?: SubmarineCardType;    // Submarine type (submarine, asw, asset)
   eventType: SubmarineEventType;        // Event type
   timestamp: number;                    // Event timestamp
   turn: number;                         // Campaign turn number

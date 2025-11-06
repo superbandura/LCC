@@ -615,13 +615,14 @@ function App() {
   }, [pendingDeployments, isDeploymentActive, cards, taskForces, units]);
 
   // Process submarine patrol orders - NOW USING SubmarineService
-  const processSubmarinePatrols = async (currentTurnState: TurnState) => {
+  const processSubmarinePatrols = async (currentTurnState: TurnState, submarines?: SubmarineDeployment[]) => {
     // Use SubmarineService for all patrol logic
     const result = await SubmarineService.processPatrols(
       submarineCampaign,
       currentTurnState,
       commandPoints,
-      operationalAreas
+      operationalAreas,
+      submarines
     );
 
     // Update command points if changed
@@ -635,7 +636,7 @@ function App() {
   };
 
   // Process ASW (Anti-Submarine Warfare) phase - Location-based system
-  const processASWPhase = async (currentTurnState: TurnState) => {
+  const processASWPhase = async (currentTurnState: TurnState, submarines?: SubmarineDeployment[]) => {
     // Use SubmarineService for ASW logic (includes cards, ships, and patrol submarines)
     const result = await SubmarineService.processASWPhase(
       submarineCampaign,
@@ -643,7 +644,8 @@ function App() {
       operationalAreas,
       taskForces,
       units,
-      cards
+      cards,
+      submarines
     );
 
     // Return result WITHOUT updating submarine campaign (will be done in batch)
@@ -651,12 +653,13 @@ function App() {
   };
 
   // Process submarine attack orders - NOW USING SubmarineService
-  const processSubmarineAttacks = async (currentTurnState: TurnState) => {
+  const processSubmarineAttacks = async (currentTurnState: TurnState, submarines?: SubmarineDeployment[]) => {
     // Use SubmarineService for all attack logic
     const result = await SubmarineService.processAttacks(
       submarineCampaign,
       currentTurnState,
-      locations
+      locations,
+      submarines
     );
 
     // Update locations if damage was applied
@@ -834,7 +837,7 @@ function App() {
 
     // STEP 2: Process submarine attack orders (damage bases before CP calculation)
     // NOTE: Use ASW result submarines (reflects eliminations)
-    const attackResult = await processSubmarineAttacks(newTurnState);
+    const attackResult = await processSubmarineAttacks(newTurnState, aswResult.updatedSubmarines);
     console.log(`  ✅ Attack events: ${attackResult.events.length}`);
 
     // STEP 3: If week completed, recalculate command points (considers damaged bases from attacks)
@@ -855,7 +858,7 @@ function App() {
 
     // STEP 4: Process submarine patrol orders AFTER CP reset (damage fresh budget)
     // NOTE: Use attack result submarines (reflects any state changes)
-    const patrolResult = await processSubmarinePatrols(newTurnState);
+    const patrolResult = await processSubmarinePatrols(newTurnState, attackResult.updatedSubmarines);
     console.log(`  ✅ Patrol events: ${patrolResult.events.length}`);
 
     // STEP 5: Combine ALL events and do ONE atomic update to submarine campaign

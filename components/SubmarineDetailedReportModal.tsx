@@ -144,8 +144,24 @@ const SubmarineDetailedReportModal: React.FC<SubmarineDetailedReportModalProps> 
     return grouped;
   };
 
+  // Group ASW events by operational area
+  const groupASWEventsByArea = (events: SubmarineEvent[]): Record<string, SubmarineEvent[]> => {
+    const grouped: Record<string, SubmarineEvent[]> = {};
+    events.forEach(event => {
+      const areaName = event.rollDetails?.aswElementInfo?.areaName || 'Submarine Campaign';
+      if (!grouped[areaName]) {
+        grouped[areaName] = [];
+      }
+      grouped[areaName].push(event);
+    });
+    return grouped;
+  };
+
   // Get grouped patrol events by area
   const patrolEventsByArea = groupPatrolEventsByArea(patrolEvents);
+
+  // Get grouped ASW events by area
+  const aswEventsByArea = groupASWEventsByArea(aswEvents);
 
   return (
     <div
@@ -186,8 +202,23 @@ const SubmarineDetailedReportModal: React.FC<SubmarineDetailedReportModalProps> 
                 Total: {aswTotalAttempts} attempts → {aswSuccessfulDetections} detected → {aswEliminations} eliminated
               </div>
               {aswEvents.length > 0 ? (
-                <div className="pl-2 space-y-0.5">
-                  {aswEvents.map((event, idx) => renderSimpleEventLine(event, idx))}
+                <div className="pl-2 space-y-3">
+                  {Object.entries(aswEventsByArea).map(([areaName, areaEvents]) => {
+                    const areaEliminations = areaEvents.filter(e =>
+                      e.eventType === 'destroyed'
+                    ).length;
+
+                    return (
+                      <div key={areaName}>
+                        <div className="font-mono text-xs text-cyan-400 mb-1 font-bold">
+                          → {areaName} ({areaEvents.length} operations, {areaEliminations} eliminated)
+                        </div>
+                        <div className="space-y-0.5 ml-2">
+                          {areaEvents.map((event, idx) => renderSimpleEventLine(event, idx))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="pl-2">

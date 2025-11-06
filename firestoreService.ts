@@ -882,7 +882,28 @@ export const updateSubmarineCampaign = async (
   submarineCampaign: SubmarineCampaignState
 ): Promise<void> => {
   try {
-    await setDoc(GAME_DOC_REF, { submarineCampaign }, { merge: true });
+    // Sanitize submarine orders to ensure all required fields are present
+    let sanitizedCampaign = {
+      ...submarineCampaign,
+      deployedSubmarines: submarineCampaign.deployedSubmarines?.map(sub => {
+        if (sub.currentOrder && !sub.currentOrder.assignedDate) {
+          // Add missing assignedDate for old orders (use assignedTurn as fallback)
+          return {
+            ...sub,
+            currentOrder: {
+              ...sub.currentOrder,
+              assignedDate: '2030-06-01' // Default fallback date
+            }
+          };
+        }
+        return sub;
+      })
+    };
+
+    // Remove all undefined fields (Firestore doesn't accept them)
+    sanitizedCampaign = removeUndefinedFields(sanitizedCampaign);
+
+    await setDoc(GAME_DOC_REF, { submarineCampaign: sanitizedCampaign }, { merge: true });
   } catch (error) {
     console.error("Error updating submarine campaign:", error);
     throw error;

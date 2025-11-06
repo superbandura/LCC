@@ -69,14 +69,18 @@ export class SubmarineService {
     submarineCampaign: SubmarineCampaignState | null,
     currentTurnState: TurnState,
     commandPoints: CommandPoints,
-    operationalAreas: OperationalArea[]
+    operationalAreas: OperationalArea[],
+    submarines?: SubmarineDeployment[]
   ): Promise<SubmarinePatrolResult> {
     if (!submarineCampaign) {
       return { events: [], updatedSubmarines: [], updatedCommandPoints: { ...commandPoints } };
     }
 
+    // Use provided submarines or fall back to campaign submarines
+    const sourceSubmarines = submarines || submarineCampaign.deployedSubmarines;
+
     // Reset completed patrol orders
-    let updatedSubmarinesForReset = submarineCampaign.deployedSubmarines.map(sub => {
+    let updatedSubmarinesForReset = sourceSubmarines.map(sub => {
       if (sub.status === 'active' &&
           sub.currentOrder?.orderType === 'patrol' &&
           sub.currentOrder?.status === 'completed') {
@@ -163,14 +167,18 @@ export class SubmarineService {
   static async processAttacks(
     submarineCampaign: SubmarineCampaignState | null,
     currentTurnState: TurnState,
-    locations: Location[]
+    locations: Location[],
+    submarines?: SubmarineDeployment[]
   ): Promise<SubmarineAttackResult> {
     if (!submarineCampaign) {
       return { events: [], updatedSubmarines: [], updatedLocations: [...locations] };
     }
 
+    // Use provided submarines or fall back to campaign submarines
+    const sourceSubmarines = submarines || submarineCampaign.deployedSubmarines;
+
     // Filter active attack orders ready for execution
-    const pendingAttacks = submarineCampaign.deployedSubmarines.filter(
+    const pendingAttacks = sourceSubmarines.filter(
       sub => sub.status === 'active' &&
              sub.currentOrder?.orderType === 'attack' &&
              sub.currentOrder?.status === 'pending' &&
@@ -179,12 +187,12 @@ export class SubmarineService {
     );
 
     if (pendingAttacks.length === 0) {
-      return { events: [], updatedSubmarines: submarineCampaign.deployedSubmarines, updatedLocations: [...locations] };
+      return { events: [], updatedSubmarines: sourceSubmarines, updatedLocations: [...locations] };
     }
 
     const events: SubmarineEvent[] = [];
     let updatedLocations = [...locations];
-    let updatedSubmarines = [...submarineCampaign.deployedSubmarines];
+    let updatedSubmarines = [...sourceSubmarines];
     let successfulAttacks = 0;
     let totalDamage = 0;
 
@@ -347,14 +355,18 @@ export class SubmarineService {
     operationalAreas: OperationalArea[],
     taskForces: TaskForce[],
     units: Unit[],
-    cards: Card[]
+    cards: Card[],
+    submarines?: SubmarineDeployment[]
   ): Promise<ASWResult> {
     if (!submarineCampaign) {
       return { events: [], updatedSubmarines: [], eliminatedSubmarineIds: [] };
     }
 
+    // Use provided submarines or fall back to campaign submarines
+    const sourceSubmarines = submarines || submarineCampaign.deployedSubmarines;
+
     // Identify submarines in South China Sea (attack or patrol orders)
-    const submarinesInSouthChinaSea = submarineCampaign.deployedSubmarines.filter(
+    const submarinesInSouthChinaSea = sourceSubmarines.filter(
       sub => sub.status === 'active' &&
              sub.submarineType === 'submarine' &&
              sub.currentOrder &&
@@ -835,7 +847,8 @@ export class SubmarineService {
       status: 'pending',
       targetId: 'south-china-sea',
       targetType: 'area',
-      assignedTurn: currentTurnState.turnNumber
+      assignedTurn: currentTurnState.turnNumber,
+      assignedDate: currentTurnState.currentDate
     };
 
     // Check if target was destroyed

@@ -110,7 +110,7 @@ export class ASWService {
       allASWElements.push(...aswShipsInArea);
     }
 
-    // 3. Collect patrol submarines (they can do ASW)
+    // 3. Collect patrol submarines (they can do ASW in their current zone only)
     const patrolSubmarines = submarinesInSouthChinaSea
       .filter(sub =>
         sub.currentOrder?.orderType === 'patrol' && // Only patrol orders
@@ -121,8 +121,8 @@ export class ASWService {
         name: sub.submarineName,
         faction: sub.faction,
         type: 'submarine' as const,
-        areaId: undefined,
-        areaName: 'South China Sea'
+        areaId: sub.currentOrder?.targetId || sub.currentAreaId || 'south-china-sea',
+        areaName: sub.currentOrder?.targetId || 'South China Sea'
       }));
 
     allASWElements.push(...patrolSubmarines);
@@ -144,10 +144,26 @@ export class ASWService {
     let successfulDetections = 0;
 
     for (const aswElement of uniqueASWElements) {
-      // Find enemy submarines not yet eliminated
-      const enemySubmarines = submarinesInSouthChinaSea.filter(
-        sub => sub.faction !== aswElement.faction && !eliminatedSubmarineIds.includes(sub.id)
-      );
+      // Find enemy submarines not yet eliminated (in same zone for submarine ASW elements)
+      const enemySubmarines = submarinesInSouthChinaSea.filter(sub => {
+        if (sub.faction === aswElement.faction) return false;
+        if (eliminatedSubmarineIds.includes(sub.id)) return false;
+
+        // Zone filtering: submarines can only detect in their own zone
+        if (aswElement.type === 'submarine') {
+          const subAreaId = sub.currentOrder?.targetId || sub.currentAreaId || 'south-china-sea';
+          return subAreaId === aswElement.areaId;
+        }
+
+        // Ships and ASW cards detect in their operational area
+        if (aswElement.type === 'ship' && aswElement.areaId) {
+          const subAreaId = sub.currentOrder?.targetId || sub.currentAreaId || 'south-china-sea';
+          return subAreaId === aswElement.areaId;
+        }
+
+        // ASW cards without specific area can detect any enemy submarine
+        return true;
+      });
 
       if (enemySubmarines.length === 0) continue;
 

@@ -374,6 +374,27 @@ export interface SubmarineCampaignState {
   aswShips?: AswShipDeployment[];             // ASW-capable ships (locked at turn start)
 }
 
+// Maritime Mine Phase Result
+export interface MineResult {
+  events: SubmarineEvent[];               // Events generated (defender perspective only)
+  updatedSubmarines: SubmarineDeployment[]; // Submarines with status updates
+  updatedUnits: Unit[];                   // Units with damage updates
+  eliminatedSubmarineIds: string[];       // IDs of destroyed submarines
+  eliminatedUnitIds: string[];            // IDs of destroyed naval units
+}
+
+// Asset Deploy Phase Result
+export interface AssetDeployResult {
+  updatedSubmarines: SubmarineDeployment[]; // Submarines with updated deploy orders
+  updatedOperationalAreas: OperationalArea[]; // Areas with newly deployed assets
+  deployedAssets: Array<{               // Record of deployments this turn
+    assetId: string;
+    assetName: string;
+    areaId: string;
+    areaName: string;
+  }>;
+}
+
 // =======================================
 // PLAYER ASSIGNMENT SYSTEM
 // =======================================

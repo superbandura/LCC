@@ -24,8 +24,11 @@ const SubmarineDetailedReportModal: React.FC<SubmarineDetailedReportModalProps> 
          (!e.dayOfWeek || e.dayOfWeek === turnState.dayOfWeek) // If no dayOfWeek, include for backward compatibility
   ) || [];
 
-  // Group events by phase (ASW, Attack, Patrol)
-  const aswEvents = currentTurnEvents.filter(e => e.submarineType?.toLowerCase() === 'asw' || e.eventType === 'destroyed');
+  // Group events by phase (ASW, Attack, Patrol, Mine)
+  const aswEvents = currentTurnEvents.filter(e =>
+    e.submarineType?.toLowerCase() === 'asw' ||
+    (e.eventType === 'destroyed' && e.rollDetails?.aswElementInfo)
+  );
   const attackEvents = currentTurnEvents.filter(e =>
     e.targetInfo?.targetType === 'base' &&
     e.submarineType?.toLowerCase() !== 'asw' &&
@@ -35,6 +38,10 @@ const SubmarineDetailedReportModal: React.FC<SubmarineDetailedReportModalProps> 
     e.targetInfo?.targetType === 'area' &&
     e.submarineType?.toLowerCase() !== 'asw' &&
     !e.description?.includes('Enemy patrol')  // Only show attacker's perspective
+  );
+  // Mine events: All events related to maritime mines (both detected and destroyed)
+  const mineEvents = currentTurnEvents.filter(e =>
+    e.description?.includes('mine') || e.description?.includes('minefield')
   );
 
   // Get pending attack orders (attacks that haven't executed yet)
@@ -84,6 +91,13 @@ const SubmarineDetailedReportModal: React.FC<SubmarineDetailedReportModalProps> 
   const patrolDamageChina = successfulPatrols
     .filter(e => e.faction === 'us') // US patrols damage China CP
     .reduce((sum, e) => sum + (e.targetInfo?.damageDealt || 0), 0);
+
+  // Calculate summary statistics for Mine Phase
+  // Total attempts includes both failed detections and successful hits
+  const mineDetectionAttempts = mineEvents.length;
+  const mineHits = mineEvents.filter(e =>
+    e.eventType === 'destroyed'
+  ).length;
 
   const renderSimpleEventLine = (event: SubmarineEvent, index: number) => {
     const rolls = event.rollDetails;
@@ -193,6 +207,27 @@ const SubmarineDetailedReportModal: React.FC<SubmarineDetailedReportModalProps> 
         {/* Modal Content - Scrollable */}
         <div className="flex-1 overflow-y-auto p-6">
           <div className="space-y-6">
+            {/* Mine Phase - Always shown */}
+            <div>
+              <h3 className="text-sm font-mono font-bold text-green-400 uppercase tracking-wider mb-2 border-l-4 border-green-600 pl-2">
+                MINE PHASE ({mineDetectionAttempts} detection attempts)
+              </h3>
+              <div className="font-mono text-xs text-gray-500 mb-3 pl-2">
+                Total: {mineHits}/{mineDetectionAttempts} hits
+              </div>
+              {mineEvents.length > 0 ? (
+                <div className="pl-2 space-y-0.5">
+                  {mineEvents.map((event, idx) => renderSimpleEventLine(event, idx))}
+                </div>
+              ) : (
+                <div className="pl-2">
+                  <p className="text-gray-500 font-mono text-xs">
+                    -- NO MINE DETECTIONS THIS TURN --
+                  </p>
+                </div>
+              )}
+            </div>
+
             {/* ASW Phase - Always shown */}
             <div>
               <h3 className="text-sm font-mono font-bold text-green-400 uppercase tracking-wider mb-2 border-l-4 border-green-600 pl-2">

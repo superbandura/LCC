@@ -60,9 +60,9 @@ All game state stored in Firestore document `game/current` and syncs real-time a
 **Files**: `firebase.ts`, `firestoreService.ts`, `firestore.rules`, `firebase.json`
 
 **Architecture**:
-- `firestoreService.ts`: Low-level Firestore CRUD operations (~1,142 lines), 18 subscription functions total (14 core used in useGameState: subscribeToOperationalAreas, subscribeToUnits, etc.)
-- `services/`: Business logic layer (turnService, deploymentService, destructionService, submarineService)
-- `hooks/useGameState.ts`: React hook wrapping all 14 core Firestore subscriptions, provides unified state to App.tsx
+- `firestoreService.ts`: Low-level Firestore CRUD operations (~1,267 lines), 18 subscription functions total (17 active used in useGameState: subscribeToOperationalAreas, subscribeToUnits, etc.)
+- `services/`: Business logic layer (10+ modular services organized by domain)
+- `hooks/useGameState.ts`: React hook wrapping 17 active Firestore subscriptions, provides unified state to App.tsx
 
 ## Architecture
 
@@ -78,17 +78,24 @@ F:\LCC/
 │   ├── modals/             # Modal dialogs (pending migration)
 │   ├── ui/                 # UI components
 │   └── shared/             # Reusable components
-├── hooks/                  # Custom React hooks
-│   ├── useGameState.ts    # Firestore state subscriptions (14 states)
-│   ├── useModal.ts        # Modal state management (7 modals)
-│   ├── useFactionFilter.ts # Faction-based filtering
-│   └── useDeploymentNotifications.ts # Deployment queue notifications
-├── services/               # Business logic layer
+├── hooks/                  # Custom React hooks (~695 lines)
+│   ├── useGameState.ts    # Firestore state subscriptions (17 active, 284 lines)
+│   ├── useModal.ts        # Modal state management (7 modals, 148 lines)
+│   ├── useFactionFilter.ts # Faction-based filtering (111 lines)
+│   └── useDeploymentNotifications.ts # Deployment queue notifications (198 lines)
+├── services/               # Business logic layer (~4,000+ lines, 132 tests)
 │   ├── turnService.ts     # Turn management and capability resets
 │   ├── deploymentService.ts # Deployment queue and validation
 │   ├── destructionService.ts # Combat destruction logging
-│   ├── submarineService.ts # Submarine warfare mechanics
-│   └── *.test.ts          # Vitest test files (107+ tests)
+│   ├── submarineService.ts # Shared submarine utilities
+│   ├── submarineCampaignOrchestrator.ts # Phase coordinator
+│   ├── asw/               # ASW Phase service
+│   ├── patrol/            # Patrol Phase service
+│   ├── attack/            # Attack Phase service
+│   ├── mines/             # Mine Phase service
+│   ├── assets/            # Asset Deploy Phase service
+│   ├── events/            # EventBuilder and EventTemplates
+│   └── *.test.ts          # Vitest test files (132 tests)
 ├── utils/                  # Utility functions
 ├── constants/              # Shared constants
 ├── contexts/               # React contexts
@@ -107,21 +114,33 @@ F:\LCC/
 
 ### Services Layer
 
-Business logic in 4 testable services (~1,758 lines, 107 tests):
-- **turnService.ts** (~151 lines): Turn management, week/day calculations, game phase detection
-- **deploymentService.ts** (~330 lines): Deployment timing, arrival calculations, command point validation
-- **destructionService.ts** (~217 lines): Destruction tracking, combat statistics, unit revival detection
-- **submarineService.ts** (~1,059 lines): Submarine patrols (90% success, failed patrols tracked), attacks (50% success), d20 rolls, area-grouped reporting, failed patrol event generation
+Business logic in 10+ modular services (~4,000+ lines, 132 tests):
+
+**Core Services:**
+- **turnService.ts** (181 lines, 36 tests): Turn management, week/day calculations, game phase detection
+- **deploymentService.ts** (369 lines, 24 tests): Deployment timing, arrival calculations, command point validation
+- **destructionService.ts** (244 lines, 33 tests): Destruction tracking, combat statistics, unit revival detection
+
+**Submarine Campaign Services (Modular Architecture):**
+- **submarineCampaignOrchestrator.ts** (369 lines): Coordinates all 5 submarine campaign phases in correct sequence
+- **submarineService.ts** (1,239 lines, 21 tests): Shared utilities (communication failures, tactical network damage, ASW ship snapshots)
+- **asw/aswService.ts** (329 lines): ASW Phase - Detection with 5% rate, 50% elimination, zone filtering
+- **attack/attackService.ts** (252 lines): Attack Phase - Base attacks with 50% success rate
+- **patrol/patrolService.ts** (205 lines): Patrol Phase - Patrol operations with 90% success rate
+- **mines/mineService.ts** (318 lines, 9 tests): Mine Phase - Maritime mine detection (5% rate, d20=1)
+- **assets/assetDeployService.ts** (134 lines, 9 tests): Asset Deploy Phase - Processes deploy orders for mines/sensors
+- **events/EventBuilder.ts** (154 lines): Builder pattern for consistent event creation across all services
+- **events/EventTemplates.ts** (104 lines): Centralized message templates (Patrol, Attack, ASW, Mine)
 
 All services pure functions with comprehensive Vitest coverage. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
 
 ### Custom Hooks
 
-Four hooks reduce component complexity and centralize logic:
-- **useGameState**: Manages 14 Firestore subscriptions, single source of truth for all game state
-- **useModal**: Unified API for 7 modal states (`open()`, `close()`, `toggle()`, `isOpen()`)
-- **useFactionFilter**: Memoized faction filtering for units, cards, task forces
-- **useDeploymentNotifications**: Auto-opens modal when deployments queued
+Four hooks reduce component complexity and centralize logic (~695 lines total):
+- **useGameState** (284 lines): Manages **17 active Firestore subscriptions**, single source of truth for all game state
+- **useModal** (148 lines): Unified API for 7 modal states (`open()`, `close()`, `toggle()`, `isOpen()`)
+- **useFactionFilter** (111 lines): Memoized faction filtering for units, cards, task forces
+- **useDeploymentNotifications** (198 lines): Auto-opens modal when deployments queued
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for implementation details.
 

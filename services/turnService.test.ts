@@ -190,7 +190,7 @@ describe('TurnService', () => {
         isPlanningPhase: true,
       };
 
-      expect(TurnService.formatTurnDisplay(planningState)).toBe('Fase de Planificación');
+      expect(TurnService.formatTurnDisplay(planningState)).toBe('Planning Phase');
     });
 
     it('should format a regular turn with day name', () => {
@@ -201,7 +201,7 @@ describe('TurnService', () => {
         isPlanningPhase: false,
       };
 
-      expect(TurnService.formatTurnDisplay(mondayState)).toBe('Semana 1, Lunes (2030-06-03)');
+      expect(TurnService.formatTurnDisplay(mondayState)).toBe('Week 1, Monday (2030-06-03)');
     });
 
     it('should format Wednesday correctly', () => {
@@ -212,7 +212,7 @@ describe('TurnService', () => {
         isPlanningPhase: false,
       };
 
-      expect(TurnService.formatTurnDisplay(wednesdayState)).toBe('Semana 1, Miércoles (2030-06-05)');
+      expect(TurnService.formatTurnDisplay(wednesdayState)).toBe('Week 1, Wednesday (2030-06-05)');
     });
 
     it('should format Sunday correctly', () => {
@@ -223,7 +223,7 @@ describe('TurnService', () => {
         isPlanningPhase: false,
       };
 
-      expect(TurnService.formatTurnDisplay(sundayState)).toBe('Semana 1, Domingo (2030-06-09)');
+      expect(TurnService.formatTurnDisplay(sundayState)).toBe('Week 1, Sunday (2030-06-09)');
     });
   });
 

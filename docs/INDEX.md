@@ -1,7 +1,7 @@
 # 🗺️ Índice de Documentación LCC
 
-**Última actualización**: 2025-11-02 (Influence System)
-**Versión**: 1.4
+**Última actualización**: 2025-11-06 (Submarine Campaign Phase 3: Mines & ASW)
+**Versión**: 1.5
 
 > **Navegación rápida**: Este índice te ayuda a encontrar exactamente qué documentar leer según tu necesidad. Para Claude Code, esto optimiza el contexto y reduce lecturas innecesarias.
 
@@ -20,9 +20,10 @@
 | [UNIT_SYSTEM.md](UNIT_SYSTEM.md) | 14 KB | Unidades y Task Forces | Features de unidades |
 | [COMBAT_SYSTEM.md](COMBAT_SYSTEM.md) | 14 KB | Mecánicas de combate y daño | Features de combate |
 | [MAP_INTEGRATION.md](MAP_INTEGRATION.md) | 16 KB | Integración de Leaflet | Features de mapa |
+| [ASW_SYSTEM.md](ASW_SYSTEM.md) | 16 KB | Submarine ASW Phase | Submarine warfare mechanics |
 | [REFACTORING_LOG.md](REFACTORING_LOG.md) | 30 KB | Historial de cambios | Contexto histórico |
 
-**Total**: ~157 KB de documentación técnica (4 archivos de cartas: 54 KB)
+**Total**: ~173 KB de documentación técnica (4 archivos de cartas: 54 KB)
 
 ---
 
@@ -139,7 +140,7 @@
 
 | Componente | Documentación | Archivo | Líneas |
 |------------|---------------|---------|--------|
-| **App.tsx** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | App.tsx | ~1,218 |
+| **App.tsx** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | App.tsx | ~1,358 |
 | **Map.tsx** | [MAP_INTEGRATION.md](MAP_INTEGRATION.md) | components/Map.tsx | ~407 |
 | **TurnControl** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | components/TurnControl.tsx | ~89 |
 | **FactionSelector** | [ARCHITECTURE.md](ARCHITECTURE.md#component-organization) | components/FactionSelector.tsx | - |
@@ -185,12 +186,12 @@
 
 | Componente | Documentación | Archivo | Líneas |
 |------------|---------------|---------|--------|
-| **DataEditor** | [MAP_INTEGRATION.md](MAP_INTEGRATION.md) | components/map/DataEditor/index.tsx | ~672 |
+| **DataEditor** | [MAP_INTEGRATION.md](MAP_INTEGRATION.md) | components/map/DataEditor/index.tsx | ~759 |
 | **TacticalTab** | [COMBAT_SYSTEM.md § Tactical Network](COMBAT_SYSTEM.md#tactical-network) | components/map/DataEditor/tabs/TacticalTab.tsx | ~45 |
-| **PatrolsTab** | [COMBAT_SYSTEM.md § Air Patrol Status](COMBAT_SYSTEM.md#air-patrol-status) | components/map/DataEditor/tabs/PatrolsTab.tsx | ~78 |
+| **PatrolsTab** | [COMBAT_SYSTEM.md § Air Patrol Status](COMBAT_SYSTEM.md#air-patrol-status) | components/map/DataEditor/tabs/PatrolsTab.tsx | ~148 |
 | **TaskForcesTab** | [UNIT_SYSTEM.md](UNIT_SYSTEM.md) | components/map/DataEditor/tabs/TaskForcesTab.tsx | ~211 |
 | **BasesTab** | [COMBAT_SYSTEM.md § Base Damage](COMBAT_SYSTEM.md#base-damage-system) | components/map/DataEditor/tabs/BasesTab.tsx | ~102 |
-| **CardsTab** | [CARD_SYSTEM.md § Deployment Phase](CARD_SYSTEM.md#3-deployment-phase-map-popup) | components/map/DataEditor/tabs/CardsTab.tsx | ~43 |
+| **CardsTab** | [CARD_SYSTEM.md § Deployment Phase](CARD_SYSTEM.md#3-deployment-phase-map-popup) | components/map/DataEditor/tabs/CardsTab.tsx | ~285 |
 | **CardPlayModal** | [CARD_SYSTEM.md § Attachment](CARD_SYSTEM.md#card-attachment-system) | components/map/DataEditor/modals/CardPlayModal.tsx | - |
 | **TaskForceDetailWrapper** | [UNIT_SYSTEM.md](UNIT_SYSTEM.md) | components/map/DataEditor/modals/TaskForceDetailWrapper.tsx | - |
 
@@ -199,7 +200,8 @@
 | Utilidad | Documentación | Archivo |
 |----------|---------------|---------|
 | **iconGenerators** | [MAP_INTEGRATION.md § Custom Icons](MAP_INTEGRATION.md#custom-icons) | utils/iconGenerators.tsx |
-| **firestoreService** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | firestoreService.ts (~1,142 lines, 18 subscription functions) |
+| **firestoreService** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | firestoreService.ts (~1,267 lines, 18 subscription functions) |
+| **useGameState** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | hooks/useGameState.ts (~284 lines, 17 active subscriptions) |
 
 ---
 
@@ -235,6 +237,9 @@
 | **SubmarineEventRollDetails** | types.ts:318-333 | Submarine campaign system - D20 roll details with ASW element info |
 | **SubmarineEvent** | types.ts:334-351 | Submarine campaign system - Submarine operation events (success/failure) |
 | **SubmarineCampaignState** | types.ts:352-366 | Submarine campaign system - Overall submarine campaign state |
+| **AswShipDeployment** | types.ts:353-363 | Submarine campaign system - ASW ship deployment data |
+| **MineResult** | types.ts:377-384 | Submarine campaign system - Maritime mine phase results |
+| **AssetDeployResult** | types.ts:386-396 | Submarine campaign system - Asset deployment results |
 | **RegisteredPlayer** | types.ts:367-373 | Multiplayer system - Registered players |
 | **PlayerAssignment** | types.ts:374-379 | Multiplayer system - Player-faction assignments |
 | **PurchaseHistory** | types.ts:131-135 | Legacy purchase tracking |
@@ -408,16 +413,17 @@ STATE_MANAGEMENT.md § Damage Array Normalization
 
 ### Cobertura
 - **Componentes documentados**: 42/42 (100%)
-- **Interfaces documentadas**: 36/36 (100%)
-- **Firestore listeners documentados**: 14/14 core (100%)
+- **Interfaces documentadas**: 39/39 (100%)
+- **Firestore listeners documentados**: 17/17 active (100%)
 - **Memoizaciones críticas**: 2/2 (100%)
+- **Test suite**: 132 tests (turnService: 36, deploymentService: 24, destructionService: 33, submarineService: 21, mineService: 9, assetDeployService: 9)
 
 ### Calidad
-- **Última actualización**: 2025-11-05
+- **Última actualización**: 2025-11-06
 - **Estado**: ✅ Sincronizado con código
 - **Discrepancias**: 0% (completamente actualizado tras auditoría de documentación)
 - **Calidad general**: 9.9/10
-- **Últimos cambios**: Submarine campaign expansion (patrullas fallidas, agrupación por áreas), service line counts actualizados, 5 componentes nuevos documentados, 10 interfaces nuevas añadidas
+- **Últimos cambios**: Submarine campaign Phase 3 (maritime mines, asset deployment), modular service architecture (10+ services), ASW zone filtering, mine duplicate prevention, 132 tests total
 
 ### Tamaños
 - **ARCHITECTURE.md**: 11 KB
@@ -427,9 +433,10 @@ STATE_MANAGEMENT.md § Damage Array Normalization
 - **COMBAT_SYSTEM.md**: 14 KB
 - **MAP_INTEGRATION.md**: 16 KB
 - **REFACTORING_LOG.md**: 30 KB
+- **ASW_SYSTEM.md**: 16 KB
 - **INDEX.md** (este archivo): ~15 KB
 
-**Total**: ~129 KB
+**Total**: ~145 KB
 
 ---
 
@@ -479,6 +486,6 @@ Este índice está diseñado para:
 
 ---
 
-**Última actualización**: 2025-11-04
+**Última actualización**: 2025-11-06
 **Mantenido por**: Equipo de desarrollo LCC
-**Cambios recientes**: Service refactoring (líneas actualizadas), 14ª suscripción (PlayedCardNotifications), submarine system interfaces (5 nuevas)
+**Cambios recientes**: Submarine Campaign Phase 3 (maritime mines, asset deployment), ASW_SYSTEM.md added, modular service architecture (10+ services), 132 tests, 17 active subscriptions, 3 new interfaces (AswShipDeployment, MineResult, AssetDeployResult)

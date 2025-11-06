@@ -926,7 +926,6 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
                   {area.name}
                 </option>
               ))}
-              <option value="south-china-sea">Mar de China</option>
             </select>
           )}
 

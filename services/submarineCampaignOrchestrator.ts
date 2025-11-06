@@ -2,11 +2,13 @@
  * SubmarineCampaignOrchestrator
  *
  * Coordinates all submarine campaign operations in the correct sequence:
+ * -1. Asset Deploy Phase - Deploy assets (mines, sensors) to operational areas
+ * 0. Mine Phase - Maritime mines detect and eliminate submarines/ships
  * 1. ASW Phase - Detect and eliminate submarines
  * 2. Attack Phase - Execute missile attacks on bases
  * 3. Patrol Phase - Conduct patrol operations
  *
- * Ensures phase chaining: each phase receives updated submarine state from previous phase.
+ * Ensures phase chaining: each phase receives updated state from previous phase.
  * This prevents state inconsistencies like eliminated submarines attacking or
  * patrol orders being lost after attacks.
  *
@@ -30,6 +32,8 @@ import {
   OperationalData
 } from '../types';
 
+import { AssetDeployService, AssetDeployResult } from './assets/assetDeployService';
+import { MineService, MineResult } from './mines/mineService';
 import { PatrolService, SubmarinePatrolResult } from './patrol/patrolService';
 import { AttackService, SubmarineAttackResult } from './attack/attackService';
 import { ASWService, ASWResult } from './asw/aswService';
@@ -37,9 +41,12 @@ import { ASWService, ASWResult } from './asw/aswService';
 export interface SubmarineCampaignTurnResult {
   events: SubmarineEvent[];
   updatedSubmarines: SubmarineDeployment[];
+  updatedUnits: Unit[];
   updatedLocations: Location[];
+  updatedOperationalAreas: OperationalArea[];
   updatedCommandPoints: CommandPoints;
   eliminatedSubmarineIds: string[];
+  eliminatedUnitIds: string[];
 }
 
 /**
@@ -48,10 +55,12 @@ export interface SubmarineCampaignTurnResult {
  */
 export class SubmarineCampaignOrchestrator {
   /**
-   * Execute complete submarine campaign turn with all three phases
+   * Execute complete submarine campaign turn with all five phases
    *
    * Phase execution order (CRITICAL):
-   * 1. ASW Phase - eliminates submarines first
+   * -1. Asset Deploy Phase - deploy assets (mines, sensors) to operational areas
+   * 0. Mine Phase - maritime mines eliminate submarines and ships
+   * 1. ASW Phase - eliminates remaining submarines
    * 2. Attack Phase - eliminated subs cannot attack
    * 3. Patrol Phase - receives patrol orders created by attack phase
    *
@@ -63,7 +72,7 @@ export class SubmarineCampaignOrchestrator {
    * @param units All units
    * @param cards All cards
    * @param locations All locations (bases)
-   * @returns Combined results from all three phases
+   * @returns Combined results from all five phases
    */
   static async executeFullTurn(
     submarineCampaign: SubmarineCampaignState | null,
@@ -79,23 +88,48 @@ export class SubmarineCampaignOrchestrator {
       return {
         events: [],
         updatedSubmarines: [],
+        updatedUnits: [...units],
         updatedLocations: [...locations],
+        updatedOperationalAreas: [...operationalAreas],
         updatedCommandPoints: { ...commandPoints },
-        eliminatedSubmarineIds: []
+        eliminatedSubmarineIds: [],
+        eliminatedUnitIds: []
       };
     }
 
     const allEvents: SubmarineEvent[] = [];
 
-    // PHASE 1: ASW Phase - Detect and eliminate submarines FIRST
+    // PHASE -1: Asset Deploy Phase - Deploy assets to operational areas FIRST
+    console.log('🎯 Executing Asset Deploy Phase...');
+    const deployResult: AssetDeployResult = await AssetDeployService.processDeployOrders(
+      submarineCampaign,
+      currentTurnState,
+      operationalAreas
+    );
+
+    // PHASE 0: Mine Phase - Maritime mines eliminate submarines and ships
+    console.log('💥 Executing Mine Phase...');
+    const mineResult: MineResult = await MineService.processMinePhase(
+      submarineCampaign,
+      currentTurnState,
+      deployResult.updatedOperationalAreas, // Use areas with deployed assets
+      taskForces,
+      units,
+      cards,
+      deployResult.updatedSubmarines // Use submarines with updated deploy orders
+    );
+    allEvents.push(...mineResult.events);
+
+    // PHASE 1: ASW Phase - Detect and eliminate submarines (uses mine-updated submarines)
     console.log('🎯 Executing ASW Phase...');
     const aswResult: ASWResult = await ASWService.processASWPhase(
       submarineCampaign,
       currentTurnState,
       operationalAreas,
       taskForces,
-      units,
-      cards
+      mineResult.updatedUnits, // Pass mine-updated units
+      cards,
+      mineResult.updatedSubmarines // Pass mine-updated submarines
     );
     allEvents.push(...aswResult.events);
 
@@ -124,9 +158,12 @@ export class SubmarineCampaignOrchestrator {
     return {
       events: allEvents,
       updatedSubmarines: patrolResult.updatedSubmarines, // Contains all accumulated changes
+      updatedUnits: mineResult.updatedUnits, // Mine-updated units
       updatedLocations: attackResult.updatedLocations,
+      updatedOperationalAreas: deployResult.updatedOperationalAreas, // Areas with deployed assets
       updatedCommandPoints: patrolResult.updatedCommandPoints,
-      eliminatedSubmarineIds: aswResult.eliminatedSubmarineIds
+      eliminatedSubmarineIds: [...mineResult.eliminatedSubmarineIds, ...aswResult.eliminatedSubmarineIds],
+      eliminatedUnitIds: mineResult.eliminatedUnitIds
     };
   }
 

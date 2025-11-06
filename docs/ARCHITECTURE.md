@@ -220,23 +220,58 @@ Leaflet markers use `ReactDOMServer.renderToString()` to convert React component
 - `firebase.ts`: Firebase initialization and config
 
 ### Service Layer
-Business logic extracted from App.tsx into testable, reusable services:
-- `services/submarineService.ts`: Submarine campaign mechanics (~602 lines)
-  - Patrol processing with d20 rolls
-  - Attack calculations (50% success rate)
-  - Event generation and submarine state management
-- `services/turnService.ts`: Turn and time management (~181 lines)
+Business logic extracted from App.tsx into testable, reusable services (132 tests, ~4,000+ lines):
+
+#### Core Services
+- `services/turnService.ts`: Turn and time management (181 lines, 36 tests)
   - Turn advancement logic
   - Day/week calculations
   - Game phase determination
-- `services/deploymentService.ts`: Deployment timing and activation (~369 lines)
+- `services/deploymentService.ts`: Deployment timing and activation (369 lines, 24 tests)
   - Arrival calculations
   - Deployment cleanup
   - Activation timing
-- `services/destructionService.ts`: Combat tracking and statistics (~244 lines)
+- `services/destructionService.ts`: Combat tracking and statistics (244 lines, 33 tests)
   - Unit destruction detection
   - Combat effectiveness metrics
   - Destruction log management
+
+#### Submarine Campaign Services (Modular Architecture)
+- `services/submarineCampaignOrchestrator.ts`: Phase coordinator (369 lines)
+  - Executes all 5 submarine campaign phases in correct order
+  - Ensures state chaining between phases (ASW → Attack → Patrol)
+  - Single entry point for submarine campaign operations
+- `services/submarineService.ts`: Shared utilities (1,239 lines, 21 tests)
+  - Communication failure checks
+  - Tactical network damage calculations
+  - ASW ship snapshot management
+- `services/asw/aswService.ts`: ASW Phase (329 lines)
+  - ASW detection with 5% detection rate, 50% elimination rate
+  - Three ASW element types: cards, ships, patrol submarines
+  - Zone-filtered detection (submarines only detect in same area)
+- `services/attack/attackService.ts`: Attack Phase (252 lines)
+  - Base attack mechanics with 50% success rate
+  - Creates patrol orders on attack completion
+- `services/patrol/patrolService.ts`: Patrol Phase (205 lines)
+  - Patrol operations with 90% success rate
+  - Command point damage to enemy logistics
+- `services/mines/mineService.ts`: Mine Phase (318 lines, 9 tests)
+  - Maritime mine detection: 5% success rate (d20=1)
+  - Each mine rolls against each enemy unit in range
+  - Creates events for all detection attempts
+- `services/assets/assetDeployService.ts`: Asset Deploy Phase (134 lines, 9 tests)
+  - Processes deploy orders for asset-type cards (mines, sensors)
+  - Prevents duplicate asset deployments
+  - Marks deploy orders as completed
+
+#### Event System (Unified Pattern)
+- `services/events/EventBuilder.ts`: Builder pattern for consistent events (154 lines)
+  - Fluent API: `.setSubmarineInfo().setFaction().setEventType().build()`
+  - Generates unique IDs, timestamps, turn tracking
+  - Unified interface for all submarine campaign events
+- `services/events/EventTemplates.ts`: Centralized message templates (104 lines)
+  - PatrolTemplates, AttackTemplates, ASWTemplates, MineTemplates
+  - Ensures consistent language across all event descriptions
 
 ### Utility Layer (New)
 - `utils/iconGenerators.ts`: Leaflet icon generation
@@ -250,12 +285,13 @@ Business logic extracted from App.tsx into testable, reusable services:
 - `constants/index.ts`: Centralized exports
 
 ### Custom Hooks
-Custom hooks for state management and UI logic:
-- `hooks/useGameState.ts`: Centralized Firestore state management
-  - Manages 14 Firestore subscriptions
+Custom hooks for state management and UI logic (~695 lines total):
+- `hooks/useGameState.ts`: Centralized Firestore state management (284 lines)
+  - Manages **17 active Firestore subscriptions** (18 total functions in firestoreService.ts)
   - Provides update functions for all game state
   - Eliminates 87 lines of boilerplate from App.tsx
-- `hooks/useModal.ts`: Unified modal state management
+  - Subscriptions: operationalAreas, operationalData, locations, taskForces, units, cards, commandPoints, purchasedCards, destructionLog, turnState, pendingDeployments, influenceMarker, submarineCampaign, playedCardNotifications, playerAssignments, registeredPlayers, cardPurchaseHistory
+- `hooks/useModal.ts`: Unified modal state management (148 lines)
   - Manages 7 modal open/close states
   - Provides consistent API (open, close, toggle, isOpen)
   - Replaces 7 individual useState declarations

@@ -81,6 +81,23 @@ export const ASWTemplates = {
 };
 
 /**
+ * Mine event templates
+ */
+export const MineTemplates = {
+  /**
+   * Mine hit (defender perspective only)
+   */
+  hit: (unitName: string, unitType: string, areaName: string): string =>
+    `${unitType} ${unitName} destroyed by maritime mine in ${areaName}`,
+
+  /**
+   * Mine detection failed (defender perspective)
+   */
+  detectionFailed: (unitName: string, unitType: string, areaName: string): string =>
+    `${unitType} ${unitName} passed through minefield in ${areaName} - No contact`
+};
+
+/**
  * Helper function to get zone name from target ID
  */
 export function formatZoneName(targetId: string, operationalAreas?: Array<{ id: string; name: string }>): string {

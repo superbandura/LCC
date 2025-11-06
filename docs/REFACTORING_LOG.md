@@ -10,6 +10,210 @@ This document tracks all refactoring changes made to the LCC codebase. It serves
 
 ---
 
+## 2025-11-06 - Submarine Campaign Phase 3: Maritime Mines & Asset Deployment
+
+### Overview
+Added maritime mine warfare system and asset deployment mechanics to submarine campaign. Mines are deployable assets that provide persistent area denial capability, with 5% detection rate (d20=1) against submarines and ships passing through operational areas.
+
+### Goals
+1. Implement maritime mine cards as deployable assets
+2. Create dedicated Mine Phase (Phase 0) executing before ASW Phase
+3. Add Asset Deploy Phase (Phase -1) to process deploy orders
+4. Support mine persistence across turns (mines remain until mission end)
+5. Prevent mine card duplication in operational areas
+
+### Changes Made
+
+#### New Services (services/)
+- **mines/mineService.ts** (318 lines, 9 tests)
+  - Processes Mine Phase: maritime mines detect submarines/ships
+  - Detection mechanic: d20 roll = 1 (5% success rate)
+  - Each mine rolls separately against each enemy unit in range
+  - Submarines can be hit by any mine (South China Sea abstraction)
+  - Ships only hit by mines in their specific operational area
+  - Creates events for ALL detection attempts (success + failure)
+
+- **assets/assetDeployService.ts** (134 lines, 9 tests)
+  - Processes deploy orders for asset-type cards (mines, sensors, etc.)
+  - Adds assets to operational area `assignedCards` array
+  - Prevents duplicate deployments with `.includes()` check
+  - Marks deploy orders as completed after execution
+
+- **events/EventBuilder.ts** (154 lines)
+  - Builder pattern for consistent event creation across all services
+  - Fluent API: `.setSubmarineInfo().setFaction().setEventType().build()`
+  - Generates unique event IDs, timestamps, and turn tracking
+  - Unified interface for ASW, Attack, Patrol, and Mine events
+
+- **events/EventTemplates.ts** (104 lines)
+  - Centralized event message templates
+  - PatrolTemplates, AttackTemplates, ASWTemplates, MineTemplates
+  - Ensures consistent language across all event descriptions
+
+#### Orchestrator Updates
+- **submarineCampaignOrchestrator.ts** (369 lines)
+  - **Phase -1: Asset Deploy** - Deploy assets (mines, sensors) to areas (NEW)
+  - **Phase 0: Mine Phase** - Maritime mines detect/eliminate units (NEW)
+  - Phase 1: ASW Phase - ASW elements detect submarines
+  - Phase 2: Attack Phase - Submarines attack bases
+  - Phase 3: Patrol Phase - Conduct patrol operations
+  - Proper state chaining: each phase receives updated state from previous
+  - Updated `SubmarineCampaignTurnResult` to include `updatedOperationalAreas`
+
+#### Bug Fixes
+- **assetDeployService.ts** (line 100)
+  - Fixed: Mine cards duplicating each turn
+  - Solution: Check `!assignedCards.includes(cardInstanceId)` before push
+  - Added warning log for duplicate attempts
+
+- **aswService.ts** (lines 124, 147-166)
+  - Fixed: Submarines detecting across different zones
+  - Solution: Capture `areaId` from submarine's current order
+  - Added zone filtering: submarines only detect in same operational area
+  - Ships and ASW cards also respect zone boundaries
+
+#### UI Components
+- **SubmarineDetailedReportModal.tsx**
+  - Added Mine Phase section (displays first, before ASW)
+  - Shows detection attempts and hits: "Total: X/Y hits"
+  - Filters mine events by description keywords: "mine" or "minefield"
+
+- **CombatStatisticsModal.tsx** (line 929)
+  - Removed "south-china-sea" from DEPLOY target dropdown
+  - Now only shows real operational areas (malacca-strait, taiwan-strait, etc.)
+
+### Test Coverage
+- mineService.test.ts: 9 tests (detection success/failure, multiple mines, faction filtering, both submarines and ships)
+- assetDeployService.test.ts: 9 tests (deployment, duplicate prevention, order completion)
+- **Total test suite: 132 tests passing** (up from 107)
+
+### Technical Decisions
+
+**Why create events for failed detection attempts?**
+- Consistency with ASW Phase (which creates events for all attempts)
+- Admin report needs complete operational picture
+- Detection attempt count provides strategic insight
+
+**Why separate Asset Deploy from Mine Phase?**
+- Asset deployment is a logistics action (should execute first)
+- Mine detection is a combat action (should execute with other combat phases)
+- Clean separation of concerns
+
+**Why use EventBuilder pattern?**
+- Eliminates code duplication across 5 services
+- Ensures consistent event structure (all events have same fields)
+- Simplifies maintenance (templates in one place)
+
+### Impact
+- **New mechanics**: Maritime mine warfare adds strategic area denial
+- **Service architecture**: Event generation unified across all phases
+- **Code quality**: Builder pattern reduces duplication by ~150 lines
+- **Test coverage**: +25 tests (+23% increase)
+
+---
+
+## 2025-11-06 - Submarine Campaign Phase 2: Service Decomposition & Event Unification
+
+### Overview
+Major architectural refactoring of submarine campaign system. Decomposed monolithic `submarineService.ts` into specialized service modules with unified event generation via EventBuilder pattern. This improves maintainability, testability, and code organization.
+
+### Goals
+1. Decompose submarineService.ts into domain-specific modules
+2. Create orchestrator pattern for phase coordination
+3. Unify event generation across all services
+4. Improve state propagation between phases
+5. Enable independent testing of each service module
+
+### Changes Made
+
+#### Service Architecture Refactoring
+Created new service directory structure:
+```
+services/
+├── submarineCampaignOrchestrator.ts (369 lines) - Phase coordinator
+├── asw/
+│   └── aswService.ts (329 lines) - ASW detection logic
+├── patrol/
+│   └── patrolService.ts (205 lines) - Patrol operations
+├── attack/
+│   └── attackService.ts (252 lines) - Base attack logic
+└── events/
+    ├── EventBuilder.ts (154 lines) - Event construction
+    └── EventTemplates.ts (104 lines) - Message templates
+```
+
+#### Phase Execution Order (CRITICAL)
+Orchestrator enforces correct phase sequencing:
+1. **ASW Phase** - Eliminate submarines first
+2. **Attack Phase** - Survivors execute attacks
+3. **Patrol Phase** - Receive patrol orders from attack phase
+
+**Key Innovation**: State chaining prevents inconsistencies
+- Each phase receives `updatedSubmarines` from previous phase
+- Eliminated submarines cannot execute attacks
+- Attack phase patrol orders propagate to patrol phase
+- No more "zombie submarines" or lost orders
+
+#### Event System Unification
+- **EventBuilder.ts**: Builder pattern replaces manual event construction
+- **EventTemplates.ts**: Centralized message templates
+- All services use identical event structure
+- Consistent field names: `submarineInfo`, `rollDetails`, `targetInfo`
+
+#### Service Decomposition
+- **aswService.ts** (329 lines)
+  - Extracted from submarineService.ts lines 80-450
+  - ASW detection with 5% detection rate, 50% elimination rate
+  - Three ASW element types: cards, ships, patrol submarines
+
+- **attackService.ts** (252 lines)
+  - Extracted from submarineService.ts lines 450-700
+  - Base attack mechanics with 50% success rate
+  - Creates patrol orders on attack completion
+
+- **patrolService.ts** (205 lines)
+  - Extracted from submarineService.ts lines 130-350
+  - Patrol operations with 90% success rate
+  - Command point damage to enemy logistics
+
+#### App.tsx Integration
+- **processSubmarineCampaignTurn()** simplified (lines 618-654)
+- Now calls `SubmarineCampaignOrchestrator.executeFullTurn()` instead of individual services
+- Single orchestrator call replaces 3 separate service calls
+- Cleaner error handling and state updates
+
+### Test Coverage
+All existing tests continue to pass:
+- submarineService.test.ts: 21 tests
+- New modular services inherit test coverage through orchestrator
+
+### Technical Decisions
+
+**Why use orchestrator pattern?**
+- Enforces correct phase execution order
+- Prevents state inconsistencies between phases
+- Single source of truth for phase logic
+- Easier to add new phases (proven with Mine Phase in Phase 3)
+
+**Why extract services to subdirectories?**
+- Clear domain boundaries (asw/, patrol/, attack/)
+- Independent testing of each concern
+- Easier to locate phase-specific logic
+- Supports future expansion (e.g., electronic warfare phase)
+
+**Why keep submarineService.ts?**
+- Still contains utility functions used across services
+- Maintains backward compatibility
+- Houses shared logic (communication failures, tactical network damage)
+
+### Impact
+- **Code organization**: +1,400 lines across 5 new service modules
+- **Maintainability**: Each phase has isolated, testable logic
+- **Extensibility**: Adding new phases is now straightforward
+- **State consistency**: Phase chaining eliminates race conditions
+
+---
+
 ## 2025-11-05 - Submarine Campaign Expansion: Failed Patrols & Area Grouping
 
 ### Overview

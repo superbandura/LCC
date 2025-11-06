@@ -616,7 +616,9 @@ function App() {
 
   // Process complete submarine campaign turn - NOW USING SubmarineCampaignOrchestrator
   const processSubmarineCampaignTurn = async (currentTurnState: TurnState) => {
-    // Use orchestrator to execute all three phases in correct sequence:
+    // Use orchestrator to execute all five phases in correct sequence:
+    // -1. Asset Deploy Phase - deploy assets (mines, sensors) to areas
+    // 0. Mine Phase - maritime mines eliminate submarines/ships
     // 1. ASW Phase - detect and eliminate submarines
     // 2. Attack Phase - execute missile attacks on bases
     // 3. Patrol Phase - conduct patrol operations
@@ -630,6 +632,11 @@ function App() {
       cards,
       locations
     );
+
+    // Update operational areas if assets were deployed
+    if (result.updatedOperationalAreas.length > 0) {
+      await updateOperationalAreas(result.updatedOperationalAreas);
+    }
 
     // Update command points if changed by patrols
     if (result.updatedCommandPoints.us !== commandPoints.us ||

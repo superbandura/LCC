@@ -14,7 +14,7 @@ LCC uses a **centralized state management** pattern with React hooks and Firesto
 State that persists in Firestore and syncs across all clients in real-time.
 
 ```typescript
-// In App.tsx (managed by useGameState hook - 14 Firestore-synced states)
+// In App.tsx (managed by useGameState hook - 17 Firestore-synced states)
 const [operationalAreas, setOperationalAreas] = useState<OperationalArea[]>([]);
 const [operationalData, setOperationalData] = useState<Record<string, OperationalData>>({});
 const [locations, setLocations] = useState<Location[]>([]);
@@ -29,6 +29,9 @@ const [pendingDeployments, setPendingDeployments] = useState<PendingDeployments>
 const [influenceMarker, setInfluenceMarker] = useState<InfluenceMarker>({ value: 0 });
 const [submarineCampaign, setSubmarineCampaign] = useState<SubmarineCampaignState>(...);
 const [playedCardNotifications, setPlayedCardNotifications] = useState<PlayedCardNotification[]>([]);
+const [playerAssignments, setPlayerAssignments] = useState<PlayerAssignment | null>(null);
+const [registeredPlayers, setRegisteredPlayers] = useState<RegisteredPlayer[]>([]);
+const [cardPurchaseHistory, setCardPurchaseHistory] = useState<CardPurchaseHistory[]>([]); // Legacy
 ```
 
 #### 2. Local State (Client-only)
@@ -94,7 +97,10 @@ Firestore:
           ├── pendingDeployments: PendingDeployments
           ├── influenceMarker: InfluenceMarker
           ├── submarineCampaign: SubmarineCampaignState
-          └── playedCardNotifications: Array<PlayedCardNotification>
+          ├── playedCardNotifications: Array<PlayedCardNotification>
+          ├── playerAssignments: PlayerAssignment | null
+          ├── registeredPlayers: Array<RegisteredPlayer>
+          └── cardPurchaseHistory: Array<CardPurchaseHistory> (legacy)
 ```
 
 ### Subscription Pattern
@@ -103,9 +109,9 @@ All Firestore subscriptions are now managed by the **useGameState** custom hook 
 
 ```typescript
 // In App.tsx
-const gameState = useGameState(); // Returns all 14 Firestore-synced states
+const gameState = useGameState(); // Returns all 17 Firestore-synced states
 
-// useGameState hook internally manages 14 subscriptions:
+// useGameState hook internally manages 17 active subscriptions:
 // 1. subscribeToOperationalAreas
 // 2. subscribeToOperationalData
 // 3. subscribeToLocations
@@ -120,18 +126,24 @@ const gameState = useGameState(); // Returns all 14 Firestore-synced states
 // 12. subscribeToInfluenceMarker
 // 13. subscribeToSubmarineCampaign
 // 14. subscribeToPlayedCardNotificationsQueue
+// 15. subscribeToPlayerAssignments
+// 16. subscribeToRegisteredPlayers
+// 17. subscribeToCardPurchaseHistory (legacy, not actively used but available)
 
-// Total: 14 subscriptions (encapsulated in useGameState hook)
+// Note: firestoreService.ts has 18 total subscription functions
+// useGameState.ts actively uses 17 of them (subscribeToCardPurchaseHistory is legacy)
+
+// Total: 17 active subscriptions (encapsulated in useGameState hook)
 
 // Previous pattern (deprecated - now in useGameState):
 // useEffect(() => {
 //   const unsubscribeAreas = subscribeToOperationalAreas(setOperationalAreas);
 //   const unsubscribeData = subscribeToOperationalData(setOperationalData);
-//   // ... 12 more subscriptions
+//   // ... 15 more subscriptions
 //   return () => {
 //     unsubscribeAreas();
 //     unsubscribeData();
-//     // ... cleanup all 14 subscriptions
+//     // ... cleanup all 17 subscriptions
 //   };
 // }, []);
 ```

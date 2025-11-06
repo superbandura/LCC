@@ -282,7 +282,9 @@ export interface SubmarineOrder {
   targetId?: string;                    // Target ID (for attacks)
   targetType?: SubmarineTargetType;     // Target type (for attacks)
   assignedTurn: number;                 // Turn when order was assigned
-  executionTurn?: number;               // Turn when order will be executed (for delayed attacks)
+  assignedDate: string;                 // ISO date when order was assigned
+  executionTurn?: number;               // Turn when order will be executed (for delayed attacks) - DEPRECATED, use executionDate
+  executionDate?: string;               // ISO date when order will be executed (for delayed attacks)
   resolvedTurn?: number;                // Turn when order was resolved
   result?: 'success' | 'failure' | 'detected'; // Order result
 }

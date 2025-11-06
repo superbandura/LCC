@@ -571,10 +571,10 @@ export const calculateCommandPoints = (
     }
   });
 
-  // Apply influence modifier ONLY if flag is true (each point = 10% bonus/penalty)
+  // Apply influence modifier ONLY if flag is true (each point = 5% bonus/penalty)
   // This should only be applied at end of week, not during planning phase
   if (applyInfluenceBonus && influenceValue !== 0) {
-    const influenceMultiplier = Math.abs(influenceValue) * 0.1;
+    const influenceMultiplier = Math.abs(influenceValue) * 0.05;
 
     if (influenceValue > 0) {
       // Positive influence: US gets bonus, China gets penalty

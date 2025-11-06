@@ -38,6 +38,7 @@ interface CombatStatisticsModalProps {
   pendingDeployments: PendingDeployments;
   commandPoints: CommandPoints;
   onCommandPointsUpdate: (points: CommandPoints) => void;
+  turnState: TurnState;
 }
 
 type TabType = 'combat' | 'influence' | 'submarine';
@@ -59,7 +60,8 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
   selectedFaction,
   pendingDeployments,
   commandPoints,
-  onCommandPointsUpdate
+  onCommandPointsUpdate,
+  turnState
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('combat');
   const [factionFilter, setFactionFilter] = useState<'all' | 'us' | 'china'>('all');
@@ -85,18 +87,6 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
   const SUBMARINE_COST = 2;  // Cost for submarines (patrol and attack)
   const ASW_COST = 2;         // Cost for ASW patrol orders
   const ASSET_COST = 1;       // Cost for asset deploy orders
-
-  // Get turn state from submarine campaign or create default
-  const turnState: TurnState = useMemo(() => {
-    // Try to infer turn from submarine events or use defaults
-    const lastEvent = submarineCampaign?.events?.[submarineCampaign.events.length - 1];
-    return {
-      currentDate: new Date().toISOString().split('T')[0],
-      dayOfWeek: new Date().getDay() || 7,
-      turnNumber: lastEvent?.turn || 0,
-      isPlanningPhase: false
-    };
-  }, [submarineCampaign]);
 
   // Filter destruction log
   const filteredLog = useMemo(() => {
@@ -128,6 +118,34 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
       china: subs.filter(s => s.faction === 'china')
     };
   }, [submarineCampaign]);
+
+  // Filter submarine campaign events for operations log - only show successful events affecting player
+  const recentEvents = useMemo(() => {
+    if (!selectedFaction || !submarineCampaign?.events) return [];
+
+    return submarineCampaign.events
+      .filter(event => {
+        // Only show events for selected faction
+        if (event.faction !== selectedFaction) return false;
+
+        // Show successful attacks (patrols with damage dealt)
+        if (event.eventType === 'attack_success') {
+          // For patrols against areas, only show if damage was dealt (enemy detected)
+          if (event.targetInfo?.targetType === 'area') {
+            return event.targetInfo.damageDealt !== undefined && event.targetInfo.damageDealt > 0;
+          }
+          return true; // Show other successful attacks (against bases, etc.)
+        }
+
+        // Show destructions
+        if (event.eventType === 'destroyed') return true;
+
+        // Hide everything else (failed patrols, detection attempts, etc.)
+        return false;
+      })
+      .slice(-30)
+      .reverse();
+  }, [submarineCampaign?.events, selectedFaction]);
 
   // Reset orders when modal opens (track transition to avoid race condition)
   const prevIsOpenRef = useRef(isOpen);
@@ -302,12 +320,6 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
       return;
     }
 
-    // Check if already has current order
-    if (sub.currentOrder) {
-      setOrderErrors(prev => ({...prev, [subId]: 'Already has an active order'}));
-      return;
-    }
-
     // Determine command point cost based on submarine type
     const cost = sub.submarineType === 'asset' ? ASSET_COST :
                  sub.submarineType === 'asw' ? ASW_COST :
@@ -366,6 +378,15 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
       if (s.id === subId) {
         // Remove pendingOrder field by destructuring (Firestore doesn't accept undefined)
         const { pendingOrder, ...rest } = s;
+
+        // Calculate execution date for attacks (2 days from now)
+        let executionDate: string | undefined;
+        if (order.type === 'attack') {
+          const currentDate = new Date(turnState.currentDate);
+          currentDate.setDate(currentDate.getDate() + 2);
+          executionDate = currentDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+        }
+
         return {
           ...rest,
           currentOrder: {
@@ -375,8 +396,9 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
             status: 'pending',                           // Order status
             targetId: order.targetId,                    // Target area or base
             assignedTurn: turnState.turnNumber,          // Turn when order was assigned
-            // For attacks, set execution turn to current + 2
-            ...(order.type === 'attack' && { executionTurn: turnState.turnNumber + 2 })
+            assignedDate: turnState.currentDate,         // Date when order was assigned
+            // For attacks, set execution date to current + 2 days
+            ...(order.type === 'attack' && { executionDate })
           }
         };
       }
@@ -934,9 +956,6 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
 
   // Render Submarine Campaign tab
   const renderSubmarineTab = () => {
-    // Get recent events for operations log (last 30 events, newest first)
-    const recentEvents = submarineCampaign?.events?.slice(-30).reverse() || [];
-
     // Filter deployed elements by selected faction and submarineType
     const factionSubmarines = selectedFaction
       ? deployedSubmarines[selectedFaction].filter(s =>
@@ -1072,10 +1091,9 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
               ) : (
                 <div className="space-y-0">
                   {recentEvents.map((event, idx) => {
-                    // Format date from timestamp
-                    const eventDate = new Date(event.timestamp);
-                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
-                    const dateStr = `${eventDate.getDate()} ${monthNames[eventDate.getMonth()]}`;
+                    // Format date from game turn and day
+                    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                    const dateStr = `Week ${event.turn}, ${dayNames[(event.dayOfWeek ?? 1) - 1]}`;
                     const factionLabel = event.faction === 'us' ? 'USMC' : 'PLAN';
 
                     return (
@@ -1099,6 +1117,11 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
                           <span className="text-gray-300 flex-1">
                             {event.description}
                           </span>
+                          {event.targetInfo?.damageDealt && event.targetInfo.damageDealt > 0 && (
+                            <span className="text-red-400 font-bold flex-shrink-0">
+                              - {event.targetInfo.damageDealt} CP LOST
+                            </span>
+                          )}
                         </div>
                       </div>
                     );
@@ -1125,6 +1148,7 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
             onClose={() => setIsDetailedReportOpen(false)}
             submarineCampaign={submarineCampaign}
             turnState={turnState}
+            locations={locations}
           />
         )}
       </div>

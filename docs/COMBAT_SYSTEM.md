@@ -368,7 +368,7 @@ useEffect(() => {
 /**
  * Calculate command points from bases
  * Command points are reduced proportionally based on damage
- * Influence marker affects final command points: each point = 10% bonus/penalty
+ * Influence marker affects final command points: each point = 5% bonus/penalty
  * IMPORTANT: Influence bonus should only be applied at end of week, not mid-week or planning phase
  */
 export const calculateCommandPoints = (
@@ -398,9 +398,9 @@ export const calculateCommandPoints = (
   });
 
   // STEP 2: Apply influence modifier ONLY if flag is true
-  // Influence bonus: each point = 10% bonus/penalty
+  // Influence bonus: each point = 5% bonus/penalty
   if (applyInfluenceBonus && influenceValue !== 0) {
-    const influenceMultiplier = Math.abs(influenceValue) * 0.1;
+    const influenceMultiplier = Math.abs(influenceValue) * 0.05;
 
     if (influenceValue > 0) {
       // Positive influence: US gets bonus, China gets penalty
@@ -466,18 +466,18 @@ NEXT SUNDAY:
 
 ### Influence Bonus Formula
 
-**Each influence point = 10% bonus/penalty**
+**Each influence point = 5% bonus/penalty**
 
 **Examples**:
 ```typescript
 // Base CP: US = 100, China = 100
 // Influence = +5 (US advantage)
-US: 100 * (1 + 0.5) = 150 CP (+50%)
-China: 100 * (1 - 0.5) = 50 CP (-50%)
+US: 100 * (1 + 0.25) = 125 CP (+25%)
+China: 100 * (1 - 0.25) = 75 CP (-25%)
 
 // Influence = -3 (China advantage)
-US: 100 * (1 - 0.3) = 70 CP (-30%)
-China: 100 * (1 + 0.3) = 130 CP (+30%)
+US: 100 * (1 - 0.15) = 85 CP (-15%)
+China: 100 * (1 + 0.15) = 115 CP (+15%)
 
 // Influence = 0 (neutral)
 US: 100 CP (no change)

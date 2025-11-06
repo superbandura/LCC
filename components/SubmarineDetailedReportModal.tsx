@@ -1,24 +1,27 @@
 import React from 'react';
-import { SubmarineCampaignState, TurnState, SubmarineEvent } from '../types';
+import { SubmarineCampaignState, TurnState, SubmarineEvent, Location } from '../types';
 
 interface SubmarineDetailedReportModalProps {
   isOpen: boolean;
   onClose: () => void;
   submarineCampaign: SubmarineCampaignState;
   turnState: TurnState;
+  locations: Location[];
 }
 
 const SubmarineDetailedReportModal: React.FC<SubmarineDetailedReportModalProps> = ({
   isOpen,
   onClose,
   submarineCampaign,
-  turnState
+  turnState,
+  locations
 }) => {
   if (!isOpen) return null;
 
-  // Get all events from current turn only (last day played)
+  // Get all events from current day only (not entire week)
   const currentTurnEvents = submarineCampaign?.events?.filter(
-    e => e.turn === turnState.turnNumber
+    e => e.turn === turnState.turnNumber &&
+         (!e.dayOfWeek || e.dayOfWeek === turnState.dayOfWeek) // If no dayOfWeek, include for backward compatibility
   ) || [];
 
   // Group events by phase (ASW, Attack, Patrol)
@@ -33,6 +36,14 @@ const SubmarineDetailedReportModal: React.FC<SubmarineDetailedReportModalProps> 
     e.submarineType?.toLowerCase() !== 'asw' &&
     !e.description?.includes('Enemy patrol')  // Only show attacker's perspective
   );
+
+  // Get pending attack orders (attacks that haven't executed yet)
+  const pendingAttacks = submarineCampaign?.deployedSubmarines?.filter(sub =>
+    sub.currentOrder?.orderType === 'attack' &&
+    sub.currentOrder?.status === 'pending' &&
+    sub.currentOrder?.executionDate !== undefined &&
+    sub.currentOrder.executionDate > turnState.currentDate
+  ) || [];
 
   // Calculate summary statistics for ASW Phase
   // Separate detection attempts from elimination events
@@ -190,16 +201,69 @@ const SubmarineDetailedReportModal: React.FC<SubmarineDetailedReportModalProps> 
             {/* Attack Phase - Always shown */}
             <div>
               <h3 className="text-sm font-mono font-bold text-green-400 uppercase tracking-wider mb-2 border-l-4 border-green-600 pl-2">
-                ATTACK PHASE ({attackEvents.length} operations)
+                ATTACK PHASE ({attackEvents.length} operations, {pendingAttacks.length} pending)
               </h3>
               <div className="font-mono text-xs text-gray-500 mb-3 pl-2">
                 Total: {attackSuccessful}/{attackTotal} successful → {attackTotalDamage} base damage
               </div>
-              {attackEvents.length > 0 ? (
-                <div className="pl-2 space-y-0.5">
-                  {attackEvents.map((event, idx) => renderSimpleEventLine(event, idx))}
+
+              {/* Executed attacks */}
+              {attackEvents.length > 0 && (
+                <div className="pl-2 space-y-0.5 mb-3">
+                  <div className="font-mono text-xs text-cyan-400 mb-1 font-bold">
+                    → EXECUTED ATTACKS
+                  </div>
+                  <div className="ml-2 space-y-0.5">
+                    {attackEvents.map((event, idx) => renderSimpleEventLine(event, idx))}
+                  </div>
                 </div>
-              ) : (
+              )}
+
+              {/* Pending attacks */}
+              {pendingAttacks.length > 0 && (
+                <div className="pl-2 space-y-0.5">
+                  <div className="font-mono text-xs text-cyan-400 mb-1 font-bold">
+                    → PENDING ATTACKS
+                  </div>
+                  <div className="ml-2 space-y-0.5">
+                    {pendingAttacks.map((sub, idx) => {
+                      const targetLocation = locations.find(loc => loc.id === sub.currentOrder?.targetId);
+                      const targetName = targetLocation?.name || 'Unknown Base';
+
+                      // Calculate days remaining until execution
+                      let daysRemaining = '?';
+                      if (sub.currentOrder?.executionDate) {
+                        const currentDate = new Date(turnState.currentDate);
+                        const executionDate = new Date(sub.currentOrder.executionDate);
+                        const diffTime = executionDate.getTime() - currentDate.getTime();
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        daysRemaining = diffDays.toString();
+                      }
+
+                      const factionColor = sub.faction === 'us' ? 'text-blue-400' : 'text-red-400';
+
+                      return (
+                        <div key={`pending-${sub.id}-${idx}`} className="font-mono text-xs text-gray-300 py-1">
+                          <span className={`font-bold ${factionColor}`}>[{sub.faction.toUpperCase()}]</span>
+                          {' '}
+                          <span className="text-gray-400">{sub.submarineName}</span>
+                          {' → '}
+                          <span className="text-yellow-500">⏳ Preparing attack</span>
+                          {' '}
+                          <span className="text-gray-400">against</span>
+                          {' '}
+                          <span className="text-yellow-500">{targetName}</span>
+                          {' '}
+                          <span className="text-gray-500">(Execute in {daysRemaining} days)</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* No attacks at all */}
+              {attackEvents.length === 0 && pendingAttacks.length === 0 && (
                 <div className="pl-2">
                   <p className="text-gray-500 font-mono text-xs">
                     -- NO ATTACK OPERATIONS THIS TURN --

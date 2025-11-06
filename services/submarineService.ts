@@ -88,8 +88,13 @@ export class SubmarineService {
       return sub;
     });
 
+    // Deduplicate submarines by ID before filtering
+    const uniqueSubmarines = Array.from(
+      new Map(updatedSubmarinesForReset.map(sub => [sub.id, sub])).values()
+    );
+
     // Filter active submarines with pending patrol orders
-    const activeSubmarines = updatedSubmarinesForReset.filter(
+    const activeSubmarines = uniqueSubmarines.filter(
       sub => sub.status === 'active' &&
              sub.currentOrder?.orderType === 'patrol' &&
              sub.currentOrder?.status === 'pending'
@@ -169,8 +174,8 @@ export class SubmarineService {
       sub => sub.status === 'active' &&
              sub.currentOrder?.orderType === 'attack' &&
              sub.currentOrder?.status === 'pending' &&
-             sub.currentOrder?.executionTurn !== undefined &&
-             currentTurnState.turnNumber >= sub.currentOrder.executionTurn
+             sub.currentOrder?.executionDate !== undefined &&
+             currentTurnState.currentDate >= sub.currentOrder.executionDate
     );
 
     if (pendingAttacks.length === 0) {
@@ -390,7 +395,10 @@ export class SubmarineService {
 
     // 3. Collect patrol submarines (they can do ASW)
     const patrolSubmarines = submarinesInSouthChinaSea
-      .filter(sub => sub.currentOrder?.orderType === 'patrol')
+      .filter(sub =>
+        sub.currentOrder?.orderType === 'patrol' && // Only patrol orders
+        sub.currentOrder?.status === 'pending'       // Must be active patrol
+      )
       .map(sub => ({
         id: sub.id,
         name: sub.submarineName,
@@ -402,7 +410,12 @@ export class SubmarineService {
 
     allASWElements.push(...patrolSubmarines);
 
-    if (allASWElements.length === 0) {
+    // Deduplicate ASW elements by ID to prevent multiple detection attempts per element
+    const uniqueASWElements = Array.from(
+      new Map(allASWElements.map(elem => [elem.id, elem])).values()
+    );
+
+    if (uniqueASWElements.length === 0) {
       return { events: [], updatedSubmarines: submarineCampaign.deployedSubmarines, eliminatedSubmarineIds: [] };
     }
 
@@ -413,7 +426,7 @@ export class SubmarineService {
     let detectionAttempts = 0;
     let successfulDetections = 0;
 
-    for (const aswElement of allASWElements) {
+    for (const aswElement of uniqueASWElements) {
       // Find enemy submarines not yet eliminated
       const enemySubmarines = submarinesInSouthChinaSea.filter(
         sub => sub.faction !== aswElement.faction && !eliminatedSubmarineIds.includes(sub.id)

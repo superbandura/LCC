@@ -25,6 +25,8 @@ import {
   Card,
   Faction
 } from '../../types';
+import { EventBuilder } from '../events/EventBuilder';
+import { ASWTemplates } from '../events/EventTemplates';
 
 export interface ASWResult {
   events: SubmarineEvent[];
@@ -176,34 +178,58 @@ export class ASWService {
             );
           }
 
-          // Create events
-          const { attackerEvent, defenderEvent } = this.createASWEliminationEventsFromElement(
-            aswElement,
-            targetSubmarine,
-            currentTurnState,
-            detectionRoll,
-            eliminationRoll
-          );
+          // Create attacker event (ASW operator's view)
+          const attackerEvent = new EventBuilder()
+            .setSubmarineInfo(aswElement.id, aswElement.name, aswElement.id, aswElement.name, 'ASW')
+            .setFaction(aswElement.faction)
+            .setTurnState(currentTurnState)
+            .setEventType('attack_success')
+            .setTarget(targetSubmarine.id, targetSubmarine.submarineName, 'unit')
+            .setDescription(ASWTemplates.eliminationAttacker(aswElement.type, aswElement.name, targetSubmarine.submarineName))
+            .setRolls(detectionRoll, 1, eliminationRoll, 10)
+            .setASWElementInfo(aswElement.id, aswElement.name, aswElement.type, aswElement.areaId, aswElement.areaName)
+            .build();
+
+          // Create defender event (submarine crew's view)
+          const defenderEvent = new EventBuilder()
+            .setSubmarine(targetSubmarine)
+            .setTurnState(currentTurnState)
+            .setEventType('destroyed')
+            .setTarget(aswElement.id, aswElement.name, 'unit')
+            .setDescription(ASWTemplates.eliminationDefender(targetSubmarine.submarineName, aswElement.type, aswElement.name))
+            .setRolls(detectionRoll, 1, eliminationRoll, 10)
+            .setASWElementInfo(aswElement.id, aswElement.name, aswElement.type, aswElement.areaId, aswElement.areaName)
+            .build();
+
           events.push(attackerEvent, defenderEvent);
         } else {
           // Submarine evaded (only attacker knows)
-          const attackerEvent = this.createASWDetectionEventFromElement(
-            aswElement,
-            targetSubmarine,
-            currentTurnState,
-            detectionRoll,
-            eliminationRoll
-          );
+          const attackerEvent = new EventBuilder()
+            .setSubmarineInfo(aswElement.id, aswElement.name, aswElement.id, aswElement.name, 'ASW')
+            .setFaction(aswElement.faction)
+            .setTurnState(currentTurnState)
+            .setEventType('detected')
+            .setTarget(targetSubmarine.id, targetSubmarine.submarineName, 'unit')
+            .setDescription(ASWTemplates.detectionEvaded(targetSubmarine.submarineName))
+            .setRolls(detectionRoll, 1, eliminationRoll, 10)
+            .setASWElementInfo(aswElement.id, aswElement.name, aswElement.type, aswElement.areaId, aswElement.areaName)
+            .build();
+
           events.push(attackerEvent);
         }
       } else {
         // Detection failed - create event for admin detailed report
-        const failedDetectionEvent = this.createASWFailedDetectionEvent(
-          aswElement,
-          targetSubmarine,
-          currentTurnState,
-          detectionRoll
-        );
+        const failedDetectionEvent = new EventBuilder()
+          .setSubmarineInfo(aswElement.id, aswElement.name, aswElement.id, aswElement.name, 'ASW')
+          .setFaction(aswElement.faction)
+          .setTurnState(currentTurnState)
+          .setEventType('detected')
+          .setTarget(targetSubmarine.id, targetSubmarine.submarineName, 'unit')
+          .setDescription(ASWTemplates.detectionFailed(targetSubmarine.submarineName))
+          .setRolls(detectionRoll, 1)
+          .setASWElementInfo(aswElement.id, aswElement.name, aswElement.type, aswElement.areaId, aswElement.areaName)
+          .build();
+
         events.push(failedDetectionEvent);
       }
     }
@@ -284,188 +310,4 @@ export class ASWService {
     return ASW_SHIP_TYPES[faction].includes(unit.type);
   }
 
-  /**
-   * Create ASW elimination events from ASWElement
-   */
-  private static createASWEliminationEventsFromElement(
-    aswElement: ASWElement,
-    targetSubmarine: SubmarineDeployment,
-    currentTurnState: TurnState,
-    detectionRoll: number,
-    eliminationRoll: number
-  ): { attackerEvent: SubmarineEvent; defenderEvent: SubmarineEvent } {
-    // Build ASW element info, only including defined fields (Firestore doesn't accept undefined)
-    const aswElementInfo: any = {
-      elementId: aswElement.id,
-      elementName: aswElement.name,
-      elementType: aswElement.type
-    };
-
-    // Only add area fields if they're defined
-    if (aswElement.areaId !== undefined) {
-      aswElementInfo.areaId = aswElement.areaId;
-    }
-    if (aswElement.areaName !== undefined) {
-      aswElementInfo.areaName = aswElement.areaName;
-    }
-
-    const attackerEvent: SubmarineEvent = {
-      eventId: `asw-elim-attacker-${Date.now()}-${Math.random()}`,
-      submarineId: aswElement.id,
-      submarineName: aswElement.name,
-      faction: aswElement.faction,
-      cardId: aswElement.id,
-      cardName: aswElement.name,
-      submarineType: 'ASW',
-      eventType: 'attack_success',
-      timestamp: Date.now(),
-      turn: currentTurnState.turnNumber,
-      dayOfWeek: currentTurnState.dayOfWeek,
-      targetInfo: {
-        targetId: targetSubmarine.id,
-        targetName: targetSubmarine.submarineName,
-        targetType: 'unit'
-      },
-      description: `ASW ${aswElement.type} ${aswElement.name} eliminated enemy submarine ${targetSubmarine.submarineName}`,
-      rollDetails: {
-        primaryRoll: detectionRoll,
-        secondaryRoll: eliminationRoll,
-        primaryThreshold: 1,
-        secondaryThreshold: 10,
-        aswElementInfo
-      }
-    };
-
-    const defenderEvent: SubmarineEvent = {
-      eventId: `asw-elim-defender-${Date.now()}-${Math.random()}`,
-      submarineId: targetSubmarine.id,
-      submarineName: targetSubmarine.submarineName,
-      faction: targetSubmarine.faction,
-      cardId: targetSubmarine.cardId,
-      cardName: targetSubmarine.cardName,
-      submarineType: targetSubmarine.submarineType,
-      eventType: 'destroyed',
-      timestamp: Date.now(),
-      turn: currentTurnState.turnNumber,
-      dayOfWeek: currentTurnState.dayOfWeek,
-      targetInfo: {
-        targetId: aswElement.id,
-        targetName: aswElement.name,
-        targetType: 'unit'
-      },
-      description: `Submarine ${targetSubmarine.submarineName} destroyed by enemy ${aswElement.type} (${aswElement.name})`,
-      rollDetails: {
-        primaryRoll: detectionRoll,
-        secondaryRoll: eliminationRoll,
-        primaryThreshold: 1,
-        secondaryThreshold: 10,
-        aswElementInfo
-      }
-    };
-
-    return { attackerEvent, defenderEvent };
-  }
-
-  /**
-   * Create ASW detection event from ASWElement
-   */
-  private static createASWDetectionEventFromElement(
-    aswElement: ASWElement,
-    targetSubmarine: SubmarineDeployment,
-    currentTurnState: TurnState,
-    detectionRoll: number,
-    eliminationRoll: number
-  ): SubmarineEvent {
-    // Build ASW element info, only including defined fields (Firestore doesn't accept undefined)
-    const aswElementInfo: any = {
-      elementId: aswElement.id,
-      elementName: aswElement.name,
-      elementType: aswElement.type
-    };
-
-    // Only add area fields if they're defined
-    if (aswElement.areaId !== undefined) {
-      aswElementInfo.areaId = aswElement.areaId;
-    }
-    if (aswElement.areaName !== undefined) {
-      aswElementInfo.areaName = aswElement.areaName;
-    }
-
-    return {
-      eventId: `asw-detection-${Date.now()}-${Math.random()}`,
-      submarineId: aswElement.id,
-      submarineName: aswElement.name,
-      faction: aswElement.faction,
-      cardId: aswElement.id,
-      cardName: aswElement.name,
-      submarineType: 'ASW',
-      eventType: 'detected',
-      timestamp: Date.now(),
-      turn: currentTurnState.turnNumber,
-      dayOfWeek: currentTurnState.dayOfWeek,
-      targetInfo: {
-        targetId: targetSubmarine.id,
-        targetName: targetSubmarine.submarineName,
-        targetType: 'unit'
-      },
-      description: `Enemy submarine detected but evaded - ${targetSubmarine.submarineName} escaped`,
-      rollDetails: {
-        primaryRoll: detectionRoll,
-        secondaryRoll: eliminationRoll,
-        primaryThreshold: 1,
-        secondaryThreshold: 10,
-        aswElementInfo
-      }
-    };
-  }
-
-  /**
-   * Create failed ASW detection event from ASWElement
-   */
-  private static createASWFailedDetectionEvent(
-    aswElement: ASWElement,
-    targetSubmarine: SubmarineDeployment,
-    currentTurnState: TurnState,
-    detectionRoll: number
-  ): SubmarineEvent {
-    // Build ASW element info, only including defined fields (Firestore doesn't accept undefined)
-    const aswElementInfo: any = {
-      elementId: aswElement.id,
-      elementName: aswElement.name,
-      elementType: aswElement.type
-    };
-
-    // Only add area fields if they're defined
-    if (aswElement.areaId !== undefined) {
-      aswElementInfo.areaId = aswElement.areaId;
-    }
-    if (aswElement.areaName !== undefined) {
-      aswElementInfo.areaName = aswElement.areaName;
-    }
-
-    return {
-      eventId: `asw-failed-${Date.now()}-${Math.random()}`,
-      submarineId: aswElement.id,
-      submarineName: aswElement.name,
-      faction: aswElement.faction,
-      cardId: aswElement.id,
-      cardName: aswElement.name,
-      submarineType: 'ASW',
-      eventType: 'detected',
-      timestamp: Date.now(),
-      turn: currentTurnState.turnNumber,
-      dayOfWeek: currentTurnState.dayOfWeek,
-      targetInfo: {
-        targetId: targetSubmarine.id,
-        targetName: targetSubmarine.submarineName,
-        targetType: 'unit'
-      },
-      description: `Detection attempt failed - ${targetSubmarine.submarineName} remained undetected`,
-      rollDetails: {
-        primaryRoll: detectionRoll,
-        primaryThreshold: 1,
-        aswElementInfo
-      }
-    };
-  }
 }

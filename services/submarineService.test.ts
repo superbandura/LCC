@@ -641,15 +641,20 @@ describe('SubmarineService', () => {
       const locations = createMockLocations();
 
       // Mock both attacks to succeed
+      // Note: EventBuilder.build() also calls Math.random() for event ID generation
       let callCount = 0;
       Math.random = () => {
         callCount++;
         // Attack 1: success (roll 10) + damage 1
-        if (callCount === 1) return 0.45;
-        if (callCount === 2) return 0.49;
+        if (callCount === 1) return 0.45; // attack roll
+        if (callCount === 2) return 0.49; // damage roll
+        if (callCount === 3) return 0.1;  // EventBuilder ID for attacker event
+        if (callCount === 4) return 0.2;  // EventBuilder ID for defender event
         // Attack 2: success (roll 10) + damage 1
-        if (callCount === 3) return 0.45;
-        if (callCount === 4) return 0.49;
+        if (callCount === 5) return 0.45; // attack roll
+        if (callCount === 6) return 0.49; // damage roll
+        if (callCount === 7) return 0.3;  // EventBuilder ID for attacker event
+        if (callCount === 8) return 0.4;  // EventBuilder ID for defender event
         return 0.5;
       };
 

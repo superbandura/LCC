@@ -20,6 +20,8 @@ import {
   OperationalArea,
   Faction
 } from '../../types';
+import { EventBuilder } from '../events/EventBuilder';
+import { PatrolTemplates, formatZoneName } from '../events/EventTemplates';
 
 export interface SubmarinePatrolResult {
   events: SubmarineEvent[];
@@ -97,27 +99,59 @@ export class PatrolService {
         totalDamage[enemyFaction] += damageRoll;
         successfulPatrols++;
 
-        const zoneName = this.getZoneName(sub.currentOrder?.targetId || '', operationalAreas);
-        const { attackerEvent, defenderEvent } = this.createPatrolEvents(
-          sub,
-          currentTurnState,
-          zoneName,
-          patrolRoll,
-          damageRoll,
-          enemyFaction
-        );
+        const zoneName = formatZoneName(sub.currentOrder?.targetId || '', operationalAreas);
+        const targetId = sub.currentOrder?.targetId || '';
+
+        // Create attacker event (no damage info)
+        const attackerEvent = new EventBuilder()
+          .setSubmarine(sub)
+          .setTurnState(currentTurnState)
+          .setEventType('attack_success')
+          .setTarget(targetId, zoneName, 'area')
+          .setDescription(PatrolTemplates.successAttacker(zoneName))
+          .setRolls(patrolRoll, 2, damageRoll, 20)
+          .build();
+
+        // Create defender event (with damage info)
+        const defenderEvent = new EventBuilder()
+          .setSubmarine(sub)
+          .setFaction(enemyFaction)
+          .setTurnState(currentTurnState)
+          .setEventType('attack_success')
+          .setTarget(targetId, zoneName, 'area')
+          .setDamage(damageRoll)
+          .setDescription(PatrolTemplates.successDefender(zoneName, damageRoll))
+          .setRolls(patrolRoll, 2, damageRoll, 20)
+          .build();
 
         events.push(attackerEvent, defenderEvent);
         updatedSubmarines = this.updateSubmarineAfterPatrol(updatedSubmarines, sub, currentTurnState, true);
       } else {
         // Failed patrol - create failure events for admin detailed report
-        const zoneName = this.getZoneName(sub.currentOrder?.targetId || '', operationalAreas);
-        const { attackerEvent, defenderEvent } = this.createPatrolFailureEvents(
-          sub,
-          currentTurnState,
-          zoneName,
-          patrolRoll
-        );
+        const zoneName = formatZoneName(sub.currentOrder?.targetId || '', operationalAreas);
+        const targetId = sub.currentOrder?.targetId || '';
+        const enemyFaction = sub.faction === 'us' ? 'china' : 'us';
+
+        // Create attacker event (submarine operator's view)
+        const attackerEvent = new EventBuilder()
+          .setSubmarine(sub)
+          .setTurnState(currentTurnState)
+          .setEventType('attack_failure')
+          .setTarget(targetId, zoneName, 'area')
+          .setDescription(PatrolTemplates.failureAttacker(zoneName))
+          .setRolls(patrolRoll, 2)
+          .build();
+
+        // Create defender event (enemy faction's view)
+        const defenderEvent = new EventBuilder()
+          .setSubmarine(sub)
+          .setFaction(enemyFaction)
+          .setTurnState(currentTurnState)
+          .setEventType('attack_failure')
+          .setTarget(targetId, zoneName, 'area')
+          .setDescription(PatrolTemplates.failureDefender(zoneName))
+          .setRolls(patrolRoll, 2)
+          .build();
 
         events.push(attackerEvent, defenderEvent);
         updatedSubmarines = this.updateSubmarineAfterPatrol(updatedSubmarines, sub, currentTurnState, false);
@@ -140,145 +174,6 @@ export class PatrolService {
    */
   private static rollD20(): number {
     return Math.floor(Math.random() * 20) + 1;
-  }
-
-  /**
-   * Get zone name from target ID
-   */
-  private static getZoneName(targetId: string, operationalAreas: OperationalArea[]): string {
-    if (targetId === 'south-china-sea') {
-      return 'Mar de China';
-    }
-    const area = operationalAreas.find(a => a.id === targetId);
-    return area?.name || 'Zona desconocida';
-  }
-
-  /**
-   * Create dual patrol events (attacker and defender perspectives)
-   */
-  private static createPatrolEvents(
-    sub: SubmarineDeployment,
-    currentTurnState: TurnState,
-    zoneName: string,
-    patrolRoll: number,
-    damageRoll: number,
-    enemyFaction: 'us' | 'china'
-  ): { attackerEvent: SubmarineEvent; defenderEvent: SubmarineEvent } {
-    // Event for attacker (no damage info - generic success message)
-    const attackerEvent: SubmarineEvent = {
-      eventId: `event-${sub.id}-attacker-${Date.now()}`,
-      submarineId: sub.id,
-      submarineName: sub.submarineName,
-      faction: sub.faction,
-      cardId: sub.cardId,
-      cardName: sub.cardName,
-      eventType: 'attack_success',
-      timestamp: Date.now(),
-      turn: currentTurnState.turnNumber,
-      dayOfWeek: currentTurnState.dayOfWeek,
-      targetInfo: {
-        targetId: sub.currentOrder?.targetId || '',
-        targetName: zoneName,
-        targetType: 'area'
-      },
-      description: `Successful patrol in ${zoneName} - Enemy logistics affected`,
-      rollDetails: {
-        primaryRoll: patrolRoll,
-        secondaryRoll: damageRoll,
-        primaryThreshold: 2,
-        secondaryThreshold: 20
-      }
-    };
-
-    // Event for defender (with damage info showing command points lost)
-    const defenderEvent: SubmarineEvent = {
-      eventId: `event-${sub.id}-defender-${Date.now()}`,
-      submarineId: sub.id,
-      submarineName: sub.submarineName,
-      faction: enemyFaction, // Event belongs to defender's faction
-      cardId: sub.cardId,
-      cardName: sub.cardName,
-      eventType: 'attack_success',
-      timestamp: Date.now(),
-      turn: currentTurnState.turnNumber,
-      dayOfWeek: currentTurnState.dayOfWeek,
-      targetInfo: {
-        targetId: sub.currentOrder?.targetId || '',
-        targetName: zoneName,
-        targetType: 'area',
-        damageDealt: damageRoll
-      },
-      description: `Logistics affected in ${zoneName} - ${damageRoll} command ${damageRoll === 1 ? 'point' : 'points'} lost`,
-      rollDetails: {
-        primaryRoll: patrolRoll,
-        secondaryRoll: damageRoll,
-        primaryThreshold: 2,
-        secondaryThreshold: 20
-      }
-    };
-
-    return { attackerEvent, defenderEvent };
-  }
-
-  /**
-   * Create dual patrol failure events (attacker and defender perspectives)
-   */
-  private static createPatrolFailureEvents(
-    sub: SubmarineDeployment,
-    currentTurnState: TurnState,
-    zoneName: string,
-    patrolRoll: number
-  ): { attackerEvent: SubmarineEvent; defenderEvent: SubmarineEvent } {
-    // Event for attacker (submarine operator's view)
-    const attackerEvent: SubmarineEvent = {
-      eventId: `event-${sub.id}-attacker-failed-${Date.now()}`,
-      submarineId: sub.id,
-      submarineName: sub.submarineName,
-      faction: sub.faction,
-      cardId: sub.cardId,
-      cardName: sub.cardName,
-      eventType: 'attack_failure',
-      timestamp: Date.now(),
-      turn: currentTurnState.turnNumber,
-      dayOfWeek: currentTurnState.dayOfWeek,
-      targetInfo: {
-        targetId: sub.currentOrder?.targetId || '',
-        targetName: zoneName,
-        targetType: 'area'
-      },
-      description: `Failed patrol in ${zoneName} - No enemy activity detected`,
-      rollDetails: {
-        primaryRoll: patrolRoll,
-        primaryThreshold: 2
-      }
-    };
-
-    // Event for defender (enemy faction's view - patrol detected and avoided)
-    const enemyFaction = sub.faction === 'us' ? 'china' : 'us';
-    const defenderEvent: SubmarineEvent = {
-      eventId: `event-${sub.id}-defender-failed-${Date.now()}`,
-      submarineId: sub.id,
-      submarineName: sub.submarineName,
-      faction: enemyFaction,
-      cardId: sub.cardId,
-      cardName: sub.cardName,
-      eventType: 'attack_failure',
-      timestamp: Date.now(),
-      turn: currentTurnState.turnNumber,
-      dayOfWeek: currentTurnState.dayOfWeek,
-      targetInfo: {
-        targetId: sub.currentOrder?.targetId || '',
-        targetName: zoneName,
-        targetType: 'area'
-      },
-      description: `Enemy patrol in ${zoneName} - No impact on operations`,
-      rollDetails: {
-        primaryRoll: patrolRoll,
-        primaryThreshold: 2
-      }
-    };
-
-    return { attackerEvent, defenderEvent };
   }
 
   /**

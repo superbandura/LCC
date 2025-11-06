@@ -20,6 +20,8 @@ import {
   TurnState,
   Location
 } from '../../types';
+import { EventBuilder } from '../events/EventBuilder';
+import { AttackTemplates } from '../events/EventTemplates';
 
 export interface SubmarineAttackResult {
   events: SubmarineEvent[];
@@ -85,17 +87,34 @@ export class AttackService {
           successfulAttacks++;
         }
 
-        const { attackerEvent, defenderEvent } = this.createAttackSuccessEvents(
-          sub,
-          currentTurnState,
-          targetBaseName,
-          attackRoll,
-          damageRoll,
-          damageApplied
-        );
+        const targetId = sub.currentOrder?.targetId || '';
+        const defenderFaction = sub.faction === 'us' ? 'china' : 'us';
 
-        events.push(attackerEvent);
-        if (defenderEvent) events.push(defenderEvent);
+        // Create attacker event (no damage info)
+        const attackerEvent = new EventBuilder()
+          .setSubmarine(sub)
+          .setTurnState(currentTurnState)
+          .setEventType('attack_success')
+          .setTarget(targetId, targetBaseName, 'base')
+          .setDescription(AttackTemplates.launchedAttacker(targetBaseName))
+          .setRolls(attackRoll, 10, damageRoll, 2)
+          .setExecutionTurn(sub.currentOrder?.executionTurn)
+          .build();
+
+        // Create defender event (with damage info)
+        const defenderEvent = new EventBuilder()
+          .setSubmarine(sub)
+          .setFaction(defenderFaction)
+          .setTurnState(currentTurnState)
+          .setEventType('attack_success')
+          .setTarget(targetId, targetBaseName, 'base')
+          .setDamage(damageApplied)
+          .setDescription(AttackTemplates.successDefender(targetBaseName, damageApplied))
+          .setRolls(attackRoll, 10, damageRoll, 2)
+          .setExecutionTurn(sub.currentOrder?.executionTurn)
+          .build();
+
+        events.push(attackerEvent, defenderEvent);
 
         updatedSubmarines = this.updateSubmarineAfterAttack(
           updatedSubmarines,
@@ -106,12 +125,19 @@ export class AttackService {
           true
         );
       } else {
-        const attackerEvent = this.createAttackFailureEvent(
-          sub,
-          currentTurnState,
-          targetBaseName,
-          attackRoll
-        );
+        const targetId = sub.currentOrder?.targetId || '';
+
+        // Create attacker event (no defender event for failed attacks)
+        const attackerEvent = new EventBuilder()
+          .setSubmarine(sub)
+          .setTurnState(currentTurnState)
+          .setEventType('attack_success') // We still report as success to attacker
+          .setTarget(targetId, targetBaseName, 'base')
+          .setDescription(AttackTemplates.launchedAttacker(targetBaseName))
+          .setRolls(attackRoll, 10)
+          .setExecutionTurn(sub.currentOrder?.executionTurn)
+          .build();
+
         events.push(attackerEvent);
         updatedSubmarines = this.updateSubmarineAfterAttack(
           updatedSubmarines,
@@ -180,109 +206,6 @@ export class AttackService {
     return { damageApplied, updatedDamage, damageRoll };
   }
 
-  /**
-   * Create attack success events (attacker and defender)
-   */
-  private static createAttackSuccessEvents(
-    sub: SubmarineDeployment,
-    currentTurnState: TurnState,
-    targetBaseName: string,
-    attackRoll: number,
-    damageRoll: number,
-    damageApplied: number
-  ): { attackerEvent: SubmarineEvent; defenderEvent: SubmarineEvent | null } {
-    // Event for attacker (no damage info)
-    const attackerEvent: SubmarineEvent = {
-      eventId: `event-${sub.id}-attacker-${Date.now()}`,
-      submarineId: sub.id,
-      submarineName: sub.submarineName,
-      faction: sub.faction,
-      cardId: sub.cardId,
-      cardName: sub.cardName,
-      eventType: 'attack_success',
-      timestamp: Date.now(),
-      turn: currentTurnState.turnNumber,
-      dayOfWeek: currentTurnState.dayOfWeek,
-      targetInfo: {
-        targetId: sub.currentOrder?.targetId || '',
-        targetName: targetBaseName,
-        targetType: 'base'
-      },
-      description: `Missile attack launched against ${targetBaseName}`,
-      rollDetails: {
-        primaryRoll: attackRoll,
-        secondaryRoll: damageRoll,
-        primaryThreshold: 10,
-        secondaryThreshold: 2,
-        executionTurn: sub.currentOrder?.executionTurn
-      }
-    };
-
-    // Event for defender (with damage info)
-    const defenderFaction = sub.faction === 'us' ? 'china' : 'us';
-    const defenderEvent: SubmarineEvent = {
-      eventId: `event-${sub.id}-defender-${Date.now()}`,
-      submarineId: sub.id,
-      submarineName: sub.submarineName,
-      faction: defenderFaction, // Event belongs to defender's faction
-      cardId: sub.cardId,
-      cardName: sub.cardName,
-      eventType: 'attack_success',
-      timestamp: Date.now(),
-      turn: currentTurnState.turnNumber,
-      dayOfWeek: currentTurnState.dayOfWeek,
-      targetInfo: {
-        targetId: sub.currentOrder?.targetId || '',
-        targetName: targetBaseName,
-        targetType: 'base',
-        damageDealt: damageApplied
-      },
-      description: `Base ${targetBaseName} attacked - ${damageApplied} damage ${damageApplied === 1 ? 'point' : 'points'}`,
-      rollDetails: {
-        primaryRoll: attackRoll,
-        secondaryRoll: damageRoll,
-        primaryThreshold: 10,
-        secondaryThreshold: 2,
-        executionTurn: sub.currentOrder?.executionTurn
-      }
-    };
-
-    return { attackerEvent, defenderEvent };
-  }
-
-  /**
-   * Create attack failure event (attacker only)
-   */
-  private static createAttackFailureEvent(
-    sub: SubmarineDeployment,
-    currentTurnState: TurnState,
-    targetBaseName: string,
-    attackRoll: number
-  ): SubmarineEvent {
-    return {
-      eventId: `event-${sub.id}-attacker-${Date.now()}`,
-      submarineId: sub.id,
-      submarineName: sub.submarineName,
-      faction: sub.faction,
-      cardId: sub.cardId,
-      cardName: sub.cardName,
-      eventType: 'attack_success', // We still report as success to attacker
-      timestamp: Date.now(),
-      turn: currentTurnState.turnNumber,
-      dayOfWeek: currentTurnState.dayOfWeek,
-      targetInfo: {
-        targetId: sub.currentOrder?.targetId || '',
-        targetName: targetBaseName,
-        targetType: 'base'
-      },
-      description: `Missile attack launched against ${targetBaseName}`,
-      rollDetails: {
-        primaryRoll: attackRoll,
-        primaryThreshold: 10,
-        executionTurn: sub.currentOrder?.executionTurn
-      }
-    };
-  }
 
   /**
    * Update submarine state after attack mission

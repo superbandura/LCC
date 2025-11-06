@@ -341,7 +341,8 @@ export const initializeGameData = async (
           usedSubmarineNames: {
             us: [],
             china: []
-          }
+          },
+          aswShips: [] // Initialize ASW ships snapshot
         },
       }, { merge: true });
     } else {
@@ -863,7 +864,8 @@ export const subscribeToSubmarineCampaign = (
           usedSubmarineNames: {
             us: [],
             china: []
-          }
+          },
+          aswShips: []
         });
       }
     }

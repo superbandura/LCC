@@ -24,7 +24,8 @@ import {
   TaskForce,
   Unit,
   Card,
-  Faction
+  Faction,
+  AswShipDeployment
 } from '../types';
 
 export interface SubmarinePatrolResult {
@@ -899,6 +900,48 @@ export class SubmarineService {
       china: ['TYPE 052D', 'TYPE 055 DDG', 'TYPE 054 FFG']
     };
     return ASW_SHIP_TYPES[faction].includes(unit.type);
+  }
+
+  /**
+   * Snapshot all ASW-capable ships deployed to operational areas
+   * This captures the current state at turn start for submarine campaign calculations
+   * Ships are locked until the next turn snapshot
+   */
+  static snapshotAswShips(
+    units: Unit[],
+    taskForces: TaskForce[],
+    operationalAreas: OperationalArea[]
+  ): AswShipDeployment[] {
+    const aswShips: AswShipDeployment[] = [];
+
+    // Iterate through all operational areas
+    for (const area of operationalAreas) {
+      // Find task forces in this area
+      const areaTaskForces = taskForces.filter(tf => tf.operationalAreaId === area.id);
+
+      for (const tf of areaTaskForces) {
+        // Find units in this task force
+        const tfUnits = units.filter(u => u.taskForceId === tf.id);
+
+        for (const unit of tfUnits) {
+          // Check if unit is naval and has ASW capability
+          if (unit.category === 'naval' && this.isASWCapable(unit, tf.faction)) {
+            aswShips.push({
+              unitId: unit.id,
+              unitName: unit.name,
+              unitType: unit.type,
+              taskForceId: tf.id,
+              taskForceName: tf.name,
+              operationalAreaId: area.id,
+              operationalAreaName: area.name,
+              faction: tf.faction
+            });
+          }
+        }
+      }
+    }
+
+    return aswShips;
   }
 
   /**

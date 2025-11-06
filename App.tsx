@@ -818,6 +818,16 @@ function App() {
     // Order: ASW → Attacks → CP Reset → Patrols → Turn Update
     console.log('🔄 Processing end-of-turn operations in sequence...');
 
+    // STEP 0: Snapshot ASW ships at turn start (locked until next turn)
+    if (submarineCampaign) {
+      const aswShips = SubmarineService.snapshotAswShips(units, taskForces, operationalAreas);
+      await updateSubmarineCampaign({
+        ...submarineCampaign,
+        aswShips
+      });
+      console.log(`  ✅ ASW ships snapshot: ${aswShips.length} ships locked for this turn`);
+    }
+
     // STEP 1: Process ASW phase FIRST (eliminate submarines before they can attack/patrol)
     const aswResult = await processASWPhase(newTurnState);
     console.log(`  ✅ ASW events: ${aswResult.events.length}`);

@@ -348,6 +348,18 @@ export interface SubmarineEvent {
   rollDetails?: SubmarineEventRollDetails; // Detailed roll information for admin report
 }
 
+// ASW-capable surface ship deployment (locked at turn start)
+export interface AswShipDeployment {
+  unitId: string;                             // Unit ID
+  unitName: string;                           // Unit name
+  unitType: string;                           // Unit type (DDG, FFG, etc.)
+  taskForceId: string;                        // Task Force ID
+  taskForceName: string;                      // Task Force name
+  operationalAreaId: string;                  // Operational Area ID
+  operationalAreaName: string;                // Operational Area name
+  faction: 'us' | 'china';                    // Faction
+}
+
 // Submarine campaign state interface
 export interface SubmarineCampaignState {
   deployedSubmarines: SubmarineDeployment[];  // All deployed submarines
@@ -357,6 +369,7 @@ export interface SubmarineCampaignState {
     us: string[];
     china: string[];
   };
+  aswShips?: AswShipDeployment[];             // ASW-capable ships (locked at turn start)
 }
 
 // =======================================

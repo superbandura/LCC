@@ -60,7 +60,7 @@ All game state stored in Firestore document `game/current` and syncs real-time a
 **Files**: `firebase.ts`, `firestoreService.ts`, `firestore.rules`, `firebase.json`
 
 **Architecture**:
-- `firestoreService.ts`: Low-level Firestore CRUD operations (~1,267 lines), 18 subscription functions total (17 active used in useGameState: subscribeToOperationalAreas, subscribeToUnits, etc.)
+- `firestoreService.ts`: Low-level Firestore CRUD operations (~1,267 lines), 19 subscription functions total (17 active used in useGameState: subscribeToOperationalAreas, subscribeToUnits, etc.)
 - `services/`: Business logic layer (10+ modular services organized by domain)
 - `hooks/useGameState.ts`: React hook wrapping 17 active Firestore subscriptions, provides unified state to App.tsx
 
@@ -124,20 +124,20 @@ Business logic in 10+ modular services (~4,000+ lines, 132 tests):
 **Submarine Campaign Services (Modular Architecture):**
 - **submarineCampaignOrchestrator.ts** (369 lines): Coordinates all 5 submarine campaign phases in correct sequence
 - **submarineService.ts** (1,239 lines, 21 tests): Shared utilities (communication failures, tactical network damage, ASW ship snapshots)
-- **asw/aswService.ts** (329 lines): ASW Phase - Detection with 5% rate, 50% elimination, zone filtering
-- **attack/attackService.ts** (252 lines): Attack Phase - Base attacks with 50% success rate
-- **patrol/patrolService.ts** (205 lines): Patrol Phase - Patrol operations with 90% success rate
-- **mines/mineService.ts** (318 lines, 9 tests): Mine Phase - Maritime mine detection (5% rate, d20=1)
-- **assets/assetDeployService.ts** (134 lines, 9 tests): Asset Deploy Phase - Processes deploy orders for mines/sensors
-- **events/EventBuilder.ts** (154 lines): Builder pattern for consistent event creation across all services
-- **events/EventTemplates.ts** (104 lines): Centralized message templates (Patrol, Attack, ASW, Mine)
+- **asw/aswService.ts** (361 lines): ASW Phase - Detection with 5% rate, 50% elimination, zone filtering
+- **attack/attackService.ts** (265 lines): Attack Phase - Base attacks with 50% success rate
+- **patrol/patrolService.ts** (207 lines): Patrol Phase - Patrol operations with 90% success rate
+- **mines/mineService.ts** (324 lines, 9 tests): Mine Phase - Maritime mine detection (5% rate, d20=1)
+- **assets/assetDeployService.ts** (148 lines, 9 tests): Asset Deploy Phase - Processes deploy orders for mines/sensors
+- **events/EventBuilder.ts** (217 lines): Builder pattern for consistent event creation across all services
+- **events/EventTemplates.ts** (132 lines): Centralized message templates (Patrol, Attack, ASW, Mine)
 
 All services pure functions with comprehensive Vitest coverage. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
 
 ### Custom Hooks
 
-Four hooks reduce component complexity and centralize logic (~695 lines total):
-- **useGameState** (284 lines): Manages **17 active Firestore subscriptions**, single source of truth for all game state
+Four hooks reduce component complexity and centralize logic (~720 lines total):
+- **useGameState** (306 lines): Manages **17 active Firestore subscriptions**, single source of truth for all game state
 - **useModal** (148 lines): Unified API for 7 modal states (`open()`, `close()`, `toggle()`, `isOpen()`)
 - **useFactionFilter** (111 lines): Memoized faction filtering for units, cards, task forces
 - **useDeploymentNotifications** (198 lines): Auto-opens modal when deployments queued

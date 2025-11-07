@@ -72,8 +72,10 @@ export class PatrolService {
     );
 
     // Filter active submarines with pending patrol orders
+    // Exclude ASW cards - they only perform ASW detection, not offensive patrols
     const activeSubmarines = uniqueSubmarines.filter(
       sub => sub.status === 'active' &&
+             sub.submarineType === 'submarine' &&
              sub.currentOrder?.orderType === 'patrol' &&
              sub.currentOrder?.status === 'pending'
     );
@@ -127,33 +129,7 @@ export class PatrolService {
         events.push(attackerEvent, defenderEvent);
         updatedSubmarines = this.updateSubmarineAfterPatrol(updatedSubmarines, sub, currentTurnState, true);
       } else {
-        // Failed patrol - create failure events for admin detailed report
-        const zoneName = formatZoneName(sub.currentOrder?.targetId || '', operationalAreas);
-        const targetId = sub.currentOrder?.targetId || '';
-        const enemyFaction = sub.faction === 'us' ? 'china' : 'us';
-
-        // Create attacker event (submarine operator's view)
-        const attackerEvent = new EventBuilder()
-          .setSubmarine(sub)
-          .setTurnState(currentTurnState)
-          .setEventType('attack_failure')
-          .setTarget(targetId, zoneName, 'area')
-          .setDescription(PatrolTemplates.failureAttacker(zoneName))
-          .setRolls(patrolRoll, 2)
-          .build();
-
-        // Create defender event (enemy faction's view)
-        const defenderEvent = new EventBuilder()
-          .setSubmarine(sub)
-          .setFaction(enemyFaction)
-          .setTurnState(currentTurnState)
-          .setEventType('attack_failure')
-          .setTarget(targetId, zoneName, 'area')
-          .setDescription(PatrolTemplates.failureDefender(zoneName))
-          .setRolls(patrolRoll, 2)
-          .build();
-
-        events.push(attackerEvent, defenderEvent);
+        // Failed patrol - no events created (fog of war)
         updatedSubmarines = this.updateSubmarineAfterPatrol(updatedSubmarines, sub, currentTurnState, false);
       }
     }

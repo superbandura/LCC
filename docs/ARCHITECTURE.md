@@ -46,12 +46,12 @@
 
 ### Root Component (App.tsx)
 - Central state management with 11 useState hooks (reduced from 31)
-- 14 Firestore real-time subscriptions managed by `useGameState` hook
+- 17 active Firestore real-time subscriptions managed by `useGameState` hook (19 total subscription functions)
 - Faction selection logic
 - Modal orchestration via `useModal` hook
 - Layout and UI structure
 - 18 performance-optimized handlers with `useCallback`
-- **Current size**: ~1,218 lines (reduced from 1,588 lines, -23.3%)
+- **Current size**: ~1,431 lines (reduced from 1,588 lines, -9.9%)
 
 ### Component Organization
 

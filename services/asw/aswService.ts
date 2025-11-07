@@ -5,7 +5,7 @@
  * - Location-based ASW detection from operational areas
  * - ASW cards in submarine campaign
  * - Patrol submarines performing ASW missions
- * - Detection mechanics: d20 = 1 (5% success rate)
+ * - Detection mechanics: d20 ≤ 3 for ASW cards (15%), d20 ≤ 2 for destroyers/frigates (10%), d20 === 1 for patrol subs (5%)
  * - Elimination mechanics: d20 ≤ 10 (50% success rate if detected)
  * - Event generation for both factions
  * - Kill tracking and statistics
@@ -51,7 +51,7 @@ export class ASWService {
   /**
    * Process ASW (Anti-Submarine Warfare) operations
    * Location-based system: ASW assets in operational areas detect submarines in South China Sea
-   * Detection: d20 = 1 (5% success rate)
+   * Detection: d20 ≤ 3 for ASW cards (15%), d20 ≤ 2 for destroyers/frigates (10%), d20 === 1 for patrol subs (5%)
    * Elimination: d20 ≤ 10 (50% success rate if detected)
    */
   static async processASWPhase(
@@ -82,24 +82,10 @@ export class ASWService {
       return { events: [], updatedSubmarines: submarineCampaign.deployedSubmarines, eliminatedSubmarineIds: [] };
     }
 
-    // Collect all ASW elements from operational areas and submarine campaign
+    // Collect all ASW elements from operational areas
     const allASWElements: ASWElement[] = [];
 
-    // 1. Collect ASW cards from submarine campaign
-    const aswCardsFromCampaign = submarineCampaign.deployedSubmarines
-      .filter(sub => sub.status === 'active' && sub.submarineType === 'asw')
-      .map(card => ({
-        id: card.id,
-        name: card.submarineName,
-        faction: card.faction,
-        type: 'card' as const,
-        areaId: undefined,
-        areaName: 'Submarine Campaign'
-      }));
-
-    allASWElements.push(...aswCardsFromCampaign);
-
-    // 2. Collect ASW ships and cards from operational areas
+    // 1. Collect ASW ships and cards from operational areas
     for (const area of operationalAreas) {
       // ASW cards played in operational areas
       const aswCardsInArea = this.getASWCardsInArea(area, cards);
@@ -110,7 +96,7 @@ export class ASWService {
       allASWElements.push(...aswShipsInArea);
     }
 
-    // 3. Collect patrol submarines (they can do ASW in their current zone only)
+    // 2. Collect patrol submarines (they can do ASW in their current zone only)
     const patrolSubmarines = submarinesInSouthChinaSea
       .filter(sub =>
         sub.currentOrder?.orderType === 'patrol' && // Only patrol orders
@@ -149,20 +135,25 @@ export class ASWService {
         if (sub.faction === aswElement.faction) return false;
         if (eliminatedSubmarineIds.includes(sub.id)) return false;
 
-        // Zone filtering: submarines can only detect in their own zone
+        // Zone filtering for all ASW element types
+        const subAreaId = sub.currentOrder?.targetId || sub.currentAreaId || 'south-china-sea';
+
         if (aswElement.type === 'submarine') {
-          const subAreaId = sub.currentOrder?.targetId || sub.currentAreaId || 'south-china-sea';
+          // Patrol submarines: detect only in their zone
           return subAreaId === aswElement.areaId;
         }
 
-        // Ships and ASW cards detect in their operational area
         if (aswElement.type === 'ship' && aswElement.areaId) {
-          const subAreaId = sub.currentOrder?.targetId || sub.currentAreaId || 'south-china-sea';
+          // ASW ships: detect only in their operational area
           return subAreaId === aswElement.areaId;
         }
 
-        // ASW cards without specific area can detect any enemy submarine
-        return true;
+        if (aswElement.type === 'card') {
+          // ASW cards ALWAYS have areaId (zone-restricted)
+          return subAreaId === aswElement.areaId;
+        }
+
+        return true; // Fallback
       });
 
       if (enemySubmarines.length === 0) continue;
@@ -171,9 +162,21 @@ export class ASWService {
       const targetSubmarine = enemySubmarines[Math.floor(Math.random() * enemySubmarines.length)];
       detectionAttempts++;
 
-      // Roll detection: d20 === 1 (5%)
+      // Determine detection threshold based on ASW element type
+      let detectionThreshold = 1; // Default 5% (d20 === 1) for patrol submarines
+      if (aswElement.type === 'card') {
+        detectionThreshold = 3; // 15% (d20 ≤ 3) for ASW cards
+      } else if (aswElement.type === 'ship') {
+        // Find the unit to get its type for threshold calculation
+        const aswUnit = units.find(u => u.id === aswElement.id);
+        if (aswUnit) {
+          detectionThreshold = this.getASWDetectionThreshold(aswUnit, aswElement.faction);
+        }
+      }
+
+      // Roll detection: threshold depends on ASW element type
       const detectionRoll = this.rollD20();
-      if (detectionRoll === 1) {
+      if (detectionRoll <= detectionThreshold) {
         successfulDetections++;
 
         // Roll elimination: d20 ≤ 10 (50%)
@@ -201,8 +204,8 @@ export class ASWService {
             .setTurnState(currentTurnState)
             .setEventType('attack_success')
             .setTarget(targetSubmarine.id, targetSubmarine.submarineName, 'unit')
-            .setDescription(ASWTemplates.eliminationAttacker(aswElement.type, aswElement.name, targetSubmarine.submarineName))
-            .setRolls(detectionRoll, 1, eliminationRoll, 10)
+            .setDescription(ASWTemplates.eliminationAttacker(aswElement.type, aswElement.name))
+            .setRolls(detectionRoll, detectionThreshold, eliminationRoll, 10)
             .setASWElementInfo(aswElement.id, aswElement.name, aswElement.type, aswElement.areaId, aswElement.areaName)
             .build();
 
@@ -213,7 +216,7 @@ export class ASWService {
             .setEventType('destroyed')
             .setTarget(aswElement.id, aswElement.name, 'unit')
             .setDescription(ASWTemplates.eliminationDefender(targetSubmarine.submarineName, aswElement.type, aswElement.name))
-            .setRolls(detectionRoll, 1, eliminationRoll, 10)
+            .setRolls(detectionRoll, detectionThreshold, eliminationRoll, 10)
             .setASWElementInfo(aswElement.id, aswElement.name, aswElement.type, aswElement.areaId, aswElement.areaName)
             .build();
 
@@ -226,28 +229,15 @@ export class ASWService {
             .setTurnState(currentTurnState)
             .setEventType('detected')
             .setTarget(targetSubmarine.id, targetSubmarine.submarineName, 'unit')
-            .setDescription(ASWTemplates.detectionEvaded(targetSubmarine.submarineName))
-            .setRolls(detectionRoll, 1, eliminationRoll, 10)
+            .setDescription(ASWTemplates.detectionEvaded())
+            .setRolls(detectionRoll, detectionThreshold, eliminationRoll, 10)
             .setASWElementInfo(aswElement.id, aswElement.name, aswElement.type, aswElement.areaId, aswElement.areaName)
             .build();
 
           events.push(attackerEvent);
         }
-      } else {
-        // Detection failed - create event for admin detailed report
-        const failedDetectionEvent = new EventBuilder()
-          .setSubmarineInfo(aswElement.id, aswElement.name, aswElement.id, aswElement.name, 'ASW')
-          .setFaction(aswElement.faction)
-          .setTurnState(currentTurnState)
-          .setEventType('detected')
-          .setTarget(targetSubmarine.id, targetSubmarine.submarineName, 'unit')
-          .setDescription(ASWTemplates.detectionFailed(targetSubmarine.submarineName))
-          .setRolls(detectionRoll, 1)
-          .setASWElementInfo(aswElement.id, aswElement.name, aswElement.type, aswElement.areaId, aswElement.areaName)
-          .build();
-
-        events.push(failedDetectionEvent);
       }
+      // Detection failed - no event created (fog of war)
     }
 
     console.log(`🎯 ASW: ${eliminatedSubmarineIds.length} eliminated (${detectionAttempts} attempts, ${successfulDetections} detected)`);
@@ -324,6 +314,26 @@ export class ASWService {
       china: ['TYPE 052D', 'TYPE 055 DDG', 'TYPE 054 FFG']
     };
     return ASW_SHIP_TYPES[faction].includes(unit.type);
+  }
+
+  /**
+   * Get ASW detection threshold for naval units (destroyers and frigates)
+   * Destroyers and frigates have enhanced detection: d20 ≤ 2 (10% success rate)
+   * ASW cards have superior detection: d20 ≤ 3 (15% success rate)
+   * Patrol submarines maintain baseline: d20 === 1 (5% success rate)
+   */
+  private static getASWDetectionThreshold(unit: Unit, faction: Faction): number {
+    // All ASW-capable ships (destroyers and frigates) get enhanced detection
+    const ASW_SHIP_TYPES: Record<Faction, string[]> = {
+      us: ['ARLEIGH BURKE CLASS DDG', 'DDG(X)'],
+      china: ['TYPE 052D', 'TYPE 055 DDG', 'TYPE 054 FFG']
+    };
+
+    if (ASW_SHIP_TYPES[faction].includes(unit.type)) {
+      return 2; // 10% detection rate (d20 ≤ 2)
+    }
+
+    return 1; // Default 5% detection rate (d20 === 1)
   }
 
 }

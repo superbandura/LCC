@@ -262,7 +262,7 @@ export interface InfluenceThreshold {
 export type OrderStatus = 'pending' | 'executing' | 'completed' | 'failed';
 
 // Types of submarine orders
-export type SubmarineOrderType = 'patrol' | 'attack' | 'deploy';
+export type SubmarineOrderType = 'patrol' | 'attack' | 'deploy' | 'asw';
 
 // Types of submarine events
 export type SubmarineEventType = 'deployment' | 'attack_success' | 'attack_failure' | 'detected' | 'destroyed' | 'return' | 'communication_failure';
@@ -345,6 +345,7 @@ export interface SubmarineEvent {
   timestamp: number;                    // Event timestamp
   turn: number;                         // Campaign turn number
   dayOfWeek?: number;                   // Day of week when event occurred (1-7)
+  currentDate?: string;                 // ISO date string when event occurred (e.g., "2030-06-02")
   targetInfo?: SubmarineEventTarget;    // Target information (if applicable)
   description: string;                  // Event description for UI
   rollDetails?: SubmarineEventRollDetails; // Detailed roll information for admin report

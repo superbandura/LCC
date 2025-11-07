@@ -119,7 +119,7 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
     };
   }, [submarineCampaign]);
 
-  // Filter submarine campaign events for operations log - only show successful events affecting player
+  // Filter submarine campaign events for operations log - show events affecting player
   const recentEvents = useMemo(() => {
     if (!selectedFaction || !submarineCampaign?.events) return [];
 
@@ -128,19 +128,25 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
         // Only show events for selected faction
         if (event.faction !== selectedFaction) return false;
 
-        // Show successful attacks (patrols with damage dealt)
+        // Show successful attacks (patrols with damage dealt, base attacks, deployments)
         if (event.eventType === 'attack_success') {
           // For patrols against areas, only show if damage was dealt (enemy detected)
           if (event.targetInfo?.targetType === 'area') {
             return event.targetInfo.damageDealt !== undefined && event.targetInfo.damageDealt > 0;
           }
-          return true; // Show other successful attacks (against bases, etc.)
+          return true; // Show other successful attacks (against bases, deployments, etc.)
         }
+
+        // Show failed attacks (defender sees incoming attack, attacker sees launch)
+        if (event.eventType === 'attack_failure') return true;
+
+        // Show detections (ASW detections without elimination - both sides see it)
+        if (event.eventType === 'detected') return true;
 
         // Show destructions
         if (event.eventType === 'destroyed') return true;
 
-        // Hide everything else (failed patrols, detection attempts, etc.)
+        // Hide everything else
         return false;
       })
       .slice(-30)
@@ -792,14 +798,14 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
             )}
           </div>
 
-          {/* Order Type Dropdown - Only PATROL for ASW */}
+          {/* Order Type Dropdown - Only ASW for ASW cards */}
           <select
             value={pendingOrder?.type || ''}
             onChange={(e) => handleOrderTypeChange(asw.id, e.target.value)}
             className="font-mono text-xs bg-gray-800 text-white border border-gray-600 rounded px-2 py-1 w-24"
           >
             <option value="">-- ORDER --</option>
-            <option value="patrol">PATROL</option>
+            <option value="asw">ASW</option>
           </select>
 
           {/* Target Dropdown */}
@@ -815,7 +821,7 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
                   {area.name}
                 </option>
               ))}
-              <option value="south-china-sea">Mar de China</option>
+              <option value="south-china-sea">South China Sea</option>
             </select>
           )}
 
@@ -1097,9 +1103,18 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
               ) : (
                 <div className="space-y-0">
                   {recentEvents.map((event, idx) => {
-                    // Format date from game turn and day
-                    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                    const dateStr = `Week ${event.turn}, ${dayNames[(event.dayOfWeek ?? 1) - 1]}`;
+                    // Format date from ISO date string to "Month Day, Year"
+                    const formatEventDate = (isoDate?: string): string => {
+                      if (!isoDate) return 'Unknown Date';
+                      const date = new Date(isoDate);
+                      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                                          'July', 'August', 'September', 'October', 'November', 'December'];
+                      const month = monthNames[date.getMonth()];
+                      const day = date.getDate();
+                      const year = date.getFullYear();
+                      return `${month} ${day}, ${year}`;
+                    };
+                    const dateStr = formatEventDate(event.currentDate);
                     const factionLabel = event.faction === 'us' ? 'USMC' : 'PLAN';
 
                     return (
@@ -1125,7 +1140,7 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
                           </span>
                           {event.targetInfo?.damageDealt && event.targetInfo.damageDealt > 0 && (
                             <span className="text-red-400 font-bold flex-shrink-0">
-                              - {event.targetInfo.damageDealt} CP LOST
+                              - {event.targetInfo.damageDealt} DP LOST
                             </span>
                           )}
                         </div>

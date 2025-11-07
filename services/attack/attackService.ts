@@ -126,19 +126,32 @@ export class AttackService {
         );
       } else {
         const targetId = sub.currentOrder?.targetId || '';
+        const defenderFaction = sub.faction === 'us' ? 'china' : 'us';
 
-        // Create attacker event (no defender event for failed attacks)
+        // Create attacker event (attack launched)
         const attackerEvent = new EventBuilder()
           .setSubmarine(sub)
           .setTurnState(currentTurnState)
-          .setEventType('attack_success') // We still report as success to attacker
+          .setEventType('attack_failure')
           .setTarget(targetId, targetBaseName, 'base')
           .setDescription(AttackTemplates.launchedAttacker(targetBaseName))
           .setRolls(attackRoll, 10)
           .setExecutionTurn(sub.currentOrder?.executionTurn)
           .build();
 
-        events.push(attackerEvent);
+        // Create defender event (attack detected but defended)
+        const defenderEvent = new EventBuilder()
+          .setSubmarine(sub)
+          .setFaction(defenderFaction)
+          .setTurnState(currentTurnState)
+          .setEventType('attack_failure')
+          .setTarget(targetId, targetBaseName, 'base')
+          .setDescription(AttackTemplates.failureDefender(targetBaseName))
+          .setRolls(attackRoll, 10)
+          .setExecutionTurn(sub.currentOrder?.executionTurn)
+          .build();
+
+        events.push(attackerEvent, defenderEvent);
         updatedSubmarines = this.updateSubmarineAfterAttack(
           updatedSubmarines,
           sub,

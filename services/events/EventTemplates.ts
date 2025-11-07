@@ -48,7 +48,13 @@ export const AttackTemplates = {
    * Successful attack (defender perspective - with damage info)
    */
   successDefender: (targetName: string, damage: number): string =>
-    `Base ${targetName} attacked - ${damage} damage ${damage === 1 ? 'point' : 'points'}`
+    `Base ${targetName} attacked - ${damage} damage ${damage === 1 ? 'point' : 'points'}`,
+
+  /**
+   * Failed attack (defender perspective - no damage)
+   */
+  failureDefender: (targetName: string): string =>
+    `Missile attack detected at ${targetName} - Defenses held`
 };
 
 /**
@@ -56,10 +62,10 @@ export const AttackTemplates = {
  */
 export const ASWTemplates = {
   /**
-   * ASW elimination (attacker perspective)
+   * ASW elimination (attacker perspective - no enemy submarine name for fog of war)
    */
-  eliminationAttacker: (aswElementType: string, aswElementName: string, targetSubmarineName: string): string =>
-    `ASW ${aswElementType} ${aswElementName} eliminated enemy submarine ${targetSubmarineName}`,
+  eliminationAttacker: (aswElementType: string, aswElementName: string): string =>
+    `ASW ${aswElementType} ${aswElementName} eliminated enemy submarine`,
 
   /**
    * ASW elimination (defender perspective)
@@ -68,16 +74,16 @@ export const ASWTemplates = {
     `Submarine ${submarineName} destroyed by enemy ${aswElementType} (${aswElementName})`,
 
   /**
-   * ASW detection but evaded (attacker perspective only)
+   * ASW detection but evaded (attacker perspective - no enemy submarine name for fog of war)
    */
-  detectionEvaded: (targetSubmarineName: string): string =>
-    `Enemy submarine detected but evaded - ${targetSubmarineName} escaped`,
+  detectionEvaded: (): string =>
+    `Enemy submarine detected but evaded`,
 
   /**
-   * ASW detection failed (attacker perspective)
+   * ASW detection but evaded (defender perspective)
    */
-  detectionFailed: (targetSubmarineName: string): string =>
-    `Detection attempt failed - ${targetSubmarineName} remained undetected`
+  detectionEvadedDefender: (submarineName: string, areaName: string): string =>
+    `Submarine ${submarineName} detected in ${areaName} but escaped - Enemy failed to eliminate`
 };
 
 /**
@@ -95,6 +101,17 @@ export const MineTemplates = {
    */
   detectionFailed: (unitName: string, unitType: string, areaName: string): string =>
     `${unitType} ${unitName} passed through minefield in ${areaName} - No contact`
+};
+
+/**
+ * Asset deployment event templates
+ */
+export const AssetTemplates = {
+  /**
+   * Asset deployment success (deployer perspective)
+   */
+  deploymentSuccess: (assetType: string, areaName: string): string =>
+    `Asset deployment: ${assetType} operational in ${areaName}`
 };
 
 /**

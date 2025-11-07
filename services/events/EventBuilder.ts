@@ -69,11 +69,12 @@ export class EventBuilder {
   }
 
   /**
-   * Set turn state (turn number and day of week)
+   * Set turn state (turn number, day of week, and current date)
    */
   setTurnState(turnState: TurnState): this {
     this.event.turn = turnState.turnNumber;
     this.event.dayOfWeek = turnState.dayOfWeek;
+    this.event.currentDate = turnState.currentDate;
     return this;
   }
 

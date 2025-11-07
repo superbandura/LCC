@@ -106,6 +106,7 @@ export class SubmarineCampaignOrchestrator {
       currentTurnState,
       operationalAreas
     );
+    allEvents.push(...deployResult.events);
 
     // PHASE 0: Mine Phase - Maritime mines eliminate submarines and ships
     console.log('💥 Executing Mine Phase...');

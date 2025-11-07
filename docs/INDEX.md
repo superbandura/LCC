@@ -140,7 +140,7 @@
 
 | Componente | Documentación | Archivo | Líneas |
 |------------|---------------|---------|--------|
-| **App.tsx** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | App.tsx | ~1,358 |
+| **App.tsx** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | App.tsx | ~1,431 |
 | **Map.tsx** | [MAP_INTEGRATION.md](MAP_INTEGRATION.md) | components/Map.tsx | ~407 |
 | **TurnControl** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | components/TurnControl.tsx | ~89 |
 | **FactionSelector** | [ARCHITECTURE.md](ARCHITECTURE.md#component-organization) | components/FactionSelector.tsx | - |
@@ -200,8 +200,8 @@
 | Utilidad | Documentación | Archivo |
 |----------|---------------|---------|
 | **iconGenerators** | [MAP_INTEGRATION.md § Custom Icons](MAP_INTEGRATION.md#custom-icons) | utils/iconGenerators.tsx |
-| **firestoreService** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | firestoreService.ts (~1,267 lines, 18 subscription functions) |
-| **useGameState** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | hooks/useGameState.ts (~284 lines, 17 active subscriptions) |
+| **firestoreService** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | firestoreService.ts (~1,334 lines, 19 subscription functions) |
+| **useGameState** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | hooks/useGameState.ts (~306 lines, 17 active subscriptions) |
 
 ---
 
@@ -218,6 +218,7 @@
 | **TaskForce** | types.ts:79-86 | [UNIT_SYSTEM.md § Task Force Definition](UNIT_SYSTEM.md#task-force-definition) |
 | **Card** | types.ts:90-117 | [CARD_SYSTEM.md § Type Definition](CARD_SYSTEM.md#type-definition) (includes transport & influence fields) |
 | **CommandPoints** | types.ts:116-119 | [COMBAT_SYSTEM.md § Command Points](COMBAT_SYSTEM.md#command-points-system) |
+| **previousCommandPoints** | useGameState.ts:68 | [COMBAT_SYSTEM.md § Command Points](COMBAT_SYSTEM.md#command-points-system) | CommandPoints \| undefined - Command points history tracking |
 | **PurchasedCardInstance** | types.ts:121-126 | [CARD_SYSTEM.md § Transport System](CARD_SYSTEM.md#transport-card-system) (includes embarkedUnits) |
 | **PurchasedCards** | types.ts:128-131 | [CARD_SYSTEM.md § Purchase System](CARD_SYSTEM.md#purchase-system) |
 | **DestructionRecord** | types.ts:121-131 | [COMBAT_SYSTEM.md § Unit Destruction](COMBAT_SYSTEM.md#unit-destruction) |
@@ -413,17 +414,17 @@ STATE_MANAGEMENT.md § Damage Array Normalization
 
 ### Cobertura
 - **Componentes documentados**: 42/42 (100%)
-- **Interfaces documentadas**: 39/39 (100%)
-- **Firestore listeners documentados**: 17/17 active (100%)
+- **Interfaces documentadas**: 44/44 (100%)
+- **Firestore listeners documentados**: 17/17 active (19 total functions) (100%)
 - **Memoizaciones críticas**: 2/2 (100%)
 - **Test suite**: 132 tests (turnService: 36, deploymentService: 24, destructionService: 33, submarineService: 21, mineService: 9, assetDeployService: 9)
 
 ### Calidad
-- **Última actualización**: 2025-11-06
+- **Última actualización**: 2025-11-07
 - **Estado**: ✅ Sincronizado con código
-- **Discrepancias**: 0% (completamente actualizado tras auditoría de documentación)
+- **Discrepancias**: 0% (completamente actualizado tras auditoría de documentación 2025-11-07)
 - **Calidad general**: 9.9/10
-- **Últimos cambios**: Submarine campaign Phase 3 (maritime mines, asset deployment), modular service architecture (10+ services), ASW zone filtering, mine duplicate prevention, 132 tests total
+- **Últimos cambios**: Documentation sync (firestore subscriptions count, previousCommandPoints, service line counts, App.tsx metrics), submarine campaign Phase 3 (maritime mines, asset deployment), modular service architecture (10+ services), 132 tests total
 
 ### Tamaños
 - **ARCHITECTURE.md**: 11 KB

@@ -119,19 +119,20 @@ const gameState = useGameState(); // Returns all 17 Firestore-synced states
 // 5. subscribeToUnits
 // 6. subscribeToCards
 // 7. subscribeToCommandPoints
-// 8. subscribeToPurchasedCards
-// 9. subscribeToDestructionLog
-// 10. subscribeToTurnState
-// 11. subscribeToPendingDeployments
-// 12. subscribeToInfluenceMarker
-// 13. subscribeToSubmarineCampaign
-// 14. subscribeToPlayedCardNotificationsQueue
-// 15. subscribeToPlayerAssignments
-// 16. subscribeToRegisteredPlayers
-// 17. subscribeToCardPurchaseHistory (legacy, not actively used but available)
+// 8. subscribeToPreviousCommandPoints (command points history tracking)
+// 9. subscribeToPurchasedCards
+// 10. subscribeToDestructionLog
+// 11. subscribeToTurnState
+// 12. subscribeToPendingDeployments
+// 13. subscribeToInfluenceMarker
+// 14. subscribeToSubmarineCampaign
+// 15. subscribeToPlayedCardNotificationsQueue
+// 16. subscribeToPlayerAssignments
+// 17. subscribeToRegisteredPlayers
 
-// Note: firestoreService.ts has 18 total subscription functions
-// useGameState.ts actively uses 17 of them (subscribeToCardPurchaseHistory is legacy)
+// Note: firestoreService.ts has 19 total subscription functions
+// useGameState.ts actively uses 17 of them
+// Legacy functions not used: subscribeToPurchaseHistory, subscribeToCardPurchaseHistory
 
 // Total: 17 active subscriptions (encapsulated in useGameState hook)
 

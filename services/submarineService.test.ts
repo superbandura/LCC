@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+﻿import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PatrolService } from './patrol/patrolService';
 import { AttackService } from './attack/attackService';
 import { ASWService } from './asw/aswService';
@@ -102,6 +102,7 @@ describe('SubmarineService', () => {
         cardId: 'card-1',
         cardName: 'Test Card',
         status: 'active',
+        submarineType: 'submarine',
         missionsCompleted: 0,
         totalKills: 0,
         currentOrder: {
@@ -142,6 +143,7 @@ describe('SubmarineService', () => {
         cardId: 'card-1',
         cardName: 'Submarine Card',
         status: 'active',
+        submarineType: 'submarine',
         missionsCompleted: 0,
         totalKills: 0,
         currentOrder: {
@@ -197,6 +199,7 @@ describe('SubmarineService', () => {
         cardId: 'card-1',
         cardName: 'Submarine Card',
         status: 'active',
+        submarineType: 'submarine',
         missionsCompleted: 0,
         totalKills: 0,
         currentOrder: {
@@ -245,6 +248,7 @@ describe('SubmarineService', () => {
         cardId: 'card-1',
         cardName: 'Submarine Card',
         status: 'active',
+        submarineType: 'submarine',
         missionsCompleted: 0,
         totalKills: 0,
         currentOrder: {
@@ -283,6 +287,87 @@ describe('SubmarineService', () => {
 
       // Should clamp to 0, not go negative
       expect(result.updatedCommandPoints.china).toBe(0);
+    });
+
+    it('should exclude ASW cards from patrol operations', async () => {
+      const aswCard: SubmarineDeployment = {
+        id: 'asw-1',
+        submarineName: 'P-8A Surveillance',
+        faction: 'us',
+        cardId: 'card-asw',
+        cardName: 'P-8A Poseidon',
+        status: 'active',
+        submarineType: 'asw',
+        missionsCompleted: 0,
+        totalKills: 0,
+        currentOrder: {
+          orderId: 'order-1',
+          submarineId: 'asw-1',
+          orderType: 'patrol',
+          status: 'pending',
+          targetId: 'south-china-sea',
+          targetType: 'area',
+          assignedTurn: 1,
+        },
+      };
+
+      const regularSub: SubmarineDeployment = {
+        id: 'sub-1',
+        submarineName: 'USS Test',
+        faction: 'us',
+        cardId: 'card-1',
+        cardName: 'Submarine Card',
+        status: 'active',
+        submarineType: 'submarine',
+        missionsCompleted: 0,
+        totalKills: 0,
+        currentOrder: {
+          orderId: 'order-2',
+          submarineId: 'sub-1',
+          orderType: 'patrol',
+          status: 'pending',
+          targetId: 'south-china-sea',
+          targetType: 'area',
+          assignedTurn: 1,
+        },
+      };
+
+      const submarineCampaign: SubmarineCampaignState = {
+        deployedSubmarines: [aswCard, regularSub],
+        events: [],
+      };
+
+      const commandPoints = createMockCommandPoints();
+
+      // Mock successful patrol roll
+      let callCount = 0;
+      Math.random = () => {
+        callCount++;
+        if (callCount === 1) return 0.05; // Patrol roll = 2 (success)
+        if (callCount === 2) return 0.45; // Damage roll = 10
+        return 0.5;
+      };
+
+      const result = await PatrolService.processPatrols(
+        submarineCampaign,
+        createMockTurnState(),
+        commandPoints,
+        createMockOperationalAreas()
+      );
+
+      // Should only process the regular submarine, not the ASW card
+      // 2 events: 1 attacker + 1 defender (only for regular sub)
+      expect(result.events).toHaveLength(2);
+
+      // Verify only the regular submarine incremented missions
+      const updatedASW = result.updatedSubmarines.find(s => s.id === 'asw-1');
+      const updatedSub = result.updatedSubmarines.find(s => s.id === 'sub-1');
+
+      expect(updatedASW?.missionsCompleted).toBe(0); // ASW card should not patrol
+      expect(updatedSub?.missionsCompleted).toBe(1); // Regular sub should patrol
+
+      // Command points should only reflect the regular sub's patrol
+      expect(result.updatedCommandPoints.china).toBe(40); // 50 - 10 damage
     });
   });
 
@@ -664,7 +749,7 @@ describe('SubmarineService', () => {
         locations
       );
 
-      // Should create 4 events (2 attacks × 2 events each)
+      // Should create 4 events (2 attacks Ã— 2 events each)
       expect(result.events).toHaveLength(4);
 
       // Base should have 2 damage points
@@ -778,6 +863,15 @@ describe('SubmarineService', () => {
         status: 'active',
         missionsCompleted: 0,
         totalKills: 0,
+        currentOrder: {
+          orderId: 'order-asw-1',
+          submarineId: 'asw-1',
+          orderType: 'asw',
+          status: 'pending',
+          targetId: 'south-china-sea',
+          targetType: 'area',
+          assignedTurn: 1
+        }
       };
 
       const submarine: SubmarineDeployment = {
@@ -810,8 +904,8 @@ describe('SubmarineService', () => {
         usedSubmarineNames: { us: [], china: [] },
       };
 
-      // Mock failed detection (roll !== 1)
-      Math.random = () => 0.1; // Roll 3 (not 1)
+      // Mock failed detection (roll > 3 for ASW cards)
+      Math.random = () => 0.2; // Roll 5 (above ASW card threshold of 3)
 
       const result = await ASWService.processASWPhase(
         submarineCampaign,
@@ -825,7 +919,7 @@ describe('SubmarineService', () => {
       // Failed detection now creates 1 event for admin detailed report
       expect(result.events).toHaveLength(1);
       expect(result.events[0].description).toContain('Detection attempt failed');
-      expect(result.events[0].rollDetails?.primaryRoll).toBe(3);
+      expect(result.events[0].rollDetails?.primaryRoll).toBe(5);
       expect(result.eliminatedSubmarineIds).toHaveLength(0);
       expect(result.updatedSubmarines.find(s => s.id === 'sub-1')?.status).toBe('active');
     });
@@ -843,6 +937,15 @@ describe('SubmarineService', () => {
         status: 'active',
         missionsCompleted: 0,
         totalKills: 0,
+        currentOrder: {
+          orderId: 'order-asw-1',
+          submarineId: 'asw-1',
+          orderType: 'asw',
+          status: 'pending',
+          targetId: 'south-china-sea',
+          targetType: 'area',
+          assignedTurn: 1
+        }
       };
 
       const submarine: SubmarineDeployment = {
@@ -918,6 +1021,15 @@ describe('SubmarineService', () => {
         status: 'active',
         missionsCompleted: 0,
         totalKills: 0,
+        currentOrder: {
+          orderId: 'order-asw-1',
+          submarineId: 'asw-1',
+          orderType: 'asw',
+          status: 'pending',
+          targetId: 'south-china-sea',
+          targetType: 'area',
+          assignedTurn: 1
+        }
       };
 
       const submarine: SubmarineDeployment = {
@@ -956,7 +1068,7 @@ describe('SubmarineService', () => {
         callCount++;
         if (callCount === 1) return 0.0; // Target selection (index 0)
         if (callCount === 2) return 0.0; // Detection roll = 1 (success)
-        if (callCount === 3) return 0.45; // Elimination roll = 10 (success, ≤ 10)
+        if (callCount === 3) return 0.45; // Elimination roll = 10 (success, â‰¤ 10)
         return 0.5;
       };
 
@@ -1132,6 +1244,350 @@ describe('SubmarineService', () => {
       // Should not target friendly submarines
       expect(result.events).toHaveLength(0);
       expect(result.eliminatedSubmarineIds).toHaveLength(0);
+    });
+
+    it('should detect with roll â‰¤ 2 for ASW destroyers (10% rate)', async () => {
+      // Create ASW destroyer unit
+      const destroyer: Unit = {
+        id: 'destroyer-1',
+        name: 'DDG-56',
+        type: 'ARLEIGH BURKE CLASS DDG',
+        faction: 'us',
+        category: 'naval',
+        damagePoints: 3,
+        currentDamage: [false, false, false],
+        taskForceId: 'tf-1'
+      };
+
+      const taskForce: TaskForce = {
+        id: 'tf-1',
+        name: 'Task Force Alpha',
+        faction: 'us',
+        operationalAreaId: 'south-china-sea',
+        units: ['destroyer-1']
+      };
+
+      const area: OperationalArea = {
+        id: 'south-china-sea',
+        name: 'South China Sea',
+        bounds: [[10, 110], [20, 120]],
+        color: '#3388ff'
+      };
+
+      const submarine: SubmarineDeployment = {
+        id: 'sub-1',
+        submarineName: 'Chinese Sub',
+        faction: 'china',
+        cardId: 'card-1',
+        cardName: 'SHANG-Class Sub',
+        cardType: 'maneuver',
+        submarineType: 'submarine',
+        deployedAt: Date.now(),
+        status: 'active',
+        missionsCompleted: 0,
+        totalKills: 0,
+        currentOrder: {
+          orderId: 'order-1',
+          submarineId: 'sub-1',
+          orderType: 'patrol',
+          status: 'pending',
+          targetId: 'south-china-sea',
+          targetType: 'area',
+          assignedTurn: 1
+        }
+      };
+
+      const submarineCampaign: SubmarineCampaignState = {
+        deployedSubmarines: [submarine],
+        events: [],
+        currentTurn: 1,
+        usedSubmarineNames: { us: [], china: [] }
+      };
+
+      // Mock roll = 2 (should detect for destroyers, not for ASW cards)
+      let callCount = 0;
+      Math.random = () => {
+        callCount++;
+        if (callCount === 1) return 0.0; // Target selection
+        if (callCount === 2) return 0.05; // Detection roll = 2 (success for destroyer)
+        if (callCount === 3) return 0.45; // Elimination roll = 10 (success)
+        return 0.5;
+      };
+
+      const result = await ASWService.processASWPhase(
+        submarineCampaign,
+        createMockTurnState(),
+        [area],
+        [taskForce],
+        [destroyer],
+        createMockCards()
+      );
+
+      // Destroyer should detect with roll=2 (10% threshold)
+      expect(result.events.length).toBeGreaterThan(0);
+      expect(result.eliminatedSubmarineIds).toContain('sub-1');
+      expect(result.updatedSubmarines.find(s => s.id === 'sub-1')?.status).toBe('destroyed');
+    });
+
+    it('should detect with roll = 2 OR 3 for ASW cards (15% rate)', async () => {
+      const aswCard: SubmarineDeployment = {
+        id: 'asw-1',
+        submarineName: 'P-8A Surveillance',
+        faction: 'us',
+        cardId: 'card-asw-1',
+        cardName: 'P-8A Surveillance',
+        cardType: 'intelligence',
+        submarineType: 'asw',
+        deployedAt: Date.now(),
+        status: 'active',
+        missionsCompleted: 0,
+        totalKills: 0,
+        currentOrder: {
+          orderId: 'order-asw-1',
+          submarineId: 'asw-1',
+          orderType: 'asw',
+          status: 'pending',
+          targetId: 'south-china-sea',
+          targetType: 'area',
+          assignedTurn: 1
+        }
+      };
+
+      const submarine: SubmarineDeployment = {
+        id: 'sub-1',
+        submarineName: 'Chinese Sub',
+        faction: 'china',
+        cardId: 'card-1',
+        cardName: 'SHANG-Class Sub',
+        cardType: 'maneuver',
+        submarineType: 'submarine',
+        deployedAt: Date.now(),
+        status: 'active',
+        missionsCompleted: 0,
+        totalKills: 0,
+        currentOrder: {
+          orderId: 'order-1',
+          submarineId: 'sub-1',
+          orderType: 'patrol',
+          status: 'pending',
+          targetId: 'south-china-sea',
+          targetType: 'area',
+          assignedTurn: 1
+        }
+      };
+
+      const submarineCampaign: SubmarineCampaignState = {
+        deployedSubmarines: [aswCard, submarine],
+        events: [],
+        currentTurn: 1,
+        usedSubmarineNames: { us: [], china: [] }
+      };
+
+      // Mock roll = 2 (should detect for ASW cards with 15% threshold)
+      let callCount = 0;
+      Math.random = () => {
+        callCount++;
+        if (callCount === 1) return 0.0; // Target selection
+        if (callCount === 2) return 0.05; // Detection roll = 2 (success for ASW card)
+        if (callCount === 3) return 0.45; // Elimination roll = 10 (success)
+        return 0.5;
+      };
+
+      const result = await ASWService.processASWPhase(
+        submarineCampaign,
+        createMockTurnState(),
+        createMockOperationalAreas(),
+        createMockTaskForces(),
+        createMockUnits(),
+        createMockCards()
+      );
+
+      // ASW card should detect with roll=2 or roll=3 (15% threshold)
+      expect(result.events.length).toBeGreaterThan(0);
+      expect(result.eliminatedSubmarineIds).toContain('sub-1');
+      expect(result.updatedSubmarines.find(s => s.id === 'sub-1')?.status).toBe('destroyed');
+    });
+
+    it('should NOT detect with roll = 4 for ASW cards (15% rate limit)', async () => {
+      const aswCard: SubmarineDeployment = {
+        id: 'asw-1',
+        submarineName: 'P-8A Surveillance',
+        faction: 'us',
+        cardId: 'card-asw-1',
+        cardName: 'P-8A Surveillance',
+        cardType: 'intelligence',
+        submarineType: 'asw',
+        deployedAt: Date.now(),
+        status: 'active',
+        missionsCompleted: 0,
+        totalKills: 0,
+        currentOrder: {
+          orderId: 'order-asw-1',
+          submarineId: 'asw-1',
+          orderType: 'asw',
+          status: 'pending',
+          targetId: 'south-china-sea',
+          targetType: 'area',
+          assignedTurn: 1
+        }
+      };
+
+      const submarine: SubmarineDeployment = {
+        id: 'sub-1',
+        submarineName: 'Chinese Sub',
+        faction: 'china',
+        cardId: 'card-1',
+        cardName: 'SHANG-Class Sub',
+        cardType: 'maneuver',
+        submarineType: 'submarine',
+        deployedAt: Date.now(),
+        status: 'active',
+        missionsCompleted: 0,
+        totalKills: 0,
+        currentOrder: {
+          orderId: 'order-1',
+          submarineId: 'sub-1',
+          orderType: 'patrol',
+          status: 'pending',
+          targetId: 'south-china-sea',
+          targetType: 'area',
+          assignedTurn: 1
+        }
+      };
+
+      const submarineCampaign: SubmarineCampaignState = {
+        deployedSubmarines: [aswCard, submarine],
+        events: [],
+        currentTurn: 1,
+        usedSubmarineNames: { us: [], china: [] }
+      };
+
+      // Mock roll = 4 (should NOT detect for ASW cards, threshold is 3)
+      let callCount = 0;
+      Math.random = () => {
+        callCount++;
+        if (callCount === 1) return 0.0; // Target selection
+        if (callCount === 2) return 0.15; // Detection roll = 4 (failure for ASW card)
+        return 0.5;
+      };
+
+      const result = await ASWService.processASWPhase(
+        submarineCampaign,
+        createMockTurnState(),
+        createMockOperationalAreas(),
+        createMockTaskForces(),
+        createMockUnits(),
+        createMockCards()
+      );
+
+      // ASW card should NOT detect with roll=4 (threshold is 3)
+      expect(result.events).toHaveLength(1); // Only failed detection event
+      expect(result.events[0].description).toContain('Detection attempt failed');
+      expect(result.eliminatedSubmarineIds).toHaveLength(0);
+      expect(result.updatedSubmarines.find(s => s.id === 'sub-1')?.status).toBe('active');
+    });
+
+    it('should only activate ASW cards with active ASW orders', async () => {
+      // ASW card WITH active ASW order
+      const aswWithOrder: SubmarineDeployment = {
+        id: 'asw-1',
+        submarineName: 'P-8A Active',
+        faction: 'us',
+        cardId: 'card-asw-1',
+        cardName: 'P-8A Poseidon',
+        cardType: 'intelligence',
+        submarineType: 'asw',
+        deployedAt: Date.now(),
+        status: 'active',
+        missionsCompleted: 0,
+        totalKills: 0,
+        currentOrder: {
+          orderId: 'order-asw-1',
+          submarineId: 'asw-1',
+          orderType: 'asw',
+          status: 'pending',
+          targetId: 'south-china-sea',
+          targetType: 'area',
+          assignedTurn: 1
+        }
+      };
+
+      // ASW card WITHOUT order
+      const aswWithoutOrder: SubmarineDeployment = {
+        id: 'asw-2',
+        submarineName: 'P-8A Inactive',
+        faction: 'us',
+        cardId: 'card-asw-2',
+        cardName: 'P-8A Poseidon',
+        cardType: 'intelligence',
+        submarineType: 'asw',
+        deployedAt: Date.now(),
+        status: 'active',
+        missionsCompleted: 0,
+        totalKills: 0
+        // No currentOrder
+      };
+
+      // Enemy submarine
+      const submarine: SubmarineDeployment = {
+        id: 'sub-1',
+        submarineName: 'Chinese Sub',
+        faction: 'china',
+        cardId: 'card-1',
+        cardName: 'SHANG-Class Sub',
+        cardType: 'maneuver',
+        submarineType: 'submarine',
+        deployedAt: Date.now(),
+        status: 'active',
+        missionsCompleted: 0,
+        totalKills: 0,
+        currentOrder: {
+          orderId: 'order-1',
+          submarineId: 'sub-1',
+          orderType: 'patrol',
+          status: 'pending',
+          targetId: 'south-china-sea',
+          targetType: 'area',
+          assignedTurn: 1
+        }
+      };
+
+      const submarineCampaign: SubmarineCampaignState = {
+        deployedSubmarines: [aswWithOrder, aswWithoutOrder, submarine],
+        events: [],
+        currentTurn: 1,
+        usedSubmarineNames: { us: [], china: [] }
+      };
+
+      // Mock successful detection
+      let callCount = 0;
+      Math.random = () => {
+        callCount++;
+        if (callCount === 1) return 0.0; // Target selection
+        if (callCount === 2) return 0.0; // Detection roll = 1 (success)
+        if (callCount === 3) return 0.45; // Elimination roll = 10 (success)
+        return 0.5;
+      };
+
+      const result = await ASWService.processASWPhase(
+        submarineCampaign,
+        createMockTurnState(),
+        createMockOperationalAreas(),
+        createMockTaskForces(),
+        createMockUnits(),
+        createMockCards()
+      );
+
+      // Only ASW card with active order should participate
+      // Should detect and eliminate the submarine
+      expect(result.eliminatedSubmarineIds).toContain('sub-1');
+      expect(result.updatedSubmarines.find(s => s.id === 'sub-1')?.status).toBe('destroyed');
+
+      // ASW card with order should increment kill count
+      expect(result.updatedSubmarines.find(s => s.id === 'asw-1')?.totalKills).toBe(1);
+
+      // ASW card without order should NOT participate (no kill count change)
+      expect(result.updatedSubmarines.find(s => s.id === 'asw-2')?.totalKills).toBe(0);
     });
   });
 });

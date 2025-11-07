@@ -754,11 +754,10 @@ const TaskForceModal: React.FC<TaskForceModalProps> = ({
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsEncyclopediaOpen(true)}
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded font-mono text-xs uppercase tracking-wide transition-colors flex items-center gap-2"
-              title="View Unit Roster"
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-mono text-xs uppercase tracking-wider transition-colors border border-green-400"
+              title="View Unit Encyclopedia"
             >
-              <span className="text-lg">📚</span>
-              <span>ROSTER</span>
+              <span>[ UNITS ]</span>
             </button>
             <button
               onClick={onClose}

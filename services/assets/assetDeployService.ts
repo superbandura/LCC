@@ -14,9 +14,12 @@
 import {
   SubmarineCampaignState,
   SubmarineDeployment,
+  SubmarineEvent,
   TurnState,
   OperationalArea
 } from '../../types';
+import { EventBuilder } from '../events/EventBuilder';
+import { AssetTemplates } from '../events/EventTemplates';
 
 export interface AssetDeployResult {
   updatedSubmarines: SubmarineDeployment[];
@@ -27,6 +30,7 @@ export interface AssetDeployResult {
     areaId: string;
     areaName: string;
   }>;
+  events: SubmarineEvent[];
 }
 
 /**
@@ -48,7 +52,8 @@ export class AssetDeployService {
       return {
         updatedSubmarines: [],
         updatedOperationalAreas: [...operationalAreas],
-        deployedAssets: []
+        deployedAssets: [],
+        events: []
       };
     }
 
@@ -68,11 +73,13 @@ export class AssetDeployService {
       return {
         updatedSubmarines: sourceSubmarines,
         updatedOperationalAreas: [...operationalAreas],
-        deployedAssets: []
+        deployedAssets: [],
+        events: []
       };
     }
 
     const deployedAssets: Array<{ assetId: string; assetName: string; areaId: string; areaName: string }> = [];
+    const events: SubmarineEvent[] = [];
     // Assets are invisible infrastructure - do NOT add them to assignedCards
     const updatedOperationalAreas = [...operationalAreas];
 
@@ -100,6 +107,18 @@ export class AssetDeployService {
         areaName: targetArea.name
       });
 
+      // Create deployment event (visible to deploying faction)
+      const deploymentEvent = new EventBuilder()
+        .setSubmarine(sub)
+        .setTurnState(currentTurnState)
+        .setEventType('attack_success') // Use attack_success for display in ops log
+        .setTarget(targetAreaId, targetArea.name, 'area')
+        .setDescription(AssetTemplates.deploymentSuccess(sub.cardName, targetArea.name))
+        .setExecutionTurn(currentTurnState.turnNumber)
+        .build();
+
+      events.push(deploymentEvent);
+
       // Mark order as completed
       return {
         ...sub,
@@ -122,7 +141,8 @@ export class AssetDeployService {
     return {
       updatedSubmarines,
       updatedOperationalAreas,
-      deployedAssets
+      deployedAssets,
+      events
     };
   }
 }

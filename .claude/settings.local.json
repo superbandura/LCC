@@ -72,7 +72,13 @@
       "Bash(gh:*)",
       "Bash(git init:*)",
       "Bash(git config:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git checkout:*)",
+      "Bash(for file in F:/LCC/services/*.ts)",
+      "Bash(for file in F:/LCC/hooks/*.ts)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"F:/LCC/temp_add_method.ps1\")"
     ],
     "deny": [],
     "ask": []

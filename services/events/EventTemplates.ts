@@ -18,8 +18,8 @@ export const PatrolTemplates = {
   /**
    * Successful patrol (defender perspective - with damage info)
    */
-  successDefender: (zoneName: string, damage: number): string =>
-    `Logistics affected in ${zoneName} - ${damage} command ${damage === 1 ? 'point' : 'points'} lost`,
+  successDefender: (damage: number): string =>
+    `${damage} command ${damage === 1 ? 'point' : 'points'} lost due to enemy submarine activity`,
 
   /**
    * Failed patrol (attacker perspective)
@@ -31,7 +31,13 @@ export const PatrolTemplates = {
    * Failed patrol (defender perspective)
    */
   failureDefender: (zoneName: string): string =>
-    `Enemy patrol in ${zoneName} - No impact on operations`
+    `Enemy patrol in ${zoneName} - No impact on operations`,
+
+  /**
+   * Failed patrol (admin view only - no perspective)
+   */
+  patrolFailed: (zoneName: string): string =>
+    `Patrol sweep completed in ${zoneName} - No enemy contact`
 };
 
 /**
@@ -76,14 +82,22 @@ export const ASWTemplates = {
   /**
    * ASW detection but evaded (attacker perspective - no enemy submarine name for fog of war)
    */
-  detectionEvaded: (): string =>
-    `Enemy submarine detected but evaded`,
+  detectionEvaded: (areaName?: string): string =>
+    areaName
+      ? `Enemy submarine detected but evaded in ${areaName}`
+      : `Enemy submarine detected but evaded`,
 
   /**
    * ASW detection but evaded (defender perspective)
    */
   detectionEvadedDefender: (submarineName: string, areaName: string): string =>
-    `Submarine ${submarineName} detected in ${areaName} but escaped - Enemy failed to eliminate`
+    `Submarine ${submarineName} detected in ${areaName} but escaped - Enemy failed to eliminate`,
+
+  /**
+   * ASW detection attempt failed (admin view only - no perspective)
+   */
+  detectionFailed: (): string =>
+    `ASW detection attempt - No enemy contact`
 };
 
 /**

@@ -46,19 +46,19 @@
 
 ### Root Component (App.tsx)
 - Central state management with 11 useState hooks (reduced from 31)
-- 17 active Firestore real-time subscriptions managed by `useGameState` hook (19 total subscription functions)
+- 19 active Firestore real-time subscriptions managed by `useGameState` hook (19 total subscription functions)
 - Faction selection logic
 - Modal orchestration via `useModal` hook
 - Layout and UI structure
 - 18 performance-optimized handlers with `useCallback`
-- **Current size**: ~1,431 lines (reduced from 1,588 lines, -9.9%)
+- **Current size**: ~1,276 lines (reduced from 1,588 lines, -19.6%)
 
 ### Component Organization
 
 ```
 components/
 ├── map/
-│   ├── Map.tsx                    # Main map component (~430 lines)
+│   ├── Map.tsx                    # Main map component (~407 lines)
 │   ├── controls/                  # Map control components
 │   │   ├── MapInitializer.tsx
 │   │   ├── ScaleControl.tsx
@@ -105,7 +105,7 @@ App.tsx componentDidMount
     │
     ├─> useGameState() hook initializes
     │   │
-    │   └─> Subscribe to Firestore collections (14 subscriptions)
+    │   └─> Subscribe to Firestore collections (19 subscriptions)
     │       ├─> operationalAreas
     │       ├─> operationalData
     │       ├─> locations
@@ -147,7 +147,7 @@ User Interaction (e.g., edit base damage)
 **Single Source of Truth**: Firestore document `game/current`
 
 **State Categories**:
-- **Synced State**: Stored in Firestore, auto-synced across clients (13 states managed by `useGameState` hook)
+- **Synced State**: Stored in Firestore, auto-synced across clients (19 states managed by `useGameState` hook)
   - operationalAreas: Map zones with bounds, colors, assignedCards
   - operationalData: Damage/status by area ID
   - locations: Military bases with damage tracking
@@ -286,8 +286,8 @@ Business logic extracted from App.tsx into testable, reusable services (132 test
 
 ### Custom Hooks
 Custom hooks for state management and UI logic (~695 lines total):
-- `hooks/useGameState.ts`: Centralized Firestore state management (284 lines)
-  - Manages **17 active Firestore subscriptions** (18 total functions in firestoreService.ts)
+- `hooks/useGameState.ts`: Centralized Firestore state management (279 lines)
+  - Manages **19 active Firestore subscriptions** (19 total functions in firestoreService.ts)
   - Provides update functions for all game state
   - Eliminates 87 lines of boilerplate from App.tsx
   - Subscriptions: operationalAreas, operationalData, locations, taskForces, units, cards, commandPoints, purchasedCards, destructionLog, turnState, pendingDeployments, influenceMarker, submarineCampaign, playedCardNotifications, playerAssignments, registeredPlayers, cardPurchaseHistory
@@ -416,15 +416,15 @@ App.tsx (1,588 lines) - Monolithic component
 
 ### After Refactoring
 ```
-App.tsx (~1,266 lines) - Clean orchestration layer
-├── services/ (~1,396 lines of testable business logic)
-│   ├── submarineService.ts (602 lines)
-│   ├── turnService.ts (181 lines)
-│   ├── deploymentService.ts (369 lines)
-│   └── destructionService.ts (244 lines)
+App.tsx (~1,276 lines) - Clean orchestration layer
+├── services/ (~3,100+ lines of testable business logic)
+│   ├── submarineService.ts (1,118 lines)
+│   ├── turnService.ts (151 lines)
+│   ├── deploymentService.ts (330 lines)
+│   └── destructionService.ts (217 lines)
 │
 ├── hooks/ (~300 lines of reusable logic)
-│   ├── useGameState.ts (manages 14 Firestore subscriptions)
+│   ├── useGameState.ts (manages 19 Firestore subscriptions)
 │   ├── useModal.ts (manages 7 modal states)
 │   ├── useFactionFilter.ts (generic filtering)
 │   └── useDeploymentNotifications.ts (arrival detection)

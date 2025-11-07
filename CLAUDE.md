@@ -60,9 +60,9 @@ All game state stored in Firestore document `game/current` and syncs real-time a
 **Files**: `firebase.ts`, `firestoreService.ts`, `firestore.rules`, `firebase.json`
 
 **Architecture**:
-- `firestoreService.ts`: Low-level Firestore CRUD operations (~1,267 lines), 19 subscription functions total (17 active used in useGameState: subscribeToOperationalAreas, subscribeToUnits, etc.)
+- `firestoreService.ts`: Low-level Firestore CRUD operations (~1,223 lines), 19 subscription functions total (19 active used in useGameState: subscribeToOperationalAreas, subscribeToUnits, etc.)
 - `services/`: Business logic layer (10+ modular services organized by domain)
-- `hooks/useGameState.ts`: React hook wrapping 17 active Firestore subscriptions, provides unified state to App.tsx
+- `hooks/useGameState.ts`: React hook wrapping 19 active Firestore subscriptions, provides unified state to App.tsx
 
 ## Architecture
 
@@ -78,8 +78,8 @@ F:\LCC/
 │   ├── modals/             # Modal dialogs (pending migration)
 │   ├── ui/                 # UI components
 │   └── shared/             # Reusable components
-├── hooks/                  # Custom React hooks (~695 lines)
-│   ├── useGameState.ts    # Firestore state subscriptions (17 active, 284 lines)
+├── hooks/                  # Custom React hooks (~736 lines)
+│   ├── useGameState.ts    # Firestore state subscriptions (19 active, 279 lines)
 │   ├── useModal.ts        # Modal state management (7 modals, 148 lines)
 │   ├── useFactionFilter.ts # Faction-based filtering (111 lines)
 │   └── useDeploymentNotifications.ts # Deployment queue notifications (198 lines)
@@ -117,27 +117,27 @@ F:\LCC/
 Business logic in 10+ modular services (~4,000+ lines, 132 tests):
 
 **Core Services:**
-- **turnService.ts** (181 lines, 36 tests): Turn management, week/day calculations, game phase detection
-- **deploymentService.ts** (369 lines, 24 tests): Deployment timing, arrival calculations, command point validation
-- **destructionService.ts** (244 lines, 33 tests): Destruction tracking, combat statistics, unit revival detection
+- **turnService.ts** (151 lines, 36 tests): Turn management, week/day calculations, game phase detection
+- **deploymentService.ts** (330 lines, 24 tests): Deployment timing, arrival calculations, command point validation
+- **destructionService.ts** (217 lines, 33 tests): Destruction tracking, combat statistics, unit revival detection
 
 **Submarine Campaign Services (Modular Architecture):**
-- **submarineCampaignOrchestrator.ts** (369 lines): Coordinates all 5 submarine campaign phases in correct sequence
-- **submarineService.ts** (1,239 lines, 21 tests): Shared utilities (communication failures, tactical network damage, ASW ship snapshots)
-- **asw/aswService.ts** (361 lines): ASW Phase - Detection with 5% rate, 50% elimination, zone filtering
-- **attack/attackService.ts** (265 lines): Attack Phase - Base attacks with 50% success rate
-- **patrol/patrolService.ts** (207 lines): Patrol Phase - Patrol operations with 90% success rate
-- **mines/mineService.ts** (324 lines, 9 tests): Mine Phase - Maritime mine detection (5% rate, d20=1)
-- **assets/assetDeployService.ts** (148 lines, 9 tests): Asset Deploy Phase - Processes deploy orders for mines/sensors
-- **events/EventBuilder.ts** (217 lines): Builder pattern for consistent event creation across all services
-- **events/EventTemplates.ts** (132 lines): Centralized message templates (Patrol, Attack, ASW, Mine)
+- **submarineCampaignOrchestrator.ts** (338 lines): Coordinates all 5 submarine campaign phases in correct sequence
+- **submarineService.ts** (1,118 lines, 21 tests): Shared utilities (communication failures, tactical network damage, ASW ship snapshots)
+- **asw/aswService.ts** (313 lines): ASW Phase - Detection with 5% rate, 50% elimination, zone filtering
+- **attack/attackService.ts** (231 lines): Attack Phase - Base attacks with 50% success rate
+- **patrol/patrolService.ts** (168 lines): Patrol Phase - Patrol operations with 90% success rate
+- **mines/mineService.ts** (290 lines, 9 tests): Mine Phase - Maritime mine detection (5% rate, d20=1)
+- **assets/assetDeployService.ts** (132 lines, 9 tests): Asset Deploy Phase - Processes deploy orders for mines/sensors
+- **events/EventBuilder.ts** (189 lines): Builder pattern for consistent event creation across all services
+- **events/EventTemplates.ts** (123 lines): Centralized message templates (Patrol, Attack, ASW, Mine)
 
 All services pure functions with comprehensive Vitest coverage. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
 
 ### Custom Hooks
 
-Four hooks reduce component complexity and centralize logic (~720 lines total):
-- **useGameState** (306 lines): Manages **17 active Firestore subscriptions**, single source of truth for all game state
+Four hooks reduce component complexity and centralize logic (~736 lines total):
+- **useGameState** (279 lines): Manages **19 active Firestore subscriptions**, single source of truth for all game state
 - **useModal** (148 lines): Unified API for 7 modal states (`open()`, `close()`, `toggle()`, `isOpen()`)
 - **useFactionFilter** (111 lines): Memoized faction filtering for units, cards, task forces
 - **useDeploymentNotifications** (198 lines): Auto-opens modal when deployments queued
@@ -165,7 +165,7 @@ Centralized hook encapsulating 14 Firestore subscriptions:
 - `submarineCampaign`: SubmarineCampaignState - submarine warfare state
 - `playedCardNotifications`: PlayedCardNotification[] - queue of played card notifications for both players
 
-**App.tsx Local State** (~1,218 lines):
+**App.tsx Local State** (~1,276 lines):
 - `selectedFaction`: 'us' | 'china' | null
 - `filters`: Country visibility filters for sidebar
 - Modal states: Managed by `useModal` hook (7 modals)
@@ -210,8 +210,8 @@ Centralized hook encapsulating 14 Firestore subscriptions:
 
 ### Components
 
-- **App.tsx**: Root component (~1,266 lines), uses `useGameState` and `useModal` hooks, faction selection, layout, memoized filters
-- **Map.tsx**: Leaflet map (~430 lines) with markers, rectangles, popups, DataEditor
+- **App.tsx**: Root component (~1,276 lines), uses `useGameState` and `useModal` hooks, faction selection, layout, memoized filters
+- **Map.tsx**: Leaflet map (~407 lines) with markers, rectangles, popups, DataEditor
   - Air patrol indicators (blue/red/gray circles, 35x35px)
   - DataEditor with 5 tabs: TacticalTab, PatrolsTab, ForcesTab, CommandPointsTab, CardsTab
 - **Sidebar.tsx**: Location list with region grouping and filters

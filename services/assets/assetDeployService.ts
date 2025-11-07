@@ -60,13 +60,27 @@ export class AssetDeployService {
     // Use provided submarines or fall back to campaign submarines
     const sourceSubmarines = submarines || submarineCampaign.deployedSubmarines;
 
-    // Filter assets with pending deploy orders
+    // Log asset order statuses at the start of processing
+    const assetOrdersAtStart = sourceSubmarines
+      .filter(sub => sub.submarineType === 'asset' && sub.currentOrder)
+      .map(sub => ({
+        name: sub.submarineName,
+        orderType: sub.currentOrder?.orderType,
+        status: sub.currentOrder?.status,
+        executionTurn: sub.currentOrder?.executionTurn
+      }));
+    if (assetOrdersAtStart.length > 0) {
+      console.log('🔍 [ASSET DEPLOY START] Asset orders at phase start:', assetOrdersAtStart);
+    }
+
+    // Filter assets with pending deploy orders (only if not already executed)
     const pendingDeploys = sourceSubmarines.filter(
       sub => sub.status === 'active' &&
              sub.submarineType === 'asset' &&
              sub.currentOrder &&
              sub.currentOrder.orderType === 'deploy' &&
-             sub.currentOrder.status === 'pending'
+             sub.currentOrder.status === 'pending' &&
+             !sub.currentOrder.executionTurn  // Only process if not already executed
     );
 
     if (pendingDeploys.length === 0) {
@@ -120,7 +134,7 @@ export class AssetDeployService {
       events.push(deploymentEvent);
 
       // Mark order as completed
-      return {
+      const completedSub = {
         ...sub,
         currentOrder: {
           ...sub.currentOrder!,
@@ -129,6 +143,14 @@ export class AssetDeployService {
           executionDate: currentTurnState.currentDate
         }
       };
+
+      console.log(`🔧 [ASSET DEPLOY] Marking ${sub.submarineName} order as completed:`, {
+        before: sub.currentOrder?.status,
+        after: completedSub.currentOrder?.status,
+        executionTurn: completedSub.currentOrder?.executionTurn
+      });
+
+      return completedSub;
     });
 
     if (deployedAssets.length > 0) {

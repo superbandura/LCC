@@ -265,7 +265,7 @@ export type OrderStatus = 'pending' | 'executing' | 'completed' | 'failed';
 export type SubmarineOrderType = 'patrol' | 'attack' | 'deploy' | 'asw';
 
 // Types of submarine events
-export type SubmarineEventType = 'deployment' | 'attack_success' | 'attack_failure' | 'detected' | 'destroyed' | 'return' | 'communication_failure';
+export type SubmarineEventType = 'deployment' | 'attack_success' | 'attack_failure' | 'detected' | 'destroyed' | 'return' | 'communication_failure' | 'asw_failed' | 'patrol_failed';
 
 // Status of deployed submarines
 export type SubmarineStatus = 'active' | 'destroyed' | 'returned';

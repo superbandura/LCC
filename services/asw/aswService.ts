@@ -85,18 +85,27 @@ export class ASWService {
     // Collect all ASW elements from operational areas
     const allASWElements: ASWElement[] = [];
 
-    // 1. Collect ASW ships and cards from operational areas
-    for (const area of operationalAreas) {
-      // ASW cards played in operational areas
-      const aswCardsInArea = this.getASWCardsInArea(area, cards);
-      allASWElements.push(...aswCardsInArea);
+    // 1. Collect ASW cards from submarine campaign (they have assigned areas)
+    const aswCardsInCampaign = sourceSubmarines
+      .filter(sub => sub.submarineType === 'asw' && sub.status === 'active')
+      .map(aswCard => ({
+        id: aswCard.id,
+        name: aswCard.submarineName,
+        faction: aswCard.faction,
+        type: 'card' as const,
+        areaId: aswCard.currentOrder?.targetId || aswCard.currentAreaId,
+        areaName: aswCard.currentOrder?.targetId || aswCard.currentAreaId || 'Unknown'
+      }));
 
-      // ASW ships in task forces
+    allASWElements.push(...aswCardsInCampaign);
+
+    // 2. Collect ASW ships from operational areas
+    for (const area of operationalAreas) {
       const aswShipsInArea = this.getASWShipsInArea(area, taskForces, units);
       allASWElements.push(...aswShipsInArea);
     }
 
-    // 2. Collect patrol submarines (they can do ASW in their current zone only)
+    // 3. Collect patrol submarines (they can do ASW in their current zone only)
     const patrolSubmarines = submarinesInSouthChinaSea
       .filter(sub =>
         sub.currentOrder?.orderType === 'patrol' && // Only patrol orders
@@ -229,15 +238,28 @@ export class ASWService {
             .setTurnState(currentTurnState)
             .setEventType('detected')
             .setTarget(targetSubmarine.id, targetSubmarine.submarineName, 'unit')
-            .setDescription(ASWTemplates.detectionEvaded())
+            .setDescription(ASWTemplates.detectionEvaded(aswElement.areaName))
             .setRolls(detectionRoll, detectionThreshold, eliminationRoll, 10)
             .setASWElementInfo(aswElement.id, aswElement.name, aswElement.type, aswElement.areaId, aswElement.areaName)
             .build();
 
           events.push(attackerEvent);
         }
+      } else {
+        // Detection failed - create event for admin report only
+        const failedDetectionEvent = new EventBuilder()
+          .setSubmarineInfo(aswElement.id, aswElement.name, aswElement.id, aswElement.name, 'ASW')
+          .setFaction(aswElement.faction)
+          .setTurnState(currentTurnState)
+          .setEventType('asw_failed')
+          .setTarget(targetSubmarine.id, targetSubmarine.submarineName, 'unit')
+          .setDescription(ASWTemplates.detectionFailed())
+          .setRolls(detectionRoll, detectionThreshold)
+          .setASWElementInfo(aswElement.id, aswElement.name, aswElement.type, aswElement.areaId, aswElement.areaName)
+          .build();
+
+        events.push(failedDetectionEvent);
       }
-      // Detection failed - no event created (fog of war)
     }
 
     console.log(`🎯 ASW: ${eliminatedSubmarineIds.length} eliminated (${detectionAttempts} attempts, ${successfulDetections} detected)`);
@@ -282,11 +304,11 @@ export class ASWService {
    * Get ASW ships in an operational area
    */
   private static getASWShipsInArea(area: OperationalArea, taskForces: TaskForce[], units: Unit[]): ASWElement[] {
-    const areaTaskForces = taskForces.filter(tf => tf.operationalAreaId === area.id);
+    const areaTaskForces = taskForces.filter(tf => tf.operationalAreaId === area.id && !tf.isPendingDeployment);
     const aswShips: ASWElement[] = [];
 
     for (const tf of areaTaskForces) {
-      const tfUnits = units.filter(u => u.taskForceId === tf.id);
+      const tfUnits = units.filter(u => u.taskForceId === tf.id && !u.isPendingDeployment);
 
       for (const unit of tfUnits) {
         if (unit.category === 'naval' && this.isASWCapable(unit, tf.faction)) {

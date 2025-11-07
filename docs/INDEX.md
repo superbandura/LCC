@@ -140,7 +140,7 @@
 
 | Componente | Documentación | Archivo | Líneas |
 |------------|---------------|---------|--------|
-| **App.tsx** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | App.tsx | ~1,431 |
+| **App.tsx** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | App.tsx | ~1,276 |
 | **Map.tsx** | [MAP_INTEGRATION.md](MAP_INTEGRATION.md) | components/Map.tsx | ~407 |
 | **TurnControl** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | components/TurnControl.tsx | ~89 |
 | **FactionSelector** | [ARCHITECTURE.md](ARCHITECTURE.md#component-organization) | components/FactionSelector.tsx | - |
@@ -159,7 +159,7 @@
 | **TaskForceDetailModal** | [UNIT_SYSTEM.md](UNIT_SYSTEM.md) | components/TaskForceDetailModal.tsx | ~320 | Detalle de TF |
 | **DeploymentNotificationModal** | [UNIT_SYSTEM.md § Deployment Time](UNIT_SYSTEM.md#deployment-time-system) | components/DeploymentNotificationModal.tsx | ~279 | Notificaciones de arribo |
 | **TurnControl** | [STATE_MANAGEMENT.md § Turn System](STATE_MANAGEMENT.md#turn-system) | components/TurnControl.tsx | ~83 | Control de turnos |
-| **CombatStatisticsModal** | [COMBAT_SYSTEM.md § Combat Statistics](COMBAT_SYSTEM.md#combat-statistics-modal) | components/CombatStatisticsModal.tsx | - | Stats de combate |
+| **CombatStatisticsModal** | [COMBAT_SYSTEM.md § Combat Statistics](COMBAT_SYSTEM.md#combat-statistics-modal) | components/CombatStatisticsModal.tsx | ~1,116 | Stats de combate |
 | **AdminLoginModal** | [ARCHITECTURE.md](ARCHITECTURE.md) | components/AdminLoginModal.tsx | - | Login de admin |
 | **BoardUnitsModal** | [CARD_SYSTEM.md § Boarding Units](CARD_SYSTEM.md#boarding-units-boardunitsmodal) | components/BoardUnitsModal.tsx | - | Embarcar unidades en transporte |
 | **DisembarkModal** | [CARD_SYSTEM.md § Disembarking Units](CARD_SYSTEM.md#disembarking-units-disembarkmodal) | components/map/DataEditor/modals/DisembarkModal.tsx | ~450 | Desembarcar unidades de transporte |
@@ -200,8 +200,8 @@
 | Utilidad | Documentación | Archivo |
 |----------|---------------|---------|
 | **iconGenerators** | [MAP_INTEGRATION.md § Custom Icons](MAP_INTEGRATION.md#custom-icons) | utils/iconGenerators.tsx |
-| **firestoreService** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | firestoreService.ts (~1,334 lines, 19 subscription functions) |
-| **useGameState** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | hooks/useGameState.ts (~306 lines, 17 active subscriptions) |
+| **firestoreService** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | firestoreService.ts (~1,223 lines, 19 subscription functions) |
+| **useGameState** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | hooks/useGameState.ts (~279 lines, 19 active subscriptions) |
 
 ---
 

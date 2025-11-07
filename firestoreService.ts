@@ -970,6 +970,19 @@ export const updateSubmarineCampaign = async (
     // Remove all undefined fields (Firestore doesn't accept them)
     sanitizedCampaign = removeUndefinedFields(sanitizedCampaign);
 
+    // Log asset order statuses before Firestore write
+    const assetOrdersBeforeWrite = sanitizedCampaign.deployedSubmarines
+      ?.filter(sub => sub.submarineType === 'asset' && sub.currentOrder)
+      .map(sub => ({
+        name: sub.submarineName,
+        orderType: sub.currentOrder?.orderType,
+        status: sub.currentOrder?.status,
+        executionTurn: sub.currentOrder?.executionTurn
+      })) || [];
+    if (assetOrdersBeforeWrite.length > 0) {
+      console.log('💾 [FIRESTORE] Asset orders before write:', assetOrdersBeforeWrite);
+    }
+
     await setDoc(GAME_DOC_REF, { submarineCampaign: sanitizedCampaign }, { merge: true });
   } catch (error) {
     console.error("Error updating submarine campaign:", error);

@@ -128,13 +128,9 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
         // Only show events for selected faction
         if (event.faction !== selectedFaction) return false;
 
-        // Show successful attacks (patrols with damage dealt, base attacks, deployments)
+        // Show successful attacks (patrols, base attacks, deployments)
         if (event.eventType === 'attack_success') {
-          // For patrols against areas, only show if damage was dealt (enemy detected)
-          if (event.targetInfo?.targetType === 'area') {
-            return event.targetInfo.damageDealt !== undefined && event.targetInfo.damageDealt > 0;
-          }
-          return true; // Show other successful attacks (against bases, deployments, etc.)
+          return true; // Show all successful attacks including patrols
         }
 
         // Show failed attacks (defender sees incoming attack, attacker sees launch)
@@ -146,7 +142,13 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
         // Show destructions
         if (event.eventType === 'destroyed') return true;
 
-        // Hide everything else
+        // Show communication failures
+        if (event.eventType === 'communication_failure') return true;
+
+        // Show deployments (submarines, ASW cards, assets)
+        if (event.eventType === 'deployment') return true;
+
+        // Hide everything else (asw_failed, patrol_failed - only for Admin Report)
         return false;
       })
       .slice(-30)

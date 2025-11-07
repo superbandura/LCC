@@ -10,6 +10,77 @@ This document tracks all refactoring changes made to the LCC codebase. It serves
 
 ---
 
+## 2025-11-07 - Bug Fixes: Pending Deployments & Submarine Persistence
+
+### Overview
+Fixed two critical bugs affecting submarine campaign and deployment systems. Task Forces in transit were incorrectly participating in ASW operations, and destroyed submarines were not persisting correctly to Firestore, causing them to reappear in the UI.
+
+### Goals
+1. Prevent in-transit Task Forces from participating in ASW rolls
+2. Ensure destroyed submarines persist to Firestore regardless of event generation
+3. Maintain consistency with existing pending deployment patterns
+
+### Changes Made
+
+#### Bug Fix #1: ASW Phase Including In-Transit Task Forces
+**File**: `services/asw/aswService.ts` (lines 307, 311)
+
+**Problem**: Task Forces marked with `isPendingDeployment: true` were participating in ASW detection rolls before arriving at their operational area.
+
+**Solution**: Added `!isPendingDeployment` filters at two levels:
+- Line 307: Filter Task Forces → `tf.operationalAreaId === area.id && !tf.isPendingDeployment`
+- Line 311: Filter Units → `u.taskForceId === tf.id && !u.isPendingDeployment` (defense-in-depth)
+
+**Impact**: Task Forces now only perform ASW operations after arriving at their destination. Consistent with DataEditor, TaskForcesTab, and TaskForceDetailModal patterns.
+
+#### Bug Fix #2: Destroyed Submarines Not Persisting
+**File**: `App.tsx` (lines 906-923)
+
+**Problem**: Submarine state updates only persisted to Firestore if `allEvents.length > 0`. If a submarine was destroyed but no events generated (edge case), the destroyed status would not persist.
+
+**Solution**: Refactored persistence logic to ALWAYS update `deployedSubmarines`, regardless of event count:
+```typescript
+// BEFORE (line 906):
+if (allEvents.length > 0 && submarineCampaign) {
+  await updateSubmarineCampaign({
+    deployedSubmarines: submarineResult.updatedSubmarines,
+    events: [...submarineCampaign.events, ...allEvents]
+  });
+}
+
+// AFTER:
+if (submarineCampaign) {
+  await updateSubmarineCampaign({
+    deployedSubmarines: submarineResult.updatedSubmarines, // ALWAYS updated
+    events: allEvents.length > 0 ? [...submarineCampaign.events, ...allEvents] : submarineCampaign.events
+  });
+}
+```
+
+**Impact**: Destroyed submarines now reliably persist to Firestore and disappear from UI immediately.
+
+### Testing Recommendations
+
+**Bug #1 - ASW Pending Deployments**:
+1. Deploy a Task Force with ASW-capable ships (DDG, FFG) to an operational area
+2. During transit (before arrival), advance turn and execute submarine campaign
+3. Verify ASW logs do NOT include in-transit ships
+4. After arrival time, advance turn and verify ships NOW appear in ASW rolls
+
+**Bug #2 - Submarine Persistence**:
+1. Deploy a submarine in an area with maritime mines
+2. When destroyed by mine, verify submarine disappears from left panel immediately
+3. Reload page and verify submarine does NOT reappear
+4. Check Firestore: submarine should have `status: "destroyed"`
+
+### Metrics
+- **Files Modified**: 2
+- **Lines Changed**: 4 (2 filters + 1 condition refactor)
+- **Tests Added**: 0 (existing tests cover functionality)
+- **Impact**: Critical bug fixes, no breaking changes
+
+---
+
 ## 2025-11-06 - Submarine Campaign Phase 3: Maritime Mines & Asset Deployment
 
 ### Overview

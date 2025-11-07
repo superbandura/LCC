@@ -114,22 +114,34 @@ export class PatrolService {
           .setRolls(patrolRoll, 2, damageRoll, 20)
           .build();
 
-        // Create defender event (with damage info)
+        // Create defender event (with damage info, without submarine identity for fog of war)
         const defenderEvent = new EventBuilder()
-          .setSubmarine(sub)
           .setFaction(enemyFaction)
           .setTurnState(currentTurnState)
           .setEventType('attack_success')
           .setTarget(targetId, zoneName, 'area')
           .setDamage(damageRoll)
-          .setDescription(PatrolTemplates.successDefender(zoneName, damageRoll))
+          .setDescription(PatrolTemplates.successDefender(damageRoll))
           .setRolls(patrolRoll, 2, damageRoll, 20)
           .build();
 
         events.push(attackerEvent, defenderEvent);
         updatedSubmarines = this.updateSubmarineAfterPatrol(updatedSubmarines, sub, currentTurnState, true);
       } else {
-        // Failed patrol - no events created (fog of war)
+        // Failed patrol - create event for admin report only
+        const zoneName = formatZoneName(sub.currentOrder?.targetId || '', operationalAreas);
+        const targetId = sub.currentOrder?.targetId || '';
+
+        const failedPatrolEvent = new EventBuilder()
+          .setSubmarine(sub)
+          .setTurnState(currentTurnState)
+          .setEventType('patrol_failed')
+          .setTarget(targetId, zoneName, 'area')
+          .setDescription(PatrolTemplates.patrolFailed(zoneName))
+          .setRolls(patrolRoll, 2)
+          .build();
+
+        events.push(failedPatrolEvent);
         updatedSubmarines = this.updateSubmarineAfterPatrol(updatedSubmarines, sub, currentTurnState, false);
       }
     }

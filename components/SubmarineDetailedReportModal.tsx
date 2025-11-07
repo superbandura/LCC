@@ -24,24 +24,32 @@ const SubmarineDetailedReportModal: React.FC<SubmarineDetailedReportModalProps> 
          (!e.dayOfWeek || e.dayOfWeek === turnState.dayOfWeek) // If no dayOfWeek, include for backward compatibility
   ) || [];
 
-  // Group events by phase (ASW, Attack, Patrol, Mine)
+  // Group events by phase (ASW, Attack, Patrol, Mine, Asset Deploy)
   const aswEvents = currentTurnEvents.filter(e =>
-    e.submarineType?.toLowerCase() === 'asw' ||
-    (e.eventType === 'destroyed' && e.rollDetails?.aswElementInfo)
+    (e.submarineType?.toLowerCase() === 'asw' ||
+     (e.eventType === 'destroyed' && e.rollDetails?.aswElementInfo)) &&
+    e.submarineType?.toLowerCase() !== 'asset'
   );
   const attackEvents = currentTurnEvents.filter(e =>
     e.targetInfo?.targetType === 'base' &&
     e.submarineType?.toLowerCase() !== 'asw' &&
+    e.submarineType?.toLowerCase() !== 'asset' &&
     e.eventType !== 'destroyed'
   );
   const patrolEvents = currentTurnEvents.filter(e =>
     e.targetInfo?.targetType === 'area' &&
     e.submarineType?.toLowerCase() !== 'asw' &&
+    e.submarineType?.toLowerCase() !== 'asset' &&
     !e.description?.includes('Enemy patrol')  // Only show attacker's perspective
   );
   // Mine events: All events related to maritime mines (both detected and destroyed)
   const mineEvents = currentTurnEvents.filter(e =>
-    e.description?.includes('mine') || e.description?.includes('minefield')
+    (e.description?.includes('mine') || e.description?.includes('minefield')) &&
+    e.submarineType?.toLowerCase() !== 'asset'
+  );
+  // Asset deployment events
+  const assetEvents = currentTurnEvents.filter(e =>
+    e.submarineType?.toLowerCase() === 'asset'
   );
 
   // Get pending attack orders (attacks that haven't executed yet)
@@ -59,7 +67,9 @@ const SubmarineDetailedReportModal: React.FC<SubmarineDetailedReportModalProps> 
   );
   const aswTotalAttempts = aswDetectionAttempts.length;
   const aswSuccessfulDetections = aswDetectionAttempts.filter(e =>
-    e.rollDetails?.primaryRoll === 1
+    e.rollDetails?.primaryRoll !== undefined &&
+    e.rollDetails?.primaryThreshold !== undefined &&
+    e.rollDetails.primaryRoll <= e.rollDetails.primaryThreshold
   ).length;
   const aswEliminations = aswEvents.filter(e =>
     e.eventType === 'destroyed'
@@ -91,6 +101,17 @@ const SubmarineDetailedReportModal: React.FC<SubmarineDetailedReportModalProps> 
   const patrolDamageChina = successfulPatrols
     .filter(e => e.faction === 'us') // US patrols damage China CP
     .reduce((sum, e) => sum + (e.targetInfo?.damageDealt || 0), 0);
+
+  // Calculate summary statistics for Asset Deploy Phase
+  const assetTotal = assetEvents.length;
+  const assetsByArea = assetEvents.reduce((acc, event) => {
+    const areaName = event.targetInfo?.targetName || 'Unknown';
+    if (!acc[areaName]) {
+      acc[areaName] = [];
+    }
+    acc[areaName].push(event);
+    return acc;
+  }, {} as Record<string, typeof assetEvents>);
 
   // Calculate summary statistics for Mine Phase
   // Total attempts includes both failed detections and successful hits
@@ -227,6 +248,42 @@ const SubmarineDetailedReportModal: React.FC<SubmarineDetailedReportModalProps> 
                 </div>
               )}
             </div>
+
+            {/* Asset Deploy Phase - Show if there are deployments */}
+            {assetTotal > 0 && (
+              <div>
+                <h3 className="text-sm font-mono font-bold text-yellow-400 uppercase tracking-wider mb-2 border-l-4 border-yellow-600 pl-2">
+                  ASSET DEPLOY PHASE ({assetTotal} {assetTotal === 1 ? 'operation' : 'operations'})
+                </h3>
+                <div className="font-mono text-xs text-gray-500 mb-3 pl-2">
+                  Total: {assetTotal} {assetTotal === 1 ? 'deployment' : 'deployments'}
+                </div>
+                <div className="pl-2 space-y-3">
+                  {Object.entries(assetsByArea).map(([areaName, areaAssets]) => (
+                    <div key={areaName}>
+                      <div className="font-mono text-xs text-cyan-400 mb-1 font-bold">
+                        → {areaName} ({areaAssets.length} {areaAssets.length === 1 ? 'deployment' : 'deployments'})
+                      </div>
+                      <div className="space-y-0.5 ml-2">
+                        {areaAssets.map((event, idx) => (
+                          <div key={idx} className="font-mono text-xs">
+                            <span className={`font-bold ${event.faction === 'us' ? 'text-blue-400' : 'text-red-400'}`}>
+                              [{event.faction.toUpperCase()}]
+                            </span>
+                            {' '}
+                            <span className="text-gray-300">{event.cardName || event.submarineName}</span>
+                            {' → '}
+                            <span className="text-green-400">✓</span>
+                            {' '}
+                            <span className="text-gray-400">{event.description}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* ASW Phase - Always shown */}
             <div>

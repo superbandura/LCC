@@ -900,22 +900,39 @@ function App() {
       console.log('  - Influence modifier:', influenceMarker.value);
     }
 
-    // STEP 3: Combine ALL events and do ONE atomic update to submarine campaign
+    // STEP 3: Update submarine campaign state (submarines always updated, events only if exist)
     const allEvents = submarineResult.events;
 
-    if (allEvents.length > 0 && submarineCampaign) {
-      console.log(`📋 Total submarine events: ${allEvents.length}`);
-      console.log(`🔵 [BATCH UPDATE] Current events in campaign: ${submarineCampaign.events.length}`);
-      console.log(`🔵 [BATCH UPDATE] Adding events: ${allEvents.length}`);
+    if (submarineCampaign) {
+      if (allEvents.length > 0) {
+        console.log(`📋 Total submarine events: ${allEvents.length}`);
+        console.log(`🔵 [BATCH UPDATE] Current events in campaign: ${submarineCampaign.events.length}`);
+        console.log(`🔵 [BATCH UPDATE] Adding events: ${allEvents.length}`);
+      }
 
-      // Use orchestrator result submarines (they have all accumulated changes from ASW → Attack → Patrol)
+      // Log asset order statuses before saving
+      const assetOrders = submarineResult.updatedSubmarines
+        .filter(sub => sub.submarineType === 'asset' && sub.currentOrder)
+        .map(sub => ({
+          name: sub.submarineName,
+          orderType: sub.currentOrder?.orderType,
+          status: sub.currentOrder?.status,
+          executionTurn: sub.currentOrder?.executionTurn
+        }));
+      if (assetOrders.length > 0) {
+        console.log('🔍 [APP.TSX] Asset orders before Firestore save:', assetOrders);
+      }
+
+      // ALWAYS update submarines (includes destroyed status), conditionally add events
       await updateSubmarineCampaign({
         ...submarineCampaign,
         deployedSubmarines: submarineResult.updatedSubmarines,
-        events: [...submarineCampaign.events, ...allEvents]
+        events: allEvents.length > 0 ? [...submarineCampaign.events, ...allEvents] : submarineCampaign.events
       });
 
-      console.log(`🔵 [BATCH UPDATE] Total after update: ${submarineCampaign.events.length + allEvents.length}`);
+      if (allEvents.length > 0) {
+        console.log(`🔵 [BATCH UPDATE] Total after update: ${submarineCampaign.events.length + allEvents.length}`);
+      }
     }
 
     // STEP 6: Update turn state AND sync submarine campaign turn

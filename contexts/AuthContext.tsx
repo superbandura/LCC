@@ -9,7 +9,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../firebase';
 import { UserProfile } from '../types';
-import { createUserProfile, getUserProfile, updateUserLastLogin } from '../firestoreService';
+import { createUserProfile, getUserProfile, updateUserLastLogin, checkIfUsersExist } from '../firestoreService';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -36,6 +36,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   const signup = async (email: string, password: string, displayName: string) => {
+    // Check if this is the first user (before creating the account)
+    const usersExist = await checkIfUsersExist();
+
     // Create Firebase Auth user
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
@@ -43,11 +46,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await updateProfile(userCredential.user, { displayName });
 
     // Create user profile in Firestore
+    // First user gets 'admin' role, subsequent users get 'user' role
     const userProfile: UserProfile = {
       uid: userCredential.user.uid,
       email: email,
       displayName: displayName,
-      role: 'user', // Default role
+      role: usersExist ? 'user' : 'admin', // First user is admin
       createdAt: new Date().toISOString(),
       lastLoginAt: new Date().toISOString(),
     };

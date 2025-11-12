@@ -1,4 +1,4 @@
-import { doc, getDoc, onSnapshot, setDoc, updateDoc, deleteField, Unsubscribe, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, setDoc, updateDoc, deleteField, Unsubscribe, collection, query, where, getDocs, limit } from "firebase/firestore";
 import { db } from "./firebase";
 import { OperationalArea, OperationalData, Location, TaskForce, Unit, Card, CommandPoints, PurchaseHistory, CardPurchaseHistory, PurchasedCards, DestructionRecord, DrawingAnnotation, TurnState, PendingDeployments, InfluenceMarker, SubmarineCampaignState, PlayedCardNotification, PlayerAssignment, RegisteredPlayer, UserProfile, GameMetadata, GamePlayer, GameRole } from "./types";
 
@@ -1428,6 +1428,22 @@ export const updateUserLastLogin = async (uid: string): Promise<void> => {
   } catch (error) {
     console.error('Error updating last login:', error);
     throw error;
+  }
+};
+
+/**
+ * Check if any users exist in the system
+ * @returns True if at least one user exists, false otherwise
+ */
+export const checkIfUsersExist = async (): Promise<boolean> => {
+  try {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, limit(1));
+    const snapshot = await getDocs(q);
+    return !snapshot.empty;
+  } catch (error) {
+    console.error('Error checking if users exist:', error);
+    return false; // Default to false on error (safer)
   }
 };
 

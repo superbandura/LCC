@@ -1,9 +1,193 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow read and write access to the game collection
+
+    // =======================================
+    // HELPER FUNCTIONS
+    // =======================================
+
+    /**
+     * Check if user is authenticated
+     */
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    /**
+     * Check if user is a member of the game
+     */
+    function isGameMember(gameId) {
+      let game = get(/databases/$(database)/documents/games/$(gameId));
+      return request.auth.uid in game.data.metadata.players;
+    }
+
+    /**
+     * Get user's role in a specific game
+     */
+    function getGameRole(gameId) {
+      let game = get(/databases/$(database)/documents/games/$(gameId));
+      return game.data.metadata.players[request.auth.uid].role;
+    }
+
+    /**
+     * Check if user is a master in the game
+     */
+    function isMaster(gameId) {
+      return isGameMember(gameId) && getGameRole(gameId) == 'master';
+    }
+
+    /**
+     * Check if user is a player (not master) in the game
+     */
+    function isPlayer(gameId) {
+      return isGameMember(gameId) && getGameRole(gameId) == 'player';
+    }
+
+    /**
+     * Get user's faction in the game
+     */
+    function getPlayerFaction(gameId) {
+      let game = get(/databases/$(database)/documents/games/$(gameId));
+      return game.data.metadata.players[request.auth.uid].faction;
+    }
+
+    /**
+     * Check if user can modify data for a specific faction
+     * Masters can modify both factions, players only their own
+     */
+    function canModifyFaction(gameId, faction) {
+      return isMaster(gameId) ||
+             (isPlayer(gameId) && getPlayerFaction(gameId) == faction);
+    }
+
+    /**
+     * Check if user is the game creator
+     */
+    function isGameCreator(gameId) {
+      let game = get(/databases/$(database)/documents/games/$(gameId));
+      return request.auth.uid == game.data.metadata.creatorUid;
+    }
+
+    /**
+     * Validate that game metadata changes are allowed
+     */
+    function isValidMetadataUpdate() {
+      let oldData = resource.data.metadata;
+      let newData = request.resource.data.metadata;
+
+      // Can't change game ID, creator, or creation date
+      return newData.id == oldData.id &&
+             newData.creatorUid == oldData.creatorUid &&
+             newData.createdAt == oldData.createdAt;
+    }
+
+    // =======================================
+    // USER PROFILES (/users/{userId})
+    // =======================================
+
+    match /users/{userId} {
+      // Users can read their own profile
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+
+      // Users can create their own profile during signup
+      allow create: if isAuthenticated() &&
+                       request.auth.uid == userId &&
+                       request.resource.data.uid == userId;
+
+      // Users can update their own profile (but not uid or role)
+      allow update: if isAuthenticated() &&
+                       request.auth.uid == userId &&
+                       request.resource.data.uid == resource.data.uid &&
+                       request.resource.data.role == resource.data.role;
+
+      // Users cannot delete their profile
+      allow delete: if false;
+    }
+
+    // =======================================
+    // GAMES COLLECTION (/games/{gameId})
+    // =======================================
+
+    match /games/{gameId} {
+
+      // ----- READ ACCESS -----
+      // Any authenticated user can read game metadata if game is public
+      // Game members can always read their games
+      allow read: if isAuthenticated() && (
+        isGameMember(gameId) ||
+        get(/databases/$(database)/documents/games/$(gameId)).data.metadata.visibility == 'public'
+      );
+
+      // ----- CREATE ACCESS -----
+      // Any authenticated user can create a game
+      allow create: if isAuthenticated() &&
+                       request.resource.data.metadata.creatorUid == request.auth.uid &&
+                       request.resource.data.metadata.players[request.auth.uid] != null;
+
+      // ----- DELETE ACCESS -----
+      // Only game creator can delete the game
+      allow delete: if isAuthenticated() && isGameCreator(gameId);
+
+      // ----- UPDATE ACCESS -----
+      // Complex rules - different fields have different permissions
+
+      // Masters can update almost everything
+      allow update: if isAuthenticated() && isMaster(gameId) && isValidMetadataUpdate();
+
+      // Players can update game state for their faction
+      allow update: if isAuthenticated() &&
+                       isPlayer(gameId) &&
+                       isValidMetadataUpdate() &&
+                       // Players cannot modify metadata (except lastActivityAt)
+                       (!('metadata' in request.resource.data) ||
+                        (request.resource.data.metadata.diff(resource.data.metadata).affectedKeys()
+                         .hasOnly(['lastActivityAt', 'players'])));
+
+      // Specific field-level rules for players
+      allow update: if isAuthenticated() &&
+                       isPlayer(gameId) &&
+                       // Players can only modify units/taskForces/purchasedCards for their faction
+                       (
+                         // Allow updates to units if all changed units belong to player's faction
+                         ('units' in request.resource.data &&
+                          request.resource.data.units.hasAll(resource.data.units) &&
+                          // TODO: Validate faction-specific changes
+                          true) ||
+
+                         // Allow updates to taskForces if all changed TFs belong to player's faction
+                         ('taskForces' in request.resource.data &&
+                          request.resource.data.taskForces.hasAll(resource.data.taskForces) &&
+                          // TODO: Validate faction-specific changes
+                          true) ||
+
+                         // Allow updates to operational areas (card assignments)
+                         ('operationalAreas' in request.resource.data) ||
+
+                         // Allow updates to purchased cards for player's faction
+                         ('purchasedCards' in request.resource.data) ||
+
+                         // Allow updates to command points
+                         ('commandPoints' in request.resource.data) ||
+
+                         // Allow updates to pending deployments
+                         ('pendingDeployments' in request.resource.data)
+                       );
+    }
+
+    // =======================================
+    // LEGACY GAME DOCUMENT (backward compatibility)
+    // =======================================
+
+    match /game/current {
+      // Legacy single-game document
+      // Allow read/write for authenticated users (for backward compatibility during migration)
+      // TODO: Remove this after migration is complete
+      allow read, write: if isAuthenticated();
+    }
+
     match /game/{document=**} {
-      allow read, write: if true;
+      // Catch-all for other legacy documents
+      allow read, write: if isAuthenticated();
     }
   }
 }

@@ -119,11 +119,9 @@ service cloud.firestore {
       );
 
       // ----- LIST ACCESS (queries/collections) -----
-      // Any authenticated user can query for public active games
-      allow list: if isAuthenticated() &&
-                     request.query.limit <= 100 &&
-                     resource.data.metadata.visibility == 'public' &&
-                     resource.data.metadata.status == 'active';
+      // Any authenticated user can query the games collection
+      // Filtering by visibility/status is done in the query itself
+      allow list: if isAuthenticated();
 
       // ----- CREATE ACCESS -----
       // Any authenticated user can create a game

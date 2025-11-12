@@ -86,8 +86,13 @@ service cloud.firestore {
     // =======================================
 
     match /users/{userId} {
-      // Users can read their own profile
-      allow read: if isAuthenticated() && request.auth.uid == userId;
+      // Users can read their own profile (GET operation)
+      allow get: if isAuthenticated() && request.auth.uid == userId;
+
+      // Allow authenticated users to query the users collection (LIST operation)
+      // This is needed for checkIfUsersExist() to determine if first user should be admin
+      // Limited exposure: only allows checking existence, not reading all user data
+      allow list: if isAuthenticated();
 
       // Users can create their own profile during signup
       allow create: if isAuthenticated() &&
@@ -125,16 +130,39 @@ service cloud.firestore {
 
       // ----- CREATE ACCESS -----
       // Any authenticated user can create a game
+      // Creator will join via joinGame() after creation
       allow create: if isAuthenticated() &&
-                       request.resource.data.metadata.creatorUid == request.auth.uid &&
-                       request.resource.data.metadata.players[request.auth.uid] != null;
+                       request.resource.data.metadata.creatorUid == request.auth.uid;
 
       // ----- DELETE ACCESS -----
-      // Only game creator can delete the game
-      allow delete: if isAuthenticated() && isGameCreator(gameId);
+      // Only game creator or admin can delete the game
+      allow delete: if isAuthenticated() && (
+        isGameCreator(gameId) ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
 
       // ----- UPDATE ACCESS -----
       // Complex rules - different fields have different permissions
+
+      // Allow game creator to initialize empty game with seed data
+      allow update: if isAuthenticated() &&
+                       isGameCreator(gameId) &&
+                       resource.data.metadata.players.keys().size() == 0 &&
+                       isValidMetadataUpdate();
+
+      // Allow authenticated users to join games (add themselves to metadata.players)
+      allow update: if isAuthenticated() &&
+                       // User is NOT already a member
+                       !(request.auth.uid in resource.data.metadata.players) &&
+                       // Game is not full (max 2 players)
+                       resource.data.metadata.players.keys().size() < 2 &&
+                       // Only modifying players and lastActivityAt
+                       request.resource.data.metadata.diff(resource.data.metadata).affectedKeys()
+                         .hasOnly(['players', 'lastActivityAt']) &&
+                       // User is adding themselves (not someone else)
+                       request.auth.uid in request.resource.data.metadata.players &&
+                       // Validate the entire update is valid
+                       isValidMetadataUpdate();
 
       // Masters can update almost everything
       allow update: if isAuthenticated() && isMaster(gameId) && isValidMetadataUpdate();

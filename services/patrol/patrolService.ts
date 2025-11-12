@@ -116,6 +116,7 @@ export class PatrolService {
 
         // Create defender event (with damage info, without submarine identity for fog of war)
         const defenderEvent = new EventBuilder()
+          .setSubmarineInfo('unknown', 'Unknown Submarine', 'unknown', 'Unknown Card')
           .setFaction(enemyFaction)
           .setTurnState(currentTurnState)
           .setEventType('attack_success')
@@ -128,11 +129,13 @@ export class PatrolService {
         events.push(attackerEvent, defenderEvent);
         updatedSubmarines = this.updateSubmarineAfterPatrol(updatedSubmarines, sub, currentTurnState, true);
       } else {
-        // Failed patrol - create event for admin report only
+        // Failed patrol - create events for both attacker and defender
         const zoneName = formatZoneName(sub.currentOrder?.targetId || '', operationalAreas);
         const targetId = sub.currentOrder?.targetId || '';
+        const enemyFaction: 'us' | 'china' = sub.faction === 'us' ? 'china' : 'us';
 
-        const failedPatrolEvent = new EventBuilder()
+        // Create attacker event (patrol failed)
+        const attackerEvent = new EventBuilder()
           .setSubmarine(sub)
           .setTurnState(currentTurnState)
           .setEventType('patrol_failed')
@@ -141,7 +144,18 @@ export class PatrolService {
           .setRolls(patrolRoll, 2)
           .build();
 
-        events.push(failedPatrolEvent);
+        // Create defender event (patrol detected - defender sees submarine activity but no impact)
+        const defenderEvent = new EventBuilder()
+          .setSubmarineInfo('unknown', 'Unknown Submarine', 'unknown', 'Unknown Card')
+          .setFaction(enemyFaction)
+          .setTurnState(currentTurnState)
+          .setEventType('patrol_detected')
+          .setTarget(targetId, zoneName, 'area')
+          .setDescription(PatrolTemplates.failureDefender(zoneName))
+          .setRolls(patrolRoll, 2)
+          .build();
+
+        events.push(attackerEvent, defenderEvent);
         updatedSubmarines = this.updateSubmarineAfterPatrol(updatedSubmarines, sub, currentTurnState, false);
       }
     }

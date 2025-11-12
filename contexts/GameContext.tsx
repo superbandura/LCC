@@ -76,13 +76,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const canControlFaction = (faction: 'us' | 'china'): boolean => {
     if (!currentUser || !gameMetadata) return false;
 
-    // Masters can control both factions
-    if (isMaster) return true;
-
-    // Players can only control their assigned faction
-    if (isPlayer && currentPlayerFaction === faction) return true;
-
-    return false;
+    // Both masters and players can only control their assigned faction
+    return currentPlayerFaction === faction;
   };
 
   const value: GameContextType = {

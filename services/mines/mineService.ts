@@ -216,14 +216,16 @@ export class MineService {
 
   /**
    * Get Maritime Mines assets deployed in an operational area
-   * Searches in deployed submarines (assets) instead of assignedCards
+   * Searches in deployed submarines (assets) with fallback to assignedCards for backward compatibility
    */
   private static getMineCardsInArea(
     area: OperationalArea,
     cards: Card[],
     deployedSubmarines: SubmarineDeployment[]
   ): MineElement[] {
-    // Filter assets deployed in this area
+    const mineElements: MineElement[] = [];
+
+    // 1. Check deployed submarines (new system)
     const minesInArea = deployedSubmarines.filter(sub =>
       sub.submarineType === 'asset' &&
       sub.currentOrder &&
@@ -231,17 +233,47 @@ export class MineService {
       sub.currentOrder.targetId === area.id
     );
 
-    // Map to MineElement structure
-    return minesInArea.map(sub => {
+    // Map deployed submarines to MineElement structure
+    minesInArea.forEach(sub => {
       const card = cards.find(c => c.id === sub.cardId);
-      return {
+      mineElements.push({
         id: sub.id,
         name: sub.submarineName,
         faction: sub.faction,
         areaId: area.id,
         areaName: area.name
-      };
+      });
     });
+
+    // 2. Fallback: Check assignedCards for backward compatibility
+    // Format in assignedCards: 'cardId_assetId' (e.g., 'us-020_instance1')
+    if (area.assignedCards && area.assignedCards.length > 0) {
+      area.assignedCards.forEach(assignedCardId => {
+        // Parse format: 'cardId_instanceId'
+        const [cardId, instanceId] = assignedCardId.split('_');
+
+        // Only process if it's a mine card (us-020 or china-020)
+        if (cardId === 'us-020' || cardId === 'china-020') {
+          // Check if this mine isn't already in the list from deployed submarines
+          const alreadyExists = mineElements.some(mine => mine.id === instanceId);
+
+          if (!alreadyExists) {
+            const card = cards.find(c => c.id === cardId);
+            if (card) {
+              mineElements.push({
+                id: instanceId,
+                name: card.name,
+                faction: card.faction,
+                areaId: area.id,
+                areaName: area.name
+              });
+            }
+          }
+        }
+      });
+    }
+
+    return mineElements;
   }
 
   /**

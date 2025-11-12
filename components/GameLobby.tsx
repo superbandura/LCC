@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { GameMetadata, GameRole } from '../types';
-import { getPublicGames, joinGame } from '../firestoreService';
+import { GameMetadata } from '../types';
+import { subscribeToPublicGames, joinGame, deleteGame, verifyGamePassword } from '../firestoreService';
 import CreateGameModal from './CreateGameModal';
+import DeleteGameModal from './DeleteGameModal';
+import PasswordPromptModal from './PasswordPromptModal';
+import FactionSelector from './FactionSelector';
+import SuccessModal from './SuccessModal';
 
 interface GameLobbyProps {
   onGameSelected: (gameId: string) => void;
@@ -15,49 +19,141 @@ const GameLobby: React.FC<GameLobbyProps> = ({ onGameSelected }) => {
   const [error, setError] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [joiningGameId, setJoiningGameId] = useState<string | null>(null);
+  const [gameToDelete, setGameToDelete] = useState<{ id: string; name: string } | null>(null);
 
-  const loadGames = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError('');
-      const publicGames = await getPublicGames();
-      setGames(publicGames);
-    } catch (err) {
-      console.error('Error loading games:', err);
-      setError('FAILED TO LOAD GAMES');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // Password flow states
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [selectedGame, setSelectedGame] = useState<GameMetadata | null>(null);
 
-  // Load games when user is authenticated
+  // Faction selector flow states
+  const [showFactionSelector, setShowFactionSelector] = useState(false);
+
+  // Success modal states
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  // Subscribe to games list with real-time updates
   useEffect(() => {
-    if (currentUser) {
-      loadGames();
+    if (!currentUser) {
+      setLoading(false);
+      return;
     }
-  }, [currentUser, loadGames]);
 
-  const handleJoinGame = async (gameId: string, role: GameRole, faction: 'us' | 'china' | null) => {
-    if (!currentUser || !userProfile) return;
+    setLoading(true);
+    setError('');
+
+    const unsubscribe = subscribeToPublicGames((publicGames) => {
+      setGames(publicGames);
+      setLoading(false);
+    });
+
+    // Cleanup subscription on unmount
+    return () => {
+      unsubscribe();
+    };
+  }, [currentUser]);
+
+  const handleEnterGame = (game: GameMetadata) => {
+    setSelectedGame(game);
+    setJoiningGameId(game.id);
+    setPasswordError('');
+
+    // If game has password, show password modal
+    if (game.hasPassword) {
+      setShowPasswordModal(true);
+    } else {
+      // No password, go directly to faction selector
+      setShowFactionSelector(true);
+    }
+  };
+
+  const handlePasswordSubmit = async (password: string) => {
+    if (!selectedGame) return;
 
     try {
-      setJoiningGameId(gameId);
+      const isValid = await verifyGamePassword(selectedGame.id, password);
+
+      if (isValid) {
+        // Password correct, show faction selector
+        setShowPasswordModal(false);
+        setPasswordError('');
+        setShowFactionSelector(true);
+      } else {
+        // Password incorrect
+        setPasswordError('INCORRECT PASSWORD');
+      }
+    } catch (err) {
+      console.error('Error verifying password:', err);
+      setPasswordError('ERROR VERIFYING PASSWORD');
+    }
+  };
+
+  const handleFactionSelect = async (faction: 'us' | 'china') => {
+    if (!currentUser || !userProfile || !selectedGame) return;
+
+    try {
       setError('');
 
-      await joinGame(gameId, currentUser.uid, userProfile.displayName, role, faction);
+      // Determine role: master if creator, player otherwise
+      const role = selectedGame.creatorUid === currentUser.uid ? 'master' : 'player';
+
+      await joinGame(
+        selectedGame.id,
+        currentUser.uid,
+        userProfile.displayName,
+        role,
+        faction
+      );
 
       // Navigate to game
-      onGameSelected(gameId);
+      onGameSelected(selectedGame.id);
     } catch (err: any) {
       console.error('Error joining game:', err);
       setError(err.message || 'FAILED TO JOIN GAME');
       setJoiningGameId(null);
+      setShowFactionSelector(false);
     }
+  };
+
+  const handleCancelPasswordModal = () => {
+    setShowPasswordModal(false);
+    setPasswordError('');
+    setSelectedGame(null);
+    setJoiningGameId(null);
   };
 
   const handleGameCreated = (gameId: string) => {
     setShowCreateModal(false);
     onGameSelected(gameId);
+  };
+
+  const handleDeleteGame = (gameId: string, gameName: string) => {
+    setGameToDelete({ id: gameId, name: gameName });
+  };
+
+  const confirmDeleteGame = async () => {
+    if (!gameToDelete) return;
+
+    try {
+      setError('');
+      const deletedGameName = gameToDelete.name;
+      await deleteGame(gameToDelete.id);
+      setGameToDelete(null);
+      // Reload games list after deletion
+      await loadGames();
+      // Show success modal
+      setSuccessMessage(`GAME "${deletedGameName}" DELETED SUCCESSFULLY`);
+      setShowSuccessModal(true);
+    } catch (err: any) {
+      console.error('Error deleting game:', err);
+      setError('ERROR DELETING GAME');
+      setGameToDelete(null);
+    }
+  };
+
+  const cancelDeleteGame = () => {
+    setGameToDelete(null);
   };
 
   const formatDate = (isoString: string) => {
@@ -69,7 +165,60 @@ const GameLobby: React.FC<GameLobbyProps> = ({ onGameSelected }) => {
     });
   };
 
-  if (!currentUser || !userProfile) return null;
+  // Show faction selector as fullscreen (replaces lobby)
+  if (showFactionSelector) {
+    return <FactionSelector onSelect={handleFactionSelect} />;
+  }
+
+  // Show error screen if user profile failed to load
+  if (!currentUser || !userProfile) {
+    console.error('[GameLobby] Missing user data - profile may not have loaded');
+
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-8">
+        <div className="max-w-md w-full bg-gray-800 border-2 border-red-600 rounded-lg p-8">
+          <div className="text-center mb-6">
+            <div className="text-6xl mb-4">⚠️</div>
+            <h1 className="text-2xl font-mono font-bold text-red-400 uppercase tracking-wider mb-2">
+              PROFILE ERROR
+            </h1>
+            <p className="font-mono text-sm text-gray-400 tracking-wide">
+              YOUR USER PROFILE COULD NOT BE LOADED
+            </p>
+          </div>
+
+          <div className="bg-gray-900 border border-gray-700 rounded p-4 mb-6">
+            <p className="font-mono text-xs text-gray-300 mb-2">TECHNICAL DETAILS:</p>
+            <p className="font-mono text-xs text-red-300">
+              {!currentUser && '• No authenticated user found'}
+              {currentUser && !userProfile && '• User profile not found in database'}
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-mono font-bold py-3 px-6 rounded uppercase tracking-wider transition-colors"
+            >
+              RETRY
+            </button>
+            <button
+              onClick={logout}
+              className="w-full bg-gray-700 hover:bg-gray-600 text-white font-mono font-bold py-3 px-6 rounded uppercase tracking-wider transition-colors"
+            >
+              LOGOUT
+            </button>
+          </div>
+
+          <div className="mt-6 text-center">
+            <p className="font-mono text-xs text-gray-500 tracking-wide">
+              If this problem persists, contact support
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 p-8">
@@ -82,6 +231,11 @@ const GameLobby: React.FC<GameLobbyProps> = ({ onGameSelected }) => {
             </h1>
             <p className="font-mono text-gray-400 mt-2 tracking-wide">
               WELCOME, {userProfile.displayName.toUpperCase()}
+              {userProfile.role === 'admin' && (
+                <span className="ml-2 inline-block bg-yellow-600 text-gray-900 px-2 py-0.5 text-xs font-bold uppercase tracking-wider rounded border border-yellow-400">
+                  ADMIN
+                </span>
+              )}
             </p>
           </div>
           <div className="flex gap-4">
@@ -125,77 +279,74 @@ const GameLobby: React.FC<GameLobbyProps> = ({ onGameSelected }) => {
               const playerCount = Object.keys(game.players).length;
               const isFull = playerCount >= game.maxPlayers;
               const isJoining = joiningGameId === game.id;
+              const isAlreadyInGame = currentUser && game.players[currentUser.uid];
+              const isAdmin = userProfile?.role === 'admin';
+              const canDelete = isAdmin || (currentUser && game.creatorUid === currentUser.uid);
 
               return (
                 <div
                   key={game.id}
-                  className="bg-gray-800 border-2 border-green-600 rounded-lg p-6 hover:border-green-500 transition-colors"
+                  className="bg-gray-800 border-2 border-green-600 rounded-lg p-6 hover:border-green-500 transition-colors relative"
                 >
-                  {/* Game Name */}
-                  <h3 className="font-mono text-xl font-bold text-green-400 uppercase tracking-wider mb-3">
+                  {/* Password indicator - top-left corner */}
+                  <div className="absolute top-2 left-2">
+                    {game.hasPassword ? (
+                      <span className="text-yellow-400 text-lg" title="Password protected">
+                        🔒
+                      </span>
+                    ) : (
+                      <div
+                        className="w-5 h-5 bg-green-500 rounded-full"
+                        title="Open access"
+                      />
+                    )}
+                  </div>
+
+                  {/* Delete button - X in top-right corner (for game master or admin) */}
+                  {canDelete && (
+                    <button
+                      onClick={() => handleDeleteGame(game.id, game.name)}
+                      className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center bg-red-600 hover:bg-red-700 text-white font-bold rounded transition-colors"
+                      title="Delete game"
+                    >
+                      ✕
+                    </button>
+                  )}
+
+                  {/* Game Name - centered */}
+                  <h3 className="font-mono text-xl font-bold text-green-400 uppercase tracking-wider mb-4 text-center">
                     {game.name}
                   </h3>
 
-                  {/* Game Info */}
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between font-mono text-sm">
-                      <span className="text-gray-400 uppercase">Players:</span>
-                      <span className="text-green-400">
-                        {playerCount} / {game.maxPlayers}
-                      </span>
-                    </div>
-                    <div className="flex justify-between font-mono text-sm">
-                      <span className="text-gray-400 uppercase">Created:</span>
-                      <span className="text-green-400">{formatDate(game.createdAt)}</span>
-                    </div>
-                    <div className="flex justify-between font-mono text-sm">
-                      <span className="text-gray-400 uppercase">Status:</span>
-                      <span className={isFull ? 'text-red-400' : 'text-green-400'}>
-                        {isFull ? 'FULL' : 'OPEN'}
-                      </span>
-                    </div>
+                  {/* Player Count - centered */}
+                  <div className="text-center mb-4">
+                    <span className={`font-mono text-sm uppercase tracking-wide ${isFull ? 'text-red-400' : 'text-green-400'}`}>
+                      {playerCount} / {game.maxPlayers} PLAYERS
+                    </span>
                   </div>
 
-                  {/* Join Buttons */}
-                  <div className="space-y-2">
+                  {/* Action Button */}
+                  {isAlreadyInGame ? (
                     <button
-                      onClick={() => handleJoinGame(game.id, 'player', 'us')}
-                      disabled={isFull || isJoining}
-                      className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-mono font-bold py-2 rounded uppercase tracking-wide text-sm transition-colors"
+                      onClick={() => onGameSelected(game.id)}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white font-mono font-bold py-3 rounded uppercase tracking-wider text-sm transition-colors"
                     >
-                      {isJoining ? 'JOINING...' : 'JOIN AS US PLAYER'}
+                      ENTER GAME →
                     </button>
+                  ) : (
                     <button
-                      onClick={() => handleJoinGame(game.id, 'player', 'china')}
+                      onClick={() => handleEnterGame(game)}
                       disabled={isFull || isJoining}
-                      className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white font-mono font-bold py-2 rounded uppercase tracking-wide text-sm transition-colors"
+                      className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-mono font-bold py-3 rounded uppercase tracking-wider text-sm transition-colors"
                     >
-                      {isJoining ? 'JOINING...' : 'JOIN AS CHINA PLAYER'}
+                      {isJoining ? 'JOINING...' : 'JOIN GAME'}
                     </button>
-                    <button
-                      onClick={() => handleJoinGame(game.id, 'master', null)}
-                      disabled={isFull || isJoining}
-                      className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-mono font-bold py-2 rounded uppercase tracking-wide text-sm transition-colors"
-                    >
-                      {isJoining ? 'JOINING...' : 'JOIN AS MASTER'}
-                    </button>
-                  </div>
+                  )}
                 </div>
               );
             })}
           </div>
         )}
-
-        {/* Refresh Button */}
-        <div className="mt-8 text-center">
-          <button
-            onClick={loadGames}
-            disabled={loading}
-            className="bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 text-white font-mono font-bold px-6 py-2 rounded uppercase tracking-wider transition-colors"
-          >
-            {loading ? 'REFRESHING...' : 'REFRESH LIST'}
-          </button>
-        </div>
       </div>
 
       {/* Create Game Modal */}
@@ -203,6 +354,34 @@ const GameLobby: React.FC<GameLobbyProps> = ({ onGameSelected }) => {
         <CreateGameModal
           onClose={() => setShowCreateModal(false)}
           onGameCreated={handleGameCreated}
+        />
+      )}
+
+      {/* Delete Game Modal */}
+      {gameToDelete && (
+        <DeleteGameModal
+          gameName={gameToDelete.name}
+          onConfirm={confirmDeleteGame}
+          onCancel={cancelDeleteGame}
+        />
+      )}
+
+      {/* Password Prompt Modal */}
+      {showPasswordModal && selectedGame && (
+        <PasswordPromptModal
+          gameName={selectedGame.name}
+          onSubmit={handlePasswordSubmit}
+          onCancel={handleCancelPasswordModal}
+          error={passwordError}
+        />
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <SuccessModal
+          title="SUCCESS"
+          message={successMessage}
+          onClose={() => setShowSuccessModal(false)}
         />
       )}
     </div>

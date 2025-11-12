@@ -458,6 +458,8 @@ export interface GameMetadata {
   createdAt: string;            // ISO timestamp when game was created
   lastActivityAt: string;       // ISO timestamp of last game activity
   players: Record<string, GamePlayer>; // Map of uid -> GamePlayer
+  hasPassword: boolean;         // Whether game is password protected
+  password?: string;            // Game password (if hasPassword is true)
 }
 
 // Full game state (includes metadata + game state)

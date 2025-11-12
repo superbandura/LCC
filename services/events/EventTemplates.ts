@@ -97,7 +97,7 @@ export const ASWTemplates = {
    * ASW detection attempt failed (admin view only - no perspective)
    */
   detectionFailed: (): string =>
-    `ASW detection attempt - No enemy contact`
+    `Detection attempt failed - No enemy contact`
 };
 
 /**

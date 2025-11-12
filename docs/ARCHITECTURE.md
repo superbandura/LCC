@@ -44,19 +44,41 @@
 
 ## Component Hierarchy
 
-### Root Component (App.tsx)
+### Root Component (AppWrapper.tsx)
+**NEW**: Multi-game authentication system root component (~110 lines)
+- Wraps entire application with authentication and game context providers
+- Provides AuthContext (user authentication) and GameContext (game selection)
+- Renders ErrorBoundary for application-wide crash protection
+- Routes between AuthScreen, GameLobby, and App.tsx based on auth/game state
+
+**Routing Flow**:
+1. Not authenticated → `<AuthScreen />` (login/signup)
+2. Authenticated, no game selected → `<GameLobby />` (game selection)
+3. Authenticated, game selected → `<App />` (game interface)
+
+**Related Documentation**: See [Multi-Game Authentication](./MULTI_GAME_AUTH.md) for complete system details
+
+### Game Component (App.tsx)
 - Central state management with 11 useState hooks (reduced from 31)
-- 19 active Firestore real-time subscriptions managed by `useGameState` hook (19 total subscription functions)
+- 19 active Firestore real-time subscriptions managed by `useGameStateMultiGame` hook (19 total subscription functions)
 - Faction selection logic
 - Modal orchestration via `useModal` hook
 - Layout and UI structure
 - 18 performance-optimized handlers with `useCallback`
-- **Current size**: ~1,276 lines (reduced from 1,588 lines, -19.6%)
+- **Current size**: ~1,304 lines (reduced from 1,588 lines, -17.9%)
 
 ### Component Organization
 
 ```
 components/
+├── AuthScreen.tsx                 # Login/signup interface (multi-game auth)
+├── GameLobby.tsx                  # Game selection/creation (multi-game auth)
+├── CreateGameModal.tsx            # Create new game modal
+├── PasswordPromptModal.tsx        # Join private game modal
+├── DeleteGameModal.tsx            # Delete game modal (admin)
+├── SuccessModal.tsx               # Success notification modal
+├── ErrorBoundary.tsx              # Application-wide error boundary
+│
 ├── map/
 │   ├── Map.tsx                    # Main map component (~407 lines)
 │   ├── controls/                  # Map control components
@@ -82,7 +104,7 @@ components/
 │   ├── UnitDetailModal.tsx        # Individual unit details
 │   ├── TaskForceDetailModal.tsx   # Task force details
 │   ├── CombatStatisticsModal.tsx  # Combat stats
-│   └── AdminLoginModal.tsx        # Admin authentication
+│   └── AdminLoginModal.tsx        # Admin authentication (legacy)
 │
 ├── ui/                            # UI components
 │   ├── FactionSelector.tsx        # Initial faction selection
@@ -98,30 +120,47 @@ components/
 
 ## Data Flow
 
-### 1. Initialization Flow
+### 1. Initialization Flow (Multi-Game System)
 
 ```
-App.tsx componentDidMount
+AppWrapper.tsx mounts
     │
-    ├─> useGameState() hook initializes
+    ├─> AuthProvider initializes (AuthContext)
     │   │
-    │   └─> Subscribe to Firestore collections (19 subscriptions)
-    │       ├─> operationalAreas
-    │       ├─> operationalData
-    │       ├─> locations
-    │       ├─> taskForces
-    │       ├─> units
-    │       ├─> cards
-    │       ├─> commandPoints
-    │       ├─> purchasedCards
-    │       ├─> destructionLog
-    │       ├─> turnState
-    │       ├─> pendingDeployments
-    │       ├─> influenceMarker
-    │       ├─> submarineCampaign
-    │       └─> playedCardNotifications
+    │   └─> onAuthStateChanged listener
+    │       ├─> User logged in? Load UserProfile from /users/{uid}
+    │       └─> Update lastLoginAt timestamp
     │
-    └─> Update React state on Firestore changes (real-time)
+    ├─> GameProvider initializes (GameContext)
+    │   │
+    │   ├─> Restore gameId from localStorage
+    │   └─> Subscribe to GameMetadata for selected game
+    │
+    └─> AppRouter routing logic
+        │
+        ├─> No auth? → AuthScreen
+        ├─> Auth, no game? → GameLobby
+        └─> Auth + game? → App.tsx
+            │
+            └─> useGameStateMultiGame(gameId) hook initializes
+                │
+                └─> Subscribe to Firestore collections (19 subscriptions)
+                    ├─> operationalAreas
+                    ├─> operationalData
+                    ├─> locations
+                    ├─> taskForces
+                    ├─> units
+                    ├─> cards
+                    ├─> commandPoints
+                    ├─> purchasedCards
+                    ├─> destructionLog
+                    ├─> turnState
+                    ├─> pendingDeployments
+                    ├─> influenceMarker
+                    ├─> submarineCampaign
+                    └─> playedCardNotifications
+                │
+                └─> Update React state on Firestore changes (real-time)
 ```
 
 ### 2. User Action Flow
@@ -144,10 +183,14 @@ User Interaction (e.g., edit base damage)
 
 ### 3. State Management Pattern
 
-**Single Source of Truth**: Firestore document `game/current`
+**Multi-Game System**:
+- **Legacy**: Firestore document `game/current` (single-game mode)
+- **Multi-Game**: Firestore documents `/games/{gameId}/state` (multi-game mode)
 
 **State Categories**:
-- **Synced State**: Stored in Firestore, auto-synced across clients (19 states managed by `useGameState` hook)
+- **Authentication State**: Managed by `AuthContext` (user authentication, profile)
+- **Game Selection State**: Managed by `GameContext` (gameId, metadata, player role)
+- **Synced State**: Stored in Firestore, auto-synced across clients (19 states managed by `useGameStateMultiGame` hook)
   - operationalAreas: Map zones with bounds, colors, assignedCards
   - operationalData: Damage/status by area ID
   - locations: Military bases with damage tracking
@@ -214,64 +257,81 @@ Leaflet markers use `ReactDOMServer.renderToString()` to convert React component
 ## Module Dependencies
 
 ### Core Modules
-- `App.tsx`: Root component, state orchestration
-- `firestoreService.ts`: All Firestore CRUD operations
+- `AppWrapper.tsx`: Application root with auth/game providers
+- `App.tsx`: Game interface component, state orchestration
+- `firestoreService.ts`: Firestore CRUD operations (legacy, ~1,613 lines)
+- `firestoreServiceMultiGame.ts`: Multi-game Firestore operations
 - `types.ts`: TypeScript type definitions
 - `firebase.ts`: Firebase initialization and config
 
+### Context Providers
+- `contexts/AuthContext.tsx`: Firebase Authentication management (~160 lines)
+  - User signup/login/logout
+  - UserProfile creation and loading
+  - First-user admin role assignment
+  - Provides: `currentUser`, `userProfile`, `loading`, `signup()`, `login()`, `logout()`
+- `contexts/GameContext.tsx`: Game selection and metadata (~95 lines)
+  - Game selection with localStorage persistence
+  - Real-time game metadata subscription
+  - Player role/faction extraction
+  - Provides: `gameId`, `gameMetadata`, `currentPlayerRole`, `currentPlayerFaction`, `setGameId()`, `leaveGame()`, `canControlFaction()`
+
 ### Service Layer
-Business logic extracted from App.tsx into testable, reusable services (132 tests, ~4,000+ lines):
+Business logic extracted from App.tsx into testable, reusable services (138 tests total, ~4,000+ lines):
 
 #### Core Services
-- `services/turnService.ts`: Turn and time management (181 lines, 36 tests)
+- `services/turnService.ts`: Turn and time management (151 lines, 36 tests)
   - Turn advancement logic
   - Day/week calculations
   - Game phase determination
-- `services/deploymentService.ts`: Deployment timing and activation (369 lines, 24 tests)
+- `services/deploymentService.ts`: Deployment timing and activation (330 lines, 24 tests)
   - Arrival calculations
   - Deployment cleanup
   - Activation timing
-- `services/destructionService.ts`: Combat tracking and statistics (244 lines, 33 tests)
+- `services/destructionService.ts`: Combat tracking and statistics (217 lines, 33 tests)
   - Unit destruction detection
   - Combat effectiveness metrics
   - Destruction log management
 
 #### Submarine Campaign Services (Modular Architecture)
-- `services/submarineCampaignOrchestrator.ts`: Phase coordinator (369 lines)
+- `services/submarineCampaignOrchestrator.ts`: Phase coordinator (338 lines)
   - Executes all 5 submarine campaign phases in correct order
-  - Ensures state chaining between phases (ASW → Attack → Patrol)
+  - Ensures state chaining between phases (ASW → Attack → Patrol → Mines → Assets)
   - Single entry point for submarine campaign operations
-- `services/submarineService.ts`: Shared utilities (1,239 lines, 21 tests)
+- `services/submarineService.ts`: Shared utilities (1,118 lines, 27 tests passing)
   - Communication failure checks
   - Tactical network damage calculations
   - ASW ship snapshot management
-- `services/asw/aswService.ts`: ASW Phase (329 lines)
+  - Patrol and attack mechanics
+- `services/asw/aswService.ts`: ASW Phase (313 lines)
   - ASW detection with 5% detection rate, 50% elimination rate
   - Three ASW element types: cards, ships, patrol submarines
   - Zone-filtered detection (submarines only detect in same area)
-- `services/attack/attackService.ts`: Attack Phase (252 lines)
+- `services/attack/attackService.ts`: Attack Phase (231 lines)
   - Base attack mechanics with 50% success rate
   - Creates patrol orders on attack completion
-- `services/patrol/patrolService.ts`: Patrol Phase (205 lines)
+- `services/patrol/patrolService.ts`: Patrol Phase (168 lines)
   - Patrol operations with 90% success rate
   - Command point damage to enemy logistics
-- `services/mines/mineService.ts`: Mine Phase (318 lines, 9 tests)
+- `services/mines/mineService.ts`: Mine Phase (290 lines, 9 tests passing)
   - Maritime mine detection: 5% success rate (d20=1)
   - Each mine rolls against each enemy unit in range
   - Creates events for all detection attempts
-- `services/assets/assetDeployService.ts`: Asset Deploy Phase (134 lines, 9 tests)
+- `services/assets/assetDeployService.ts`: Asset Deploy Phase (147 lines, 9 tests passing)
   - Processes deploy orders for asset-type cards (mines, sensors)
   - Prevents duplicate asset deployments
   - Marks deploy orders as completed
 
 #### Event System (Unified Pattern)
-- `services/events/EventBuilder.ts`: Builder pattern for consistent events (154 lines)
+- `services/events/EventBuilder.ts`: Builder pattern for consistent events (189 lines)
   - Fluent API: `.setSubmarineInfo().setFaction().setEventType().build()`
   - Generates unique IDs, timestamps, turn tracking
   - Unified interface for all submarine campaign events
-- `services/events/EventTemplates.ts`: Centralized message templates (104 lines)
+- `services/events/EventTemplates.ts`: Centralized message templates (123 lines)
   - PatrolTemplates, AttackTemplates, ASWTemplates, MineTemplates
   - Ensures consistent language across all event descriptions
+
+**Test Status**: ✅ 138 passing, 0 failing, 1 skipped
 
 ### Utility Layer (New)
 - `utils/iconGenerators.ts`: Leaflet icon generation
@@ -285,21 +345,26 @@ Business logic extracted from App.tsx into testable, reusable services (132 test
 - `constants/index.ts`: Centralized exports
 
 ### Custom Hooks
-Custom hooks for state management and UI logic (~695 lines total):
-- `hooks/useGameState.ts`: Centralized Firestore state management (279 lines)
-  - Manages **19 active Firestore subscriptions** (19 total functions in firestoreService.ts)
+Custom hooks for state management and UI logic (~785 lines total):
+- `hooks/useGameState.ts`: Centralized Firestore state management - **LEGACY** (279 lines)
+  - Single-game mode hook
+  - Manages **19 active Firestore subscriptions** for `game/current` document
   - Provides update functions for all game state
-  - Eliminates 87 lines of boilerplate from App.tsx
   - Subscriptions: operationalAreas, operationalData, locations, taskForces, units, cards, commandPoints, purchasedCards, destructionLog, turnState, pendingDeployments, influenceMarker, submarineCampaign, playedCardNotifications, playerAssignments, registeredPlayers, cardPurchaseHistory
-- `hooks/useModal.ts`: Unified modal state management (148 lines)
+- `hooks/useGameStateMultiGame.ts`: Multi-game Firestore state management - **NEW** (~280 lines)
+  - Multi-game mode hook for `/games/{gameId}/state`
+  - Takes `gameId` parameter for game-scoped subscriptions
+  - Same 19 Firestore subscriptions as legacy hook
+  - Used in App.tsx when multi-game authentication is enabled
+- `hooks/useModal.ts`: Unified modal state management (129 lines)
   - Manages 7 modal open/close states
   - Provides consistent API (open, close, toggle, isOpen)
   - Replaces 7 individual useState declarations
-- `hooks/useFactionFilter.ts`: Generic faction filtering with memoization
+- `hooks/useFactionFilter.ts`: Generic faction filtering with memoization (103 lines)
   - Type-safe filtering for any entity with faction property
   - Automatic memoization for performance
   - Multi-entity filtering support
-- `hooks/useDeploymentNotifications.ts`: Arrival notification system
+- `hooks/useDeploymentNotifications.ts`: Arrival notification system (174 lines)
   - Detects turn/day changes
   - Calculates arrivals for current faction
   - Prevents duplicate notifications
@@ -330,18 +395,26 @@ Custom hooks for state management and UI logic (~695 lines total):
 
 ## Scalability Considerations
 
-### Current Limitations
-1. **Single Document**: All game state in one Firestore doc (size limit: 1MB)
-2. **No Authentication**: Open access to Firestore
-3. **Client-Side Logic**: All game rules enforced client-side
-4. **Prop Drilling**: Deep component trees with prop passing
+### Current Limitations (Addressed in Multi-Game System)
+1. ~~**Single Document**: All game state in one Firestore doc (size limit: 1MB)~~ ✅ **SOLVED** - Multi-game system uses `/games/{gameId}/state` structure
+2. ~~**No Authentication**: Open access to Firestore~~ ✅ **SOLVED** - Firebase Authentication with UserProfile system
+3. **Client-Side Logic**: All game rules enforced client-side (still applies)
+4. **Prop Drilling**: Deep component trees with prop passing (mitigated by Context API)
+
+### Multi-Game System (Implemented)
+- ✅ **Authentication**: Firebase Auth with email/password
+- ✅ **User Profiles**: UserProfile stored in `/users/{uid}`
+- ✅ **Role-Based Access**: Global roles (admin/user) and game roles (master/player)
+- ✅ **Game Isolation**: Each game has separate Firestore document
+- ✅ **Context Providers**: AuthContext and GameContext for state management
+- ✅ **Password Protection**: Optional password-protected private games
 
 ### Future Enhancements
-1. **Multi-Document Structure**: Split collections into separate documents
-2. **Authentication**: Firebase Auth for user management
-3. **Server-Side Validation**: Cloud Functions for game rules
-4. **State Management Library**: Context API or Zustand
-5. **Optimistic Updates**: Update UI before Firestore confirmation
+1. **Server-Side Validation**: Cloud Functions for game rules
+2. **Optimistic Updates**: Update UI before Firestore confirmation
+3. **Game Invitations**: Send email invites to specific users
+4. **Spectator Mode**: Allow users to watch games without playing
+5. **Turn History**: Complete turn-by-turn history viewing
 
 ---
 
@@ -380,7 +453,8 @@ Custom hooks for state management and UI logic (~695 lines total):
 
 ## Security Model
 
-**Current**: Open access, no authentication
+### Legacy (Single-Game Mode)
+**Status**: Open access, no authentication
 
 **Firestore Rules**: All read/write allowed
 ```javascript
@@ -394,11 +468,22 @@ service cloud.firestore {
 }
 ```
 
+### Multi-Game Mode (NEW)
+**Status**: Firebase Authentication required, role-based access control
+
+**Firestore Rules**: See [MULTI_GAME_AUTH.md](./MULTI_GAME_AUTH.md#security-rules) for complete security rules
+
+**Key Security Features**:
+- Users can only read their own profile
+- Game creators and admins can write game metadata
+- Players can only access games they're members of
+- Public games are readable by all authenticated users
+- Private games require password verification
+
 **Future Considerations**:
-- Add Firebase Authentication
-- Implement per-user game sessions
-- Add admin role verification
 - Server-side validation with Cloud Functions
+- Rate limiting for API calls
+- Audit logging for admin actions
 
 ---
 
@@ -414,27 +499,41 @@ App.tsx (1,588 lines) - Monolithic component
 └── Very high complexity, low testability
 ```
 
-### After Refactoring
+### After Refactoring + Multi-Game System
 ```
-App.tsx (~1,276 lines) - Clean orchestration layer
-├── services/ (~3,100+ lines of testable business logic)
-│   ├── submarineService.ts (1,118 lines)
-│   ├── turnService.ts (151 lines)
-│   ├── deploymentService.ts (330 lines)
-│   └── destructionService.ts (217 lines)
+AppWrapper.tsx (~110 lines) - Authentication and routing root
+├── contexts/ (~255 lines)
+│   ├── AuthContext.tsx (160 lines) - Firebase Auth
+│   └── GameContext.tsx (95 lines) - Game selection
 │
-├── hooks/ (~300 lines of reusable logic)
-│   ├── useGameState.ts (manages 19 Firestore subscriptions)
-│   ├── useModal.ts (manages 7 modal states)
-│   ├── useFactionFilter.ts (generic filtering)
-│   └── useDeploymentNotifications.ts (arrival detection)
+├── App.tsx (~1,304 lines) - Clean orchestration layer
+│   ├── services/ (~3,100+ lines of testable business logic)
+│   │   ├── submarineService.ts (1,118 lines)
+│   │   ├── turnService.ts (151 lines)
+│   │   ├── deploymentService.ts (330 lines)
+│   │   └── destructionService.ts (217 lines)
+│   │
+│   ├── hooks/ (~785 lines of reusable logic)
+│   │   ├── useGameState.ts (279 lines, legacy)
+│   │   ├── useGameStateMultiGame.ts (280 lines, multi-game)
+│   │   ├── useModal.ts (129 lines, manages 7 modals)
+│   │   ├── useFactionFilter.ts (103 lines, generic filtering)
+│   │   └── useDeploymentNotifications.ts (174 lines, arrival detection)
+│   │
+│   └── Optimized App.tsx
+│       ├── 11 useState declarations (reduced from 31)
+│       ├── 0 lines of subscription boilerplate (managed by hooks)
+│       ├── 18 memoized handlers with useCallback
+│       ├── 2 memoized calculations with useMemo
+│       └── High maintainability, high testability
 │
-└── Optimized App.tsx
-    ├── 11 useState declarations (reduced from 31)
-    ├── 0 lines of subscription boilerplate (managed by hooks)
-    ├── 18 memoized handlers with useCallback
-    ├── 2 memoized calculations with useMemo
-    └── High maintainability, high testability
+└── Multi-Game Components (~6 components)
+    ├── AuthScreen.tsx (login/signup)
+    ├── GameLobby.tsx (game selection)
+    ├── CreateGameModal.tsx
+    ├── PasswordPromptModal.tsx
+    ├── DeleteGameModal.tsx
+    └── SuccessModal.tsx
 ```
 
 ### Benefits Achieved
@@ -448,19 +547,23 @@ App.tsx (~1,276 lines) - Clean orchestration layer
 ### Impact Metrics
 | Aspect | Before | After | Improvement |
 |--------|--------|-------|-------------|
-| Lines in App.tsx | 1,588 | 1,266 | -20.3% |
+| Lines in App.tsx | 1,588 | 1,304 | -17.9% |
 | useState declarations | 31 | 11 | -65% |
 | Subscription boilerplate | 87 lines | 0 lines | -100% |
 | Business logic in component | 661 lines | 0 lines | -100% |
 | Memoized functions | 0 | 20 | +100% |
-| Testable services | 0 | 4 | +100% |
-| Custom hooks | 0 | 4 | +100% |
+| Testable services | 0 | 10+ | +100% |
+| Custom hooks | 0 | 5 | +100% |
+| Authentication | None | Firebase Auth | +100% |
+| Multi-game support | None | Full support | +100% |
 
 ---
 
 ## Related Documentation
-- [State Management](./STATE_MANAGEMENT.md)
-- [Card System](./CARD_SYSTEM.md)
-- [Unit System](./UNIT_SYSTEM.md)
-- [Combat System](./COMBAT_SYSTEM.md)
-- [Map Integration](./MAP_INTEGRATION.md)
+- **[Multi-Game Authentication](./MULTI_GAME_AUTH.md)** - Complete multi-game system documentation
+- [State Management](./STATE_MANAGEMENT.md) - State patterns and Firestore sync
+- [Card System](./CARD_SYSTEM.md) - Card purchase and deployment
+- [Unit System](./UNIT_SYSTEM.md) - Units and task forces
+- [Combat System](./COMBAT_SYSTEM.md) - Combat mechanics and damage
+- [Map Integration](./MAP_INTEGRATION.md) - Leaflet integration
+- [Refactoring Log](./REFACTORING_LOG.md) - Change history

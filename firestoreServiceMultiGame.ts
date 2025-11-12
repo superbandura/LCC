@@ -533,6 +533,14 @@ export const initializeGameWithSeedData = async (
   try {
     const gameRef = getGameRef(gameId);
 
+    // First, read the existing document to preserve metadata
+    const existingDoc = await getDoc(gameRef);
+    if (!existingDoc.exists()) {
+      throw new Error(`Game document ${gameId} does not exist. Create the game first with createGame().`);
+    }
+
+    const existingData = existingDoc.data();
+
     // Convert operational areas to flat format for Firestore
     const flatOperationalAreas = seedData.operationalAreas.map(area => {
       const flatBounds = Array.isArray(area.bounds[0])
@@ -541,8 +549,11 @@ export const initializeGameWithSeedData = async (
       return { ...area, bounds: flatBounds };
     });
 
-    // Initialize game with all seed data
+    // Write all data together, preserving existing metadata
     await setDoc(gameRef, {
+      // Preserve existing metadata
+      metadata: existingData.metadata,
+      // Add game data
       operationalAreas: flatOperationalAreas,
       operationalData: seedData.operationalData,
       locations: seedData.locations,
@@ -550,7 +561,6 @@ export const initializeGameWithSeedData = async (
       units: seedData.units,
       cards: seedData.cards,
       commandPoints: seedData.commandPoints,
-      previousCommandPoints: undefined,
       purchaseHistory: seedData.purchaseHistory,
       cardPurchaseHistory: seedData.cardPurchaseHistory,
       purchasedCards: { us: [], china: [] },
@@ -567,7 +577,7 @@ export const initializeGameWithSeedData = async (
       playedCardNotificationsQueue: [],
       playerAssignments: [],
       registeredPlayers: []
-    }, { merge: true });
+    });
 
     console.log('Game initialized successfully:', gameId);
   } catch (error) {

@@ -1,4 +1,4 @@
-import { doc, getDoc, onSnapshot, setDoc, updateDoc, deleteField, Unsubscribe, collection, query, where, getDocs, limit } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, setDoc, updateDoc, deleteField, deleteDoc, Unsubscribe, collection, query, where, getDocs, limit, orderBy } from "firebase/firestore";
 import { db } from "./firebase";
 import { OperationalArea, OperationalData, Location, TaskForce, Unit, Card, CommandPoints, PurchaseHistory, CardPurchaseHistory, PurchasedCards, DestructionRecord, DrawingAnnotation, TurnState, PendingDeployments, InfluenceMarker, SubmarineCampaignState, PlayedCardNotification, PlayerAssignment, RegisteredPlayer, UserProfile, GameMetadata, GamePlayer, GameRole } from "./types";
 
@@ -1456,32 +1456,21 @@ export const checkIfUsersExist = async (): Promise<boolean> => {
  * @param gameName Name of the game
  * @param creatorUid UID of the game creator
  * @param creatorDisplayName Display name of the creator
- * @param creatorRole Role of the creator in the game (player or master)
- * @param creatorFaction Faction of the creator (null for master)
+ * @param password Optional password to protect the game
  * @returns Game ID
  */
 export const createGame = async (
   gameName: string,
   creatorUid: string,
   creatorDisplayName: string,
-  creatorRole: GameRole,
-  creatorFaction: 'us' | 'china' | null
+  password?: string
 ): Promise<string> => {
   try {
     // Generate a unique game ID
     const gameId = `game_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const gameRef = doc(db, 'games', gameId);
 
-    // Create game player for creator
-    const creatorPlayer: GamePlayer = {
-      uid: creatorUid,
-      displayName: creatorDisplayName,
-      role: creatorRole,
-      faction: creatorFaction,
-      joinedAt: new Date().toISOString(),
-    };
-
-    // Create game metadata
+    // Create game metadata with empty players (creator will join like any other player)
     const gameMetadata: GameMetadata = {
       id: gameId,
       name: gameName,
@@ -1491,9 +1480,9 @@ export const createGame = async (
       maxPlayers: 8,
       createdAt: new Date().toISOString(),
       lastActivityAt: new Date().toISOString(),
-      players: {
-        [creatorUid]: creatorPlayer,
-      },
+      players: {}, // Empty - creator will join via joinGame()
+      hasPassword: !!password,
+      ...(password && { password }), // Only include password field if it exists
     };
 
     // Initialize game with metadata only (game state will be initialized separately)
@@ -1504,6 +1493,46 @@ export const createGame = async (
   } catch (error) {
     console.error('Error creating game:', error);
     throw error;
+  }
+};
+
+/**
+ * Verify game password
+ * @param gameId Game ID
+ * @param password Password to verify
+ * @returns True if password is correct, false otherwise
+ */
+export const verifyGamePassword = async (
+  gameId: string,
+  password: string
+): Promise<boolean> => {
+  try {
+    const gameRef = doc(db, 'games', gameId);
+    const gameDoc = await getDoc(gameRef);
+
+    if (!gameDoc.exists()) {
+      console.error('Game not found:', gameId);
+      return false;
+    }
+
+    const data = gameDoc.data();
+    const metadata = data?.metadata as GameMetadata;
+
+    if (!metadata) {
+      console.error('Game metadata not found:', gameId);
+      return false;
+    }
+
+    // If game has no password, allow access
+    if (!metadata.hasPassword) {
+      return true;
+    }
+
+    // Check if password matches
+    return metadata.password === password;
+  } catch (error) {
+    console.error('Error verifying game password:', error);
+    return false;
   }
 };
 
@@ -1528,6 +1557,54 @@ export const getPublicGames = async (): Promise<GameMetadata[]> => {
     return games;
   } catch (error) {
     console.error('Error getting public games:', error);
+    throw error;
+  }
+};
+
+/**
+ * Subscribe to public games list with real-time updates
+ * @param callback Function called with updated games list
+ * @returns Unsubscribe function
+ */
+export const subscribeToPublicGames = (
+  callback: (games: GameMetadata[]) => void
+): (() => void) => {
+  try {
+    const gamesRef = collection(db, 'games');
+    const q = query(
+      gamesRef,
+      where('metadata.visibility', '==', 'public'),
+      where('metadata.status', '==', 'active')
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const games: GameMetadata[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.metadata) {
+            games.push(data.metadata as GameMetadata);
+          }
+        });
+
+        // Sort games by creation date (newest first) on the client side
+        games.sort((a, b) => {
+          const dateA = new Date(a.createdAt).getTime();
+          const dateB = new Date(b.createdAt).getTime();
+          return dateB - dateA;
+        });
+
+        callback(games);
+      },
+      (error) => {
+        console.error('Error in games subscription:', error);
+      }
+    );
+
+    return unsubscribe;
+  } catch (error) {
+    console.error('Error subscribing to public games:', error);
     throw error;
   }
 };
@@ -1593,6 +1670,45 @@ export const joinGame = async (
 };
 
 /**
+ * Update player faction in a game
+ * @param gameId Game ID
+ * @param uid User ID
+ * @param faction New faction ('us' or 'china')
+ */
+export const updatePlayerFaction = async (
+  gameId: string,
+  uid: string,
+  faction: 'us' | 'china'
+): Promise<void> => {
+  try {
+    const gameRef = doc(db, 'games', gameId);
+    const docSnapshot = await getDoc(gameRef);
+
+    if (!docSnapshot.exists()) {
+      throw new Error('Game not found');
+    }
+
+    const data = docSnapshot.data();
+    const metadata = data.metadata as GameMetadata;
+
+    if (!metadata.players[uid]) {
+      throw new Error('User is not in this game');
+    }
+
+    // Update player's faction
+    await updateDoc(gameRef, {
+      [`metadata.players.${uid}.faction`]: faction,
+      'metadata.lastActivityAt': new Date().toISOString(),
+    });
+
+    console.log('Player faction updated:', uid, faction, gameId);
+  } catch (error) {
+    console.error('Error updating player faction:', error);
+    throw error;
+  }
+};
+
+/**
  * Get a game's metadata
  * @param gameId Game ID
  * @returns Game metadata or null if not found
@@ -1636,5 +1752,20 @@ export const subscribeToGameMetadata = (
   }, (error) => {
     console.error('Error listening to game metadata:', error);
   });
+};
+
+/**
+ * Delete a game completely from Firestore
+ * @param gameId Game ID to delete
+ */
+export const deleteGame = async (gameId: string): Promise<void> => {
+  try {
+    const gameRef = doc(db, 'games', gameId);
+    await deleteDoc(gameRef);
+    console.log('Game deleted:', gameId);
+  } catch (error) {
+    console.error('Error deleting game:', error);
+    throw error;
+  }
 };
 

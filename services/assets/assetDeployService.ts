@@ -96,8 +96,11 @@ export class AssetDeployService {
 
     const deployedAssets: Array<{ assetId: string; assetName: string; areaId: string; areaName: string }> = [];
     const events: SubmarineEvent[] = [];
-    // Assets are invisible infrastructure - do NOT add them to assignedCards
-    const updatedOperationalAreas = [...operationalAreas];
+    // Create mutable copy of operational areas to update assignedCards
+    const updatedOperationalAreas = operationalAreas.map(area => ({
+      ...area,
+      assignedCards: [...(area.assignedCards || [])]
+    }));
 
     const updatedSubmarines = sourceSubmarines.map(sub => {
       // Check if this submarine has a pending deploy order
@@ -108,14 +111,38 @@ export class AssetDeployService {
 
       // Find target operational area
       const targetAreaId = sub.currentOrder!.targetId;
-      const targetArea = operationalAreas.find(area => area.id === targetAreaId);
+      const targetArea = updatedOperationalAreas.find(area => area.id === targetAreaId);
 
       if (!targetArea) {
         console.error(`❌ Asset Deploy: Area ${targetAreaId} not found for ${sub.submarineName}`);
         return sub;
       }
 
-      // Record deployment for logging (assets remain invisible to players)
+      // Check for duplicate deployment (asset already in this area)
+      const assetCardId = `${sub.cardId}_${sub.id}`;
+      const isDuplicate = targetArea.assignedCards?.includes(assetCardId);
+
+      if (isDuplicate) {
+        console.log(`⚠️ Asset Deploy: ${sub.submarineName} already deployed to ${targetArea.name}, skipping duplicate`);
+        // Mark order as completed but don't record deployment
+        return {
+          ...sub,
+          currentOrder: {
+            ...sub.currentOrder!,
+            status: 'completed' as const,
+            executionTurn: currentTurnState.turnNumber,
+            executionDate: currentTurnState.currentDate
+          }
+        };
+      }
+
+      // Add asset to operational area assignedCards
+      if (!targetArea.assignedCards) {
+        targetArea.assignedCards = [];
+      }
+      targetArea.assignedCards.push(assetCardId);
+
+      // Record deployment for logging
       deployedAssets.push({
         assetId: sub.id,
         assetName: sub.submarineName,

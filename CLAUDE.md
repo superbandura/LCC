@@ -17,6 +17,7 @@ Comprehensive system documentation is available in the `/docs` directory. **Alwa
 ### 📚 Core Documentation
 
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Project architecture, component hierarchy, data flow, design patterns
+- **[docs/MULTI_GAME_AUTH.md](docs/MULTI_GAME_AUTH.md)** - **NEW**: Multi-game authentication system, user profiles, RBAC, game isolation
 - **[docs/STATE_MANAGEMENT.md](docs/STATE_MANAGEMENT.md)** - State management patterns, Firestore sync, memoization, side effects
 - **Card System** (4 documents):
   - **[docs/CARD_SYSTEM.md](docs/CARD_SYSTEM.md)** - Core card mechanics, budget system, purchase/assignment lifecycle
@@ -55,14 +56,31 @@ firebase deploy                 # Deploy to Firebase
 
 ## Firebase Configuration
 
-All game state stored in Firestore document `game/current` and syncs real-time across clients.
+### Multi-Game System (Current)
+**Branch**: `feature/multi-game-auth`
 
-**Files**: `firebase.ts`, `firestoreService.ts`, `firestore.rules`, `firebase.json`
+Each game has isolated Firestore document at `/games/{gameId}/state`. Requires Firebase Authentication.
+
+**Key Files**:
+- `AppWrapper.tsx`: Root component with AuthContext and GameContext providers (~110 lines)
+- `contexts/AuthContext.tsx`: Firebase Auth management (~160 lines)
+- `contexts/GameContext.tsx`: Game selection and metadata (~95 lines)
+- `firestoreService.ts`: Legacy Firestore operations (~1,613 lines, 21 subscription functions)
+- `firestoreServiceMultiGame.ts`: Multi-game Firestore operations (user/game management)
+- `hooks/useGameStateMultiGame.ts`: Multi-game state hook (~280 lines, 19 active subscriptions)
 
 **Architecture**:
-- `firestoreService.ts`: Low-level Firestore CRUD operations (~1,223 lines), 19 subscription functions total (19 active used in useGameState: subscribeToOperationalAreas, subscribeToUnits, etc.)
+- `AppWrapper`: Routes between AuthScreen → GameLobby → App based on auth/game state
+- `AuthContext`: Manages Firebase Authentication, user profiles, first-user admin
+- `GameContext`: Manages game selection, player roles, permissions
+- `firestoreServiceMultiGame.ts`: User and game management functions
+- `hooks/useGameStateMultiGame.ts`: Game-scoped Firestore subscriptions
 - `services/`: Business logic layer (10+ modular services organized by domain)
-- `hooks/useGameState.ts`: React hook wrapping 19 active Firestore subscriptions, provides unified state to App.tsx
+
+### Legacy Single-Game Mode
+All game state stored in Firestore document `game/current` and syncs real-time across clients.
+
+**Files**: `firestoreService.ts` (~1,613 lines), `hooks/useGameState.ts` (~279 lines, 19 subscriptions)
 
 ## Architecture
 
@@ -70,20 +88,32 @@ All game state stored in Firestore document `game/current` and syncs real-time a
 
 ```
 F:\LCC/
+├── AppWrapper.tsx          # Root component with auth/game routing (~110 lines)
+├── contexts/               # React Context providers (~255 lines)
+│   ├── AuthContext.tsx    # Firebase Authentication (~160 lines)
+│   └── GameContext.tsx    # Game selection (~95 lines)
 ├── components/              # React components
+│   ├── AuthScreen.tsx      # Login/signup interface (multi-game)
+│   ├── GameLobby.tsx       # Game selection/creation (multi-game)
+│   ├── CreateGameModal.tsx # Create new game
+│   ├── PasswordPromptModal.tsx # Join private game
+│   ├── DeleteGameModal.tsx # Delete/archive game (admin)
+│   ├── SuccessModal.tsx    # Success notifications
+│   ├── ErrorBoundary.tsx   # Application-wide error boundary
 │   ├── map/                # Map-related components
-│   │   ├── Map.tsx         # Main map component
+│   │   ├── Map.tsx         # Main map component (~407 lines)
 │   │   ├── controls/       # Map controls (MapInitializer, ScaleControl, etc.)
 │   │   └── DataEditor/     # DataEditor tabs (TacticalTab, PatrolsTab, etc.)
-│   ├── modals/             # Modal dialogs (pending migration)
+│   ├── modals/             # Modal dialogs
 │   ├── ui/                 # UI components
 │   └── shared/             # Reusable components
-├── hooks/                  # Custom React hooks (~736 lines)
-│   ├── useGameState.ts    # Firestore state subscriptions (19 active, 279 lines)
-│   ├── useModal.ts        # Modal state management (7 modals, 148 lines)
-│   ├── useFactionFilter.ts # Faction-based filtering (111 lines)
-│   └── useDeploymentNotifications.ts # Deployment queue notifications (198 lines)
-├── services/               # Business logic layer (~4,000+ lines, 132 tests)
+├── hooks/                  # Custom React hooks (~1,065 lines)
+│   ├── useGameState.ts    # Firestore state subscriptions - LEGACY (19 active, 279 lines)
+│   ├── useGameStateMultiGame.ts # Multi-game Firestore subscriptions (19 active, ~280 lines)
+│   ├── useModal.ts        # Modal state management (7 modals, 129 lines)
+│   ├── useFactionFilter.ts # Faction-based filtering (103 lines)
+│   └── useDeploymentNotifications.ts # Deployment queue notifications (174 lines)
+├── services/               # Business logic layer (~4,000+ lines, 138 tests)
 │   ├── turnService.ts     # Turn management and capability resets
 │   ├── deploymentService.ts # Deployment queue and validation
 │   ├── destructionService.ts # Combat destruction logging
@@ -210,7 +240,8 @@ Centralized hook encapsulating 14 Firestore subscriptions:
 
 ### Components
 
-- **App.tsx**: Root component (~1,276 lines), uses `useGameState` and `useModal` hooks, faction selection, layout, memoized filters
+- **AppWrapper.tsx**: Application root (~110 lines), provides AuthContext and GameContext, routes between AuthScreen/GameLobby/App
+- **App.tsx**: Game interface component (~1,304 lines), uses `useGameStateMultiGame` and `useModal` hooks, faction selection, layout, memoized filters
 - **Map.tsx**: Leaflet map (~407 lines) with markers, rectangles, popups, DataEditor
   - Air patrol indicators (blue/red/gray circles, 35x35px)
   - DataEditor with 5 tabs: TacticalTab, PatrolsTab, ForcesTab, CommandPointsTab, CardsTab
@@ -330,15 +361,70 @@ Tailwind CSS v3 from CDN (`<script>` in `index.html`)
 - No authentication - open access
 - Test: Open multiple tabs/windows
 
+## Multi-Game Authentication
+
+**NEW in branch `feature/multi-game-auth`**: Complete multi-user support with Firebase Authentication.
+
+### Key Features
+- ✅ Firebase email/password authentication
+- ✅ User profiles with global roles (admin/user)
+- ✅ Game-specific roles (player/master)
+- ✅ Public and password-protected private games
+- ✅ Game isolation (each game has separate Firestore document)
+- ✅ First-user admin privileges
+- ✅ Real-time game lobby
+
+### New Components (6)
+1. **AuthScreen.tsx** - Login/signup interface
+2. **GameLobby.tsx** - Game selection and creation
+3. **CreateGameModal.tsx** - Create new game form
+4. **PasswordPromptModal.tsx** - Join private game
+5. **DeleteGameModal.tsx** - Admin game deletion
+6. **SuccessModal.tsx** - Success notifications
+
+### Context Providers (2)
+1. **AuthContext** (`useAuth` hook) - User authentication and profiles
+2. **GameContext** (`useGame` hook) - Game selection and permissions
+
+### Firestore Structure
+```
+users/
+└── {uid}/
+    ├── email, displayName
+    ├── role: 'user' | 'admin'
+    └── createdAt, lastLoginAt
+
+games/
+└── {gameId}/
+    ├── metadata/
+    │   ├── name, creatorUid
+    │   ├── visibility: 'public' | 'private'
+    │   ├── players: Record<uid, GamePlayer>
+    │   └── hasPassword, password?
+    └── state/
+        └── (all game state)
+```
+
+See **[docs/MULTI_GAME_AUTH.md](docs/MULTI_GAME_AUTH.md)** for complete documentation.
+
+---
+
 ## Testing
 
 Test suite built with Vitest + happy-dom environment.
 
-**Service Tests** (107 test cases):
+**Service Tests** (138 test cases total):
 - `services/turnService.test.ts` (36 tests) - Turn lifecycle, date calculations, phase transitions, game phases
 - `services/deploymentService.test.ts` (24 tests) - Deployment timing, activation logic, command point validation, cleanup
 - `services/destructionService.test.ts` (33 tests) - Destruction detection, revival tracking, combat statistics
-- `services/submarineService.test.ts` (14 tests) - Patrol mechanics (90% success), attack resolution (50% success), d20 rolls
+- `services/submarineService.test.ts` (27 tests) - Patrol mechanics (90% success), attack resolution (50% success), d20 rolls
+- `services/mines/mineService.test.ts` (9 tests) - Maritime mine detection mechanics
+- `services/assets/assetDeployService.test.ts` (9 tests) - Asset deployment processing
+
+**Test Status**:
+- ✅ **138 tests passing** (all tests fixed)
+- 0 tests failing
+- 1 test skipped
 
 **Test Coverage**:
 - All service functions have comprehensive unit tests

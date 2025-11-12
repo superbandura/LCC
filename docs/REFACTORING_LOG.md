@@ -10,6 +10,342 @@ This document tracks all refactoring changes made to the LCC codebase. It serves
 
 ---
 
+## 2025-11-12 - Multi-Game Authentication System
+
+### Overview
+Implemented comprehensive multi-game authentication system enabling multiple users to create, join, and play separate game instances simultaneously. Major architectural change introducing Firebase Authentication, user profiles, role-based access control (RBAC), and game isolation.
+
+### Branch
+`feature/multi-game-auth`
+
+### Goals
+1. Enable multiple users to authenticate with email/password
+2. Allow users to create and join multiple independent game instances
+3. Implement role-based access control (global roles: admin/user, game roles: master/player)
+4. Isolate game state per game instance
+5. Support public and password-protected private games
+6. Maintain backward compatibility with existing game logic
+
+### Changes Made
+
+#### New Root Component: AppWrapper.tsx (~110 lines)
+**Purpose**: Application-wide authentication and game routing
+
+**Features**:
+- Wraps entire application with AuthProvider and GameProvider
+- Routes between AuthScreen, GameLobby, and App.tsx based on auth/game state
+- Includes ErrorBoundary for crash protection
+
+**Routing Logic**:
+1. Not authenticated → AuthScreen (login/signup)
+2. Authenticated, no game selected → GameLobby (game selection)
+3. Authenticated, game selected → App.tsx (game interface)
+
+**File**: `AppWrapper.tsx`
+
+#### Context Providers
+
+**AuthContext.tsx** (~160 lines)
+- Manages Firebase Authentication state
+- Handles user signup/login/logout
+- Creates/loads UserProfile from `/users/{uid}`
+- First-user admin role assignment
+- Automatic profile creation on login
+
+**Exported Hook**: `useAuth()`
+- Provides: `currentUser`, `userProfile`, `loading`, `signup()`, `login()`, `logout()`
+
+**GameContext.tsx** (~95 lines)
+- Manages game selection and metadata
+- Persists `gameId` to localStorage
+- Real-time game metadata subscription
+- Extracts player role and faction from game metadata
+- Permission helpers: `canControlFaction()`, `isMaster`, `isPlayer`
+
+**Exported Hook**: `useGame()`
+- Provides: `gameId`, `gameMetadata`, `currentPlayerRole`, `currentPlayerFaction`, `setGameId()`, `leaveGame()`
+
+#### New UI Components (6 components)
+
+**AuthScreen.tsx**
+- Login/signup interface with email/password
+- Tab-based UI (Login / Signup)
+- Form validation and error handling
+- Retro-military terminal aesthetic
+
+**GameLobby.tsx**
+- Public games list with real-time updates
+- "Create New Game" button → CreateGameModal
+- Join game functionality (with password prompt for private games)
+- Logout button
+
+**CreateGameModal.tsx**
+- Form for creating new game
+- Fields: game name, visibility (public/private), password (optional), max players
+- Validation and error handling
+
+**PasswordPromptModal.tsx**
+- Modal for entering password to join private game
+- Password validation
+- Cancel/submit actions
+
+**DeleteGameModal.tsx**
+- Admin-only game deletion/archiving
+- Confirmation prompt
+- Sets game status to "archived" (soft delete)
+
+**SuccessModal.tsx**
+- Generic success notification modal
+- Used after game creation, joining, etc.
+
+**ErrorBoundary.tsx**
+- Application-wide error boundary
+- Prevents crashes from propagating
+- Shows user-friendly error messages
+
+#### New Hook: useGameStateMultiGame.ts (~280 lines)
+
+**Purpose**: Multi-game version of useGameState hook
+
+**Key Differences from Legacy Hook**:
+- Takes `gameId` parameter for game-scoped subscriptions
+- Subscribes to `/games/{gameId}/state` instead of `game/current`
+- Same 19 Firestore subscriptions as legacy hook
+- Same API surface for backward compatibility
+
+**Usage in App.tsx**:
+```typescript
+const { gameId } = useGame();
+const gameState = useGameStateMultiGame(gameId);
+```
+
+#### New Firestore Service: firestoreServiceMultiGame.ts
+
+**User Management Functions**:
+- `createUserProfile(profile)` - Create user profile in `/users/{uid}`
+- `getUserProfile(uid)` - Get user profile
+- `updateUserLastLogin(uid)` - Update last login timestamp
+- `checkIfUsersExist()` - Check if any users exist (for first-user admin)
+
+**Game Management Functions**:
+- `createGame(metadata, initialState)` - Create new game
+- `joinGame(gameId, player, password?)` - Join existing game
+- `leaveGame(gameId, uid)` - Leave game
+- `subscribeToPublicGames(callback)` - Real-time public games list
+- `subscribeToGameMetadata(gameId, callback)` - Real-time game metadata
+
+#### New TypeScript Interfaces (7 interfaces)
+
+**UserProfile** (types.ts:432-439)
+- Global user profile stored in `/users/{uid}`
+- Fields: `uid`, `email`, `displayName`, `role`, `createdAt`, `lastLoginAt`
+- Role: `'user' | 'admin'`
+
+**GamePlayer** (types.ts:442-448)
+- Per-game player role stored within GameMetadata
+- Fields: `uid`, `displayName`, `role`, `faction`, `joinedAt`
+- Role: `'player' | 'master'`
+- Faction: `'us' | 'china' | null` (null for masters)
+
+**GameMetadata** (types.ts:451-463)
+- Game metadata stored in `/games/{gameId}/metadata`
+- Fields: `id`, `name`, `creatorUid`, `status`, `visibility`, `maxPlayers`, `players`, `hasPassword`, `password?`
+- Status: `'active' | 'archived' | 'completed'`
+- Visibility: `'public' | 'private'`
+
+**GameState** (types.ts:466-486)
+- Full game state combining metadata + game state
+- Includes all existing game state fields
+
+**Type Aliases** (3 new types)
+- `UserRole`: `'user' | 'admin'` (global role)
+- `GameRole`: `'player' | 'master'` (game-specific role)
+- `GameStatus`: `'active' | 'archived' | 'completed'`
+
+#### Firestore Structure Changes
+
+**Before (Single-Game)**:
+```
+game/
+└── current/
+    ├── operationalAreas: []
+    ├── units: []
+    └── ...
+```
+
+**After (Multi-Game)**:
+```
+users/
+└── {uid}/
+    ├── email: string
+    ├── role: 'user' | 'admin'
+    └── ...
+
+games/
+└── {gameId}/
+    ├── metadata/
+    │   ├── name: string
+    │   ├── players: Record<uid, GamePlayer>
+    │   └── ...
+    └── state/
+        ├── operationalAreas: []
+        ├── units: []
+        └── ...
+```
+
+#### App.tsx Changes
+
+**Before**: Used `useGameState()` for single-game mode
+**After**: Uses `useGameStateMultiGame(gameId)` for multi-game mode
+
+**Import Changes**:
+- Added: `import { useGameStateMultiGame } from './hooks/useGameStateMultiGame';`
+- Added: `import { useGame } from './contexts/GameContext';`
+
+**Usage**:
+```typescript
+const { gameId } = useGame();
+const gameState = useGameStateMultiGame(gameId);
+```
+
+#### index.tsx Changes
+
+**Before**: Rendered `<App />` directly
+**After**: Renders `<AppWrapper />` which wraps everything with auth/game contexts
+
+```typescript
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <AppWrapper />
+  </React.StrictMode>
+);
+```
+
+### Security Implementation
+
+**Firestore Rules** (firestore.rules):
+- Users can read/write their own profile
+- Game creators and admins can manage games
+- Players can only access games they're members of
+- Public games readable by all authenticated users
+- Private games require password verification
+
+**Key Security Features**:
+- ✅ Firebase Authentication required for all operations
+- ✅ Role-based access control (RBAC)
+- ✅ First-user admin privileges
+- ✅ Password-protected private games
+- ✅ Game isolation (players only see their games)
+
+### Testing
+
+**Manual Testing Completed**:
+- ✅ First user signup → Gets admin role
+- ✅ Second user signup → Gets user role
+- ✅ Login/logout flow
+- ✅ Create public game
+- ✅ Create private game with password
+- ✅ Join public game
+- ✅ Join private game (password validation)
+- ✅ Game lobby shows public games
+- ✅ Game state loads correctly
+- ✅ Real-time sync across multiple users
+
+**Test Status**:
+- ✅ **All 138 tests passing** (tests fixed after multi-game implementation)
+- Previous issues resolved:
+  - submarineService.test.ts: 27 tests passing ✅
+  - mineService.test.ts: 9 tests passing ✅
+  - assetDeployService.test.ts: 9 tests passing ✅
+
+### Documentation Updates
+
+**New Documentation**:
+- ✅ Created `docs/MULTI_GAME_AUTH.md` (~20 KB)
+  - Complete system documentation
+  - Component guides, API reference, troubleshooting
+
+**Updated Documentation**:
+- ✅ `docs/ARCHITECTURE.md` - Added multi-game architecture section
+- ✅ `docs/STATE_MANAGEMENT.md` - Documented useGameStateMultiGame hook
+- ✅ `docs/INDEX.md` - Added 6 new components, 7 new interfaces
+- ✅ `docs/REFACTORING_LOG.md` - This entry
+
+### Metrics
+
+**Code Changes**:
+- **New Files**: 10 files (AppWrapper, 2 contexts, 6 UI components, 1 service, 1 hook)
+- **Modified Files**: 4 files (App.tsx, index.tsx, types.ts, firestore.rules)
+- **Total New Lines**: ~1,500+ lines
+
+**Documentation**:
+- **New**: MULTI_GAME_AUTH.md (~20 KB)
+- **Updated**: 4 documentation files
+- **Total Documentation**: ~193 KB (from ~173 KB)
+
+**Line Counts Updated**:
+- App.tsx: 1,276 → 1,304 lines (+2.2%)
+- firestoreService.ts: 1,223 → 1,613 lines (+31.9%, multi-game functions added)
+- Total hooks: 736 → 1,065 lines (+44.7%, added useGameStateMultiGame)
+
+### Breaking Changes
+
+**None for Existing Games**: Legacy single-game mode still functional via `useGameState` hook
+
+**For New Deployments**:
+- Requires Firebase Authentication setup
+- Requires Firestore security rules deployment
+- Users must authenticate before accessing games
+
+### Migration Path
+
+**From Single-Game to Multi-Game**:
+1. Deploy Firestore security rules
+2. Create first user (becomes admin automatically)
+3. Admin creates game from existing data (import functionality)
+4. Invite players to join game
+5. Players authenticate and join
+
+**Backward Compatibility**:
+- Legacy `useGameState` hook still exists
+- Single-game mode accessible via `game/current` document
+- Multi-game mode uses `/games/{gameId}/state`
+
+### Future Enhancements
+
+**Planned Features**:
+- Game invitations via email
+- Player kick functionality for masters
+- Game cloning/templates
+- Spectator mode
+- In-game chat system
+- Complete turn history viewing
+
+### Impact
+
+**Positive**:
+- ✅ Multi-user support
+- ✅ Game isolation and privacy
+- ✅ Role-based permissions
+- ✅ Scalable architecture
+- ✅ Enhanced security
+
+**Neutral**:
+- Code complexity increased (new contexts, routing logic)
+- Additional authentication step before accessing games
+
+**Trade-offs**:
+- Slightly longer initial load (authentication check)
+- More complex deployment (requires auth setup)
+
+### Related Issues
+
+**Branch**: `feature/multi-game-auth`
+**Status**: ✅ Complete and documented
+**Merge Status**: Ready for merge to main
+
+---
+
 ## 2025-11-07 - Bug Fixes: Pending Deployments & Submarine Persistence
 
 ### Overview

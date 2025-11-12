@@ -109,22 +109,11 @@ function App() {
   // This encapsulates all 19 Firestore subscriptions for the current game
   const gameState = useGameStateMultiGame(gameId);
 
-  // Show loading while game state is being fetched
-  if (gameState.loading || !gameId) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-400 mb-4"></div>
-          <p className="font-mono text-green-400 uppercase tracking-wider">LOADING GAME...</p>
-        </div>
-      </div>
-    );
-  }
-
   // Wrapper functions that automatically pass gameId to update functions
+  // IMPORTANT: These must be defined BEFORE any conditional returns to comply with Rules of Hooks
   const updateOperationalAreasWithGameId = useCallback(async (areas: OperationalArea[]) => {
     if (!gameId) return;
-    await updateOperationalAreasWithGameId(gameId, areas);
+    await updateOperationalAreas(gameId, areas);
   }, [gameId]);
 
   const updateUnitsWithGameId = useCallback(async (units: Unit[]) => {
@@ -134,17 +123,17 @@ function App() {
 
   const updateTaskForcesWithGameId = useCallback(async (taskForces: TaskForce[]) => {
     if (!gameId) return;
-    await updateTaskForcesWithGameId(gameId, taskForces);
+    await updateTaskForces(gameId, taskForces);
   }, [gameId]);
 
   const updateCommandPointsWithGameId = useCallback(async (commandPoints: CommandPoints) => {
     if (!gameId) return;
-    await updateCommandPointsWithGameId(gameId, commandPoints);
+    await updateCommandPoints(gameId, commandPoints);
   }, [gameId]);
 
   const updateTurnStateWithGameId = useCallback(async (turnState: TurnState) => {
     if (!gameId) return;
-    await updateTurnStateWithGameId(gameId, turnState);
+    await updateTurnState(gameId, turnState);
   }, [gameId]);
 
   // Destructure game state for easier access
@@ -1055,6 +1044,19 @@ function App() {
       setError("Error resetting game");
     }
   };
+
+  // Show loading while game state is being fetched
+  // IMPORTANT: This must be AFTER all hooks to comply with Rules of Hooks
+  if (gameState.loading || !gameId) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-400 mb-4"></div>
+          <p className="font-mono text-green-400 uppercase tracking-wider">LOADING GAME...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white font-sans">

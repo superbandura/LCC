@@ -32,6 +32,9 @@ const AuthScreen: React.FC = () => {
         }
         await signup(email, password, displayName.trim());
       }
+
+      // Clear loading state after successful authentication
+      setLoading(false);
     } catch (err: any) {
       console.error('Authentication error:', err);
 

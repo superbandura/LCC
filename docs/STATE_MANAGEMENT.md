@@ -2,7 +2,13 @@
 
 ## Overview
 
-LCC uses a **centralized state management** pattern with React hooks and Firestore real-time synchronization. All game state is stored in a single Firestore document (`game/current`) and synced automatically across all connected clients.
+LCC uses a **centralized state management** pattern with React hooks and Firestore real-time synchronization.
+
+### Legacy Single-Game Mode
+All game state stored in single Firestore document (`game/current`), synced automatically across all connected clients.
+
+### Multi-Game Mode (NEW)
+Each game has its own isolated Firestore document (`/games/{gameId}/state`). User authentication required via Firebase Auth. See [Multi-Game Authentication](./MULTI_GAME_AUTH.md) for complete details.
 
 ---
 
@@ -10,11 +16,41 @@ LCC uses a **centralized state management** pattern with React hooks and Firesto
 
 ### State Categories
 
-#### 1. Synced State (Firestore-backed)
+#### 1. Authentication State (Multi-Game Only)
+Managed by `AuthContext` provider:
+
+```typescript
+// From contexts/AuthContext.tsx
+const { currentUser, userProfile, loading, signup, login, logout } = useAuth();
+
+// currentUser: Firebase Auth user object
+// userProfile: UserProfile from /users/{uid}
+// loading: Auth state loading flag
+```
+
+#### 2. Game Selection State (Multi-Game Only)
+Managed by `GameContext` provider:
+
+```typescript
+// From contexts/GameContext.tsx
+const {
+  gameId,                    // Selected game ID
+  gameMetadata,              // GameMetadata for selected game
+  currentPlayerRole,         // 'player' | 'master' | null
+  currentPlayerFaction,      // 'us' | 'china' | null
+  setGameId,                 // Select/change game
+  leaveGame,                 // Leave current game
+  isMaster,                  // Helper flag
+  isPlayer,                  // Helper flag
+  canControlFaction          // Permission check function
+} = useGame();
+```
+
+#### 3. Synced State (Firestore-backed)
 State that persists in Firestore and syncs across all clients in real-time.
 
 ```typescript
-// In App.tsx (managed by useGameState hook - 17 Firestore-synced states)
+// In App.tsx (managed by useGameState or useGameStateMultiGame hook - 19 Firestore-synced states)
 const [operationalAreas, setOperationalAreas] = useState<OperationalArea[]>([]);
 const [operationalData, setOperationalData] = useState<Record<string, OperationalData>>({});
 const [locations, setLocations] = useState<Location[]>([]);
@@ -34,7 +70,7 @@ const [registeredPlayers, setRegisteredPlayers] = useState<RegisteredPlayer[]>([
 const [cardPurchaseHistory, setCardPurchaseHistory] = useState<CardPurchaseHistory[]>([]); // Legacy
 ```
 
-#### 2. Local State (Client-only)
+#### 4. Local State (Client-only)
 State that exists only on the current client and is not synced.
 
 ```typescript
@@ -53,7 +89,7 @@ const [showCommandCenter, setShowCommandCenter] = useState(false);
 // ... etc
 ```
 
-#### 3. Derived State (Computed)
+#### 5. Derived State (Computed)
 State computed from other state using `useMemo` for performance.
 
 ```typescript
@@ -80,6 +116,7 @@ const factionTaskForces = useMemo(() => {
 
 ### Document Structure
 
+#### Legacy Single-Game Mode
 ```
 Firestore:
   └── game/
@@ -98,20 +135,62 @@ Firestore:
           ├── influenceMarker: InfluenceMarker
           ├── submarineCampaign: SubmarineCampaignState
           ├── playedCardNotifications: Array<PlayedCardNotification>
-          ├── playerAssignments: PlayerAssignment | null
-          ├── registeredPlayers: Array<RegisteredPlayer>
+          ├── playerAssignments: PlayerAssignment | null (legacy, unused in multi-game)
+          ├── registeredPlayers: Array<RegisteredPlayer> (legacy, unused in multi-game)
           └── cardPurchaseHistory: Array<CardPurchaseHistory> (legacy)
+```
+
+#### Multi-Game Mode (NEW)
+```
+Firestore:
+  ├── users/
+  │   └── {uid}/
+  │       ├── email: string
+  │       ├── displayName: string
+  │       ├── role: 'user' | 'admin'
+  │       ├── createdAt: string
+  │       └── lastLoginAt: string
+  │
+  └── games/
+      └── {gameId}/
+          ├── metadata/
+          │   ├── name: string
+          │   ├── creatorUid: string
+          │   ├── status: 'active' | 'archived' | 'completed'
+          │   ├── visibility: 'public' | 'private'
+          │   ├── players: Record<uid, GamePlayer>
+          │   ├── hasPassword: boolean
+          │   └── password?: string
+          │
+          └── state/
+              ├── operationalAreas: Array<OperationalArea>
+              ├── operationalData: Record<string, OperationalData>
+              ├── locations: Array<Location>
+              ├── taskForces: Array<TaskForce>
+              ├── units: Array<Unit>
+              ├── cards: Array<Card>
+              ├── commandPoints: { us: number, china: number }
+              ├── purchasedCards: { us: PurchasedCardInstance[], china: PurchasedCardInstance[] }
+              ├── destructionLog: Array<DestructionRecord>
+              ├── turnState: TurnState
+              ├── pendingDeployments: PendingDeployments
+              ├── influenceMarker: InfluenceMarker
+              ├── submarineCampaign: SubmarineCampaignState
+              └── playedCardNotifications: Array<PlayedCardNotification>
 ```
 
 ### Subscription Pattern
 
-All Firestore subscriptions are now managed by the **useGameState** custom hook (see `hooks/useGameState.ts`):
+All Firestore subscriptions are managed by custom hooks:
+
+#### Legacy Single-Game Mode
+**useGameState** hook (see `hooks/useGameState.ts`):
 
 ```typescript
-// In App.tsx
-const gameState = useGameState(); // Returns all 17 Firestore-synced states
+// In App.tsx (legacy mode)
+const gameState = useGameState(/* initial values */); // Returns all 19 Firestore-synced states
 
-// useGameState hook internally manages 17 active subscriptions:
+// useGameState hook internally manages 19 active subscriptions from game/current:
 // 1. subscribeToOperationalAreas
 // 2. subscribeToOperationalData
 // 3. subscribeToLocations
@@ -120,21 +199,44 @@ const gameState = useGameState(); // Returns all 17 Firestore-synced states
 // 6. subscribeToCards
 // 7. subscribeToCommandPoints
 // 8. subscribeToPreviousCommandPoints (command points history tracking)
-// 9. subscribeToPurchasedCards
-// 10. subscribeToDestructionLog
-// 11. subscribeToTurnState
-// 12. subscribeToPendingDeployments
-// 13. subscribeToInfluenceMarker
-// 14. subscribeToSubmarineCampaign
-// 15. subscribeToPlayedCardNotificationsQueue
-// 16. subscribeToPlayerAssignments
-// 17. subscribeToRegisteredPlayers
+// 9. subscribeToPurchaseHistory (legacy purchase tracking)
+// 10. subscribeToCardPurchaseHistory (legacy card purchase tracking)
+// 11. subscribeToPurchasedCards
+// 12. subscribeToDestructionLog
+// 13. subscribeToTurnState
+// 14. subscribeToPendingDeployments
+// 15. subscribeToInfluenceMarker
+// 16. subscribeToSubmarineCampaign
+// 17. subscribeToPlayedCardNotificationsQueue
+// 18. subscribeToPlayerAssignments (legacy, for single-game player assignment)
+// 19. subscribeToRegisteredPlayers (legacy, for single-game player registration)
 
-// Note: firestoreService.ts has 19 total subscription functions
-// useGameState.ts actively uses 17 of them
-// Legacy functions not used: subscribeToPurchaseHistory, subscribeToCardPurchaseHistory
+// Note: firestoreService.ts has 21 total subscription functions
+// useGameState.ts actively uses 19 of them for single-game mode
+// Additional functions for multi-game: subscribeToPublicGames, subscribeToGameMetadata
 
-// Total: 17 active subscriptions (encapsulated in useGameState hook)
+// Total: 19 active subscriptions (encapsulated in useGameState hook)
+```
+
+#### Multi-Game Mode (NEW)
+**useGameStateMultiGame** hook (see `hooks/useGameStateMultiGame.ts`):
+
+```typescript
+// In App.tsx (multi-game mode)
+const { gameId } = useGame(); // Get selected game ID from GameContext
+const gameState = useGameStateMultiGame(gameId); // Returns all 19 Firestore-synced states
+
+// useGameStateMultiGame hook internally manages 19 active subscriptions from /games/{gameId}/state:
+// 1-17: Same as legacy mode (operationalAreas, units, cards, etc.)
+// 18-19: playerAssignments, registeredPlayers (NOT USED in multi-game, but still subscribed for compatibility)
+
+// Key differences from legacy hook:
+// - Takes gameId parameter for game-scoped subscriptions
+// - Subscribes to /games/{gameId}/state instead of game/current
+// - Same API surface as useGameState for backward compatibility
+// - Used when authentication is enabled (AppWrapper → GameContext)
+
+// Total: 19 active subscriptions (encapsulated in useGameStateMultiGame hook)
 
 // Previous pattern (deprecated - now in useGameState):
 // useEffect(() => {

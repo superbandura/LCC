@@ -1,7 +1,7 @@
 # 🗺️ Índice de Documentación LCC
 
-**Última actualización**: 2025-11-06 (Submarine Campaign Phase 3: Mines & ASW)
-**Versión**: 1.5
+**Última actualización**: 2025-11-12 (Multi-Game Authentication System)
+**Versión**: 1.6
 
 > **Navegación rápida**: Este índice te ayuda a encontrar exactamente qué documentar leer según tu necesidad. Para Claude Code, esto optimiza el contexto y reduce lecturas innecesarias.
 
@@ -12,6 +12,7 @@
 | Documento | Tamaño | Propósito | Cuándo Leerlo |
 |-----------|--------|-----------|---------------|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 11 KB | Arquitectura general del proyecto | Primero - visión general |
+| **[MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md)** | **20 KB** | **Sistema de autenticación multi-game** | **Features de autenticación/usuarios** |
 | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | 14 KB | Gestión de estado y Firestore | Trabajando con estado/datos |
 | **[CARD_SYSTEM.md](CARD_SYSTEM.md)** | **10 KB** | **Sistema de cartas (core)** | **Features de cartas básicas** |
 | ├── [CARD_ATTACHMENT.md](CARD_ATTACHMENT.md) | 11 KB | Attachment system | Adjuntar cartas a unidades |
@@ -23,7 +24,7 @@
 | [ASW_SYSTEM.md](ASW_SYSTEM.md) | 16 KB | Submarine ASW Phase | Submarine warfare mechanics |
 | [REFACTORING_LOG.md](REFACTORING_LOG.md) | 30 KB | Historial de cambios | Contexto histórico |
 
-**Total**: ~173 KB de documentación técnica (4 archivos de cartas: 54 KB)
+**Total**: ~193 KB de documentación técnica (4 archivos de cartas: 54 KB)
 
 ---
 
@@ -140,7 +141,10 @@
 
 | Componente | Documentación | Archivo | Líneas |
 |------------|---------------|---------|--------|
-| **App.tsx** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | App.tsx | ~1,276 |
+| **AppWrapper** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | AppWrapper.tsx | ~110 |
+| **App.tsx** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | App.tsx | ~1,304 |
+| **AuthScreen** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | components/AuthScreen.tsx | - |
+| **GameLobby** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | components/GameLobby.tsx | - |
 | **Map.tsx** | [MAP_INTEGRATION.md](MAP_INTEGRATION.md) | components/Map.tsx | ~407 |
 | **TurnControl** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | components/TurnControl.tsx | ~89 |
 | **FactionSelector** | [ARCHITECTURE.md](ARCHITECTURE.md#component-organization) | components/FactionSelector.tsx | - |
@@ -171,6 +175,11 @@
 | **PlayerAssignmentModal** | Multiplayer system | components/PlayerAssignmentModal.tsx | - | Player-faction assignments |
 | **PlayedCardNotificationModal** | [CARD_SYSTEM.md](CARD_SYSTEM.md) | components/modals/PlayedCardNotificationModal.tsx | - | Influence card played notifications |
 | **InfluenceTrackAnimation** | [COMBAT_SYSTEM.md](COMBAT_SYSTEM.md) | components/InfluenceTrackAnimation.tsx | - | Influence marker animation |
+| **CreateGameModal** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | components/CreateGameModal.tsx | - | Create new game |
+| **PasswordPromptModal** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | components/PasswordPromptModal.tsx | - | Join private game |
+| **DeleteGameModal** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | components/DeleteGameModal.tsx | - | Delete/archive game |
+| **SuccessModal** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | components/SuccessModal.tsx | - | Success notifications |
+| **ErrorBoundary** | [ARCHITECTURE.md](ARCHITECTURE.md) | components/ErrorBoundary.tsx | - | Application-wide error handling |
 
 ### Controles de Mapa
 
@@ -200,8 +209,12 @@
 | Utilidad | Documentación | Archivo |
 |----------|---------------|---------|
 | **iconGenerators** | [MAP_INTEGRATION.md § Custom Icons](MAP_INTEGRATION.md#custom-icons) | utils/iconGenerators.tsx |
-| **firestoreService** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | firestoreService.ts (~1,223 lines, 19 subscription functions) |
-| **useGameState** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | hooks/useGameState.ts (~279 lines, 19 active subscriptions) |
+| **firestoreService** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | firestoreService.ts (~1,613 lines, 21 subscription functions) |
+| **firestoreServiceMultiGame** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | firestoreServiceMultiGame.ts (multi-game operations) |
+| **useGameState** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | hooks/useGameState.ts (~279 lines, 19 active subscriptions, legacy) |
+| **useGameStateMultiGame** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | hooks/useGameStateMultiGame.ts (~280 lines, 19 active subscriptions) |
+| **AuthContext** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | contexts/AuthContext.tsx (~160 lines) |
+| **GameContext** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | contexts/GameContext.tsx (~95 lines) |
 
 ---
 
@@ -241,8 +254,12 @@
 | **AswShipDeployment** | types.ts:353-363 | Submarine campaign system - ASW ship deployment data |
 | **MineResult** | types.ts:377-384 | Submarine campaign system - Maritime mine phase results |
 | **AssetDeployResult** | types.ts:386-396 | Submarine campaign system - Asset deployment results |
-| **RegisteredPlayer** | types.ts:367-373 | Multiplayer system - Registered players |
-| **PlayerAssignment** | types.ts:374-379 | Multiplayer system - Player-faction assignments |
+| **RegisteredPlayer** | types.ts:404-408 | Multiplayer system - Registered players (legacy, single-game) |
+| **PlayerAssignment** | types.ts:411-416 | Multiplayer system - Player-faction assignments (legacy, single-game) |
+| **UserProfile** | types.ts:432-439 | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) - User profile with global role |
+| **GamePlayer** | types.ts:442-448 | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) - Player role within specific game |
+| **GameMetadata** | types.ts:451-463 | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) - Game metadata with players |
+| **GameState** | types.ts:466-486 | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) - Full game state (metadata + state) |
 | **PurchaseHistory** | types.ts:131-135 | Legacy purchase tracking |
 | **CardPurchaseHistory** | types.ts:136-140 | Legacy card purchase tracking |
 
@@ -254,11 +271,14 @@
 | **UnitCategory** | types.ts:43 | [UNIT_SYSTEM.md § Unit Categories](UNIT_SYSTEM.md#unit-categories) |
 | **CardType** | types.ts:88 | [CARD_SYSTEM.md § Type Classification](CARD_SYSTEM.md#type-classification) |
 | **SubmarineCardType** | types.ts:90 | Submarine campaign system |
-| **OrderStatus** | types.ts:252 | Submarine campaign system |
-| **SubmarineOrderType** | types.ts:255 | Submarine campaign system |
+| **OrderStatus** | types.ts:262 | Submarine campaign system |
+| **SubmarineOrderType** | types.ts:265 | Submarine campaign system |
 | **SubmarineEventType** | types.ts:268 | Submarine campaign system - Event types (deployment, attack_success, attack_failure, detected, destroyed, etc.) |
 | **SubmarineStatus** | types.ts:271 | Submarine campaign system - Submarine status (active, destroyed, returned) |
 | **SubmarineTargetType** | types.ts:274 | Submarine campaign system - Target types (base, unit, area) |
+| **UserRole** | types.ts:423 | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) - Global user role ('user' \| 'admin') |
+| **GameRole** | types.ts:426 | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) - Game-specific role ('player' \| 'master') |
+| **GameStatus** | types.ts:429 | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) - Game status ('active' \| 'archived' \| 'completed') |
 
 ---
 
@@ -413,21 +433,23 @@ STATE_MANAGEMENT.md § Damage Array Normalization
 ## 📈 Métricas de Documentación
 
 ### Cobertura
-- **Componentes documentados**: 42/42 (100%)
-- **Interfaces documentadas**: 44/44 (100%)
-- **Firestore listeners documentados**: 17/17 active (19 total functions) (100%)
+- **Componentes documentados**: 48/48 (100%)
+- **Interfaces documentadas**: 51/51 (100%)
+- **Firestore listeners documentados**: 19/19 active (21 total functions) (100%)
 - **Memoizaciones críticas**: 2/2 (100%)
-- **Test suite**: 132 tests (turnService: 36, deploymentService: 24, destructionService: 33, submarineService: 21, mineService: 9, assetDeployService: 9)
+- **Test suite**: 138 tests (turnService: 36, deploymentService: 24, destructionService: 33, submarineService: 27, mineService: 9, assetDeployService: 9)
+  - **Status**: ✅ **138 passing**, 0 failing, 1 skipped
 
 ### Calidad
-- **Última actualización**: 2025-11-07
+- **Última actualización**: 2025-11-12
 - **Estado**: ✅ Sincronizado con código
-- **Discrepancias**: 0% (completamente actualizado tras auditoría de documentación 2025-11-07)
-- **Calidad general**: 9.9/10
-- **Últimos cambios**: Documentation sync (firestore subscriptions count, previousCommandPoints, service line counts, App.tsx metrics), submarine campaign Phase 3 (maritime mines, asset deployment), modular service architecture (10+ services), 132 tests total
+- **Discrepancias**: 0% (completamente actualizado tras auditoría de documentación 2025-11-12)
+- **Calidad general**: 9.8/10
+- **Últimos cambios**: Multi-Game Authentication System (AppWrapper, AuthContext, GameContext, 6 new components, 7 new interfaces), updated line counts (App.tsx: 1,304, firestoreService: 1,613, submarineService: 1,118), ✅ 138 tests passing (all fixed)
 
 ### Tamaños
 - **ARCHITECTURE.md**: 11 KB
+- **MULTI_GAME_AUTH.md**: 20 KB (NEW)
 - **STATE_MANAGEMENT.md**: 14 KB
 - **CARD_SYSTEM.md**: 15 KB
 - **UNIT_SYSTEM.md**: 14 KB
@@ -437,7 +459,7 @@ STATE_MANAGEMENT.md § Damage Array Normalization
 - **ASW_SYSTEM.md**: 16 KB
 - **INDEX.md** (este archivo): ~15 KB
 
-**Total**: ~145 KB
+**Total**: ~165 KB
 
 ---
 
@@ -487,6 +509,6 @@ Este índice está diseñado para:
 
 ---
 
-**Última actualización**: 2025-11-06
+**Última actualización**: 2025-11-12
 **Mantenido por**: Equipo de desarrollo LCC
-**Cambios recientes**: Submarine Campaign Phase 3 (maritime mines, asset deployment), ASW_SYSTEM.md added, modular service architecture (10+ services), 132 tests, 17 active subscriptions, 3 new interfaces (AswShipDeployment, MineResult, AssetDeployResult)
+**Cambios recientes**: Multi-Game Authentication System (AppWrapper, AuthContext, GameContext), MULTI_GAME_AUTH.md added, 6 new components (AuthScreen, GameLobby, CreateGameModal, etc.), 7 new interfaces (UserProfile, GameMetadata, GamePlayer, etc.), updated line counts (App.tsx: 1,304, firestoreService: 1,613, submarineService: 1,118), ✅ 138 tests passing (all fixed), 19 active subscriptions

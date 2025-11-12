@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { GameRole } from '../types';
 import { createGame } from '../firestoreService';
 import { initializeGameWithSeedData } from '../firestoreServiceMultiGame';
 import { initialOperationalAreas } from '../data/operationalAreas';
@@ -22,8 +21,8 @@ interface CreateGameModalProps {
 const CreateGameModal: React.FC<CreateGameModalProps> = ({ onClose, onGameCreated }) => {
   const { currentUser, userProfile } = useAuth();
   const [gameName, setGameName] = useState('');
-  const [selectedRole, setSelectedRole] = useState<GameRole>('player');
-  const [selectedFaction, setSelectedFaction] = useState<'us' | 'china' | null>('us');
+  const [hasPassword, setHasPassword] = useState(false);
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -37,8 +36,8 @@ const CreateGameModal: React.FC<CreateGameModalProps> = ({ onClose, onGameCreate
       return;
     }
 
-    if (selectedRole === 'player' && !selectedFaction) {
-      setError('PLEASE SELECT A FACTION');
+    if (hasPassword && !password.trim()) {
+      setError('PASSWORD IS REQUIRED');
       return;
     }
 
@@ -51,8 +50,7 @@ const CreateGameModal: React.FC<CreateGameModalProps> = ({ onClose, onGameCreate
         gameName.trim(),
         currentUser.uid,
         userProfile.displayName,
-        selectedRole,
-        selectedRole === 'master' ? null : selectedFaction
+        hasPassword ? password.trim() : undefined
       );
 
       // Initialize game with seed data
@@ -70,20 +68,13 @@ const CreateGameModal: React.FC<CreateGameModalProps> = ({ onClose, onGameCreate
         influenceMarker: initialInfluenceMarker
       });
 
-      onGameCreated(gameId);
+      // Close modal and return to lobby
+      // Creator will need to join the game like any other player
+      onClose();
     } catch (err: any) {
       console.error('Error creating game:', err);
       setError('FAILED TO CREATE GAME');
       setLoading(false);
-    }
-  };
-
-  const handleRoleChange = (role: GameRole) => {
-    setSelectedRole(role);
-    if (role === 'master') {
-      setSelectedFaction(null);
-    } else if (!selectedFaction) {
-      setSelectedFaction('us');
     }
   };
 
@@ -122,84 +113,56 @@ const CreateGameModal: React.FC<CreateGameModalProps> = ({ onClose, onGameCreate
             />
           </div>
 
-          {/* Role Selection */}
+          {/* Password Checkbox */}
           <div>
-            <label className="block font-mono text-sm text-gray-300 uppercase tracking-wide mb-2">
-              YOUR ROLE
+            <label className="flex items-center space-x-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={hasPassword}
+                onChange={(e) => {
+                  setHasPassword(e.target.checked);
+                  if (!e.target.checked) {
+                    setPassword('');
+                  }
+                }}
+                className="w-5 h-5 bg-gray-900 border-2 border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-green-500 checked:bg-green-600 checked:border-green-500"
+              />
+              <span className="font-mono text-sm text-gray-300 uppercase tracking-wide">
+                PASSWORD PROTECTED
+              </span>
             </label>
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => handleRoleChange('player')}
-                className={`w-full px-4 py-3 font-mono font-bold rounded uppercase tracking-wide border-2 transition-colors ${
-                  selectedRole === 'player'
-                    ? 'bg-blue-600 border-blue-500 text-white'
-                    : 'bg-gray-900 border-gray-600 text-gray-400 hover:border-blue-500'
-                }`}
-              >
-                PLAYER
-              </button>
-              <button
-                type="button"
-                onClick={() => handleRoleChange('master')}
-                className={`w-full px-4 py-3 font-mono font-bold rounded uppercase tracking-wide border-2 transition-colors ${
-                  selectedRole === 'master'
-                    ? 'bg-green-600 border-green-500 text-white'
-                    : 'bg-gray-900 border-gray-600 text-gray-400 hover:border-green-500'
-                }`}
-              >
-                MASTER (GAME DIRECTOR)
-              </button>
-            </div>
           </div>
 
-          {/* Faction Selection (only for players) */}
-          {selectedRole === 'player' && (
+          {/* Password Input (conditional) */}
+          {hasPassword && (
             <div>
               <label className="block font-mono text-sm text-gray-300 uppercase tracking-wide mb-2">
-                YOUR FACTION
+                PASSWORD
               </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSelectedFaction('us')}
-                  className={`px-4 py-3 font-mono font-bold rounded uppercase tracking-wide border-2 transition-colors ${
-                    selectedFaction === 'us'
-                      ? 'bg-blue-600 border-blue-500 text-white'
-                      : 'bg-gray-900 border-gray-600 text-gray-400 hover:border-blue-500'
-                  }`}
-                >
-                  US
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedFaction('china')}
-                  className={`px-4 py-3 font-mono font-bold rounded uppercase tracking-wide border-2 transition-colors ${
-                    selectedFaction === 'china'
-                      ? 'bg-red-600 border-red-500 text-white'
-                      : 'bg-gray-900 border-gray-600 text-gray-400 hover:border-red-500'
-                  }`}
-                >
-                  CHINA
-                </button>
-              </div>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded font-mono text-green-400 focus:outline-none focus:border-green-500"
+                placeholder="••••••••"
+                required={hasPassword}
+                maxLength={50}
+              />
             </div>
           )}
 
-          {/* Master Info */}
-          {selectedRole === 'master' && (
-            <div className="bg-green-900 bg-opacity-20 border border-green-600 rounded p-3">
-              <p className="font-mono text-xs text-green-300 uppercase tracking-wide">
-                MASTER ROLE CAPABILITIES:
-              </p>
-              <ul className="font-mono text-xs text-gray-300 mt-2 space-y-1">
-                <li>• CONTROL BOTH FACTIONS</li>
-                <li>• ADVANCE TURN</li>
-                <li>• ASSIGN PLAYERS TO AREAS</li>
-                <li>• MANAGE PLAYERS</li>
-              </ul>
-            </div>
-          )}
+          {/* Info */}
+          <div className="bg-green-900 bg-opacity-20 border border-green-600 rounded p-3">
+            <p className="font-mono text-xs text-green-300 uppercase tracking-wide">
+              AS GAME CREATOR:
+            </p>
+            <ul className="font-mono text-xs text-gray-300 mt-2 space-y-1">
+              <li>• YOU WILL BE THE MASTER (GAME DIRECTOR)</li>
+              <li>• AFTER CREATING, JOIN THE GAME FROM THE LOBBY</li>
+              <li>• SELECT YOUR FACTION WHEN JOINING</li>
+              <li>• OTHER PLAYERS CAN JOIN AND SELECT THEIR FACTIONS</li>
+            </ul>
+          </div>
 
           {/* Error Message */}
           {error && (

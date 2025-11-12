@@ -29,21 +29,24 @@ describe('MineService', () => {
     isPlanningPhase: false
   });
 
-  const createMockOperationalAreas = (assignedCards: string[] = []): OperationalArea[] => [
+  const createMockOperationalAreas = (
+    assignedCards: string[] = [],
+    areaId: string = 'south-china-sea'
+  ): OperationalArea[] => [
     {
-      id: 'area-1',
+      id: areaId,
       name: 'Test Area',
       bounds: [[0, 0], [1, 1]],
       assignedCards
     } as OperationalArea
   ];
 
-  const createMockTaskForces = (): TaskForce[] => [
+  const createMockTaskForces = (areaId: string = 'south-china-sea'): TaskForce[] => [
     {
       id: 'tf-1',
       name: 'Task Force 1',
       faction: 'china',
-      operationalAreaId: 'area-1',
+      operationalAreaId: areaId,
       units: ['unit-1']
     } as TaskForce
   ];

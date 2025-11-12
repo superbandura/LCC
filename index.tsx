@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import AppWrapper from './AppWrapper';
+// import TestComponent from './TestComponent';
 import './index.css';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';

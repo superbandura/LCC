@@ -110,13 +110,20 @@ service cloud.firestore {
 
     match /games/{gameId} {
 
-      // ----- READ ACCESS -----
-      // Any authenticated user can read game metadata if game is public
+      // ----- READ ACCESS (individual documents) -----
       // Game members can always read their games
-      allow read: if isAuthenticated() && (
+      // Any authenticated user can read public games
+      allow get: if isAuthenticated() && (
         isGameMember(gameId) ||
         get(/databases/$(database)/documents/games/$(gameId)).data.metadata.visibility == 'public'
       );
+
+      // ----- LIST ACCESS (queries/collections) -----
+      // Any authenticated user can query for public active games
+      allow list: if isAuthenticated() &&
+                     request.query.limit <= 100 &&
+                     resource.data.metadata.visibility == 'public' &&
+                     resource.data.metadata.status == 'active';
 
       // ----- CREATE ACCESS -----
       // Any authenticated user can create a game

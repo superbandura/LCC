@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { GameMetadata, GameRole } from '../types';
 import { getPublicGames, joinGame } from '../firestoreService';
@@ -16,12 +16,7 @@ const GameLobby: React.FC<GameLobbyProps> = ({ onGameSelected }) => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [joiningGameId, setJoiningGameId] = useState<string | null>(null);
 
-  // Load games on mount
-  useEffect(() => {
-    loadGames();
-  }, []);
-
-  const loadGames = async () => {
+  const loadGames = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
@@ -33,7 +28,14 @@ const GameLobby: React.FC<GameLobbyProps> = ({ onGameSelected }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Load games when user is authenticated
+  useEffect(() => {
+    if (currentUser) {
+      loadGames();
+    }
+  }, [currentUser, loadGames]);
 
   const handleJoinGame = async (gameId: string, role: GameRole, faction: 'us' | 'china' | null) => {
     if (!currentUser || !userProfile) return;

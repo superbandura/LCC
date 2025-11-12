@@ -504,3 +504,74 @@ export const updateTurnState = async (
     throw error;
   }
 };
+
+// =======================================
+// GAME INITIALIZATION
+// =======================================
+
+/**
+ * Initialize a new game with seed data
+ * @param gameId Game ID to initialize
+ * @param seedData Seed data for the game
+ */
+export const initializeGameWithSeedData = async (
+  gameId: string,
+  seedData: {
+    operationalAreas: OperationalArea[];
+    operationalData: Record<string, OperationalData>;
+    locations: Location[];
+    taskForces: TaskForce[];
+    units: Unit[];
+    cards: Card[];
+    commandPoints: CommandPoints;
+    purchaseHistory: PurchaseHistory;
+    cardPurchaseHistory: CardPurchaseHistory;
+    turnState: TurnState;
+    influenceMarker: InfluenceMarker;
+  }
+): Promise<void> => {
+  try {
+    const gameRef = getGameRef(gameId);
+
+    // Convert operational areas to flat format for Firestore
+    const flatOperationalAreas = seedData.operationalAreas.map(area => {
+      const flatBounds = Array.isArray(area.bounds[0])
+        ? [area.bounds[0][0], area.bounds[0][1], area.bounds[1][0], area.bounds[1][1]]
+        : area.bounds;
+      return { ...area, bounds: flatBounds };
+    });
+
+    // Initialize game with all seed data
+    await setDoc(gameRef, {
+      operationalAreas: flatOperationalAreas,
+      operationalData: seedData.operationalData,
+      locations: seedData.locations,
+      taskForces: seedData.taskForces,
+      units: seedData.units,
+      cards: seedData.cards,
+      commandPoints: seedData.commandPoints,
+      previousCommandPoints: undefined,
+      purchaseHistory: seedData.purchaseHistory,
+      cardPurchaseHistory: seedData.cardPurchaseHistory,
+      purchasedCards: { us: [], china: [] },
+      destructionLog: [],
+      turnState: seedData.turnState,
+      pendingDeployments: { cards: [], units: [], taskForces: [] },
+      influenceMarker: seedData.influenceMarker,
+      submarineCampaign: {
+        deployedSubmarines: [],
+        events: [],
+        currentTurn: 0,
+        usedSubmarineNames: { us: [], china: [] }
+      },
+      playedCardNotificationsQueue: [],
+      playerAssignments: [],
+      registeredPlayers: []
+    }, { merge: true });
+
+    console.log('Game initialized successfully:', gameId);
+  } catch (error) {
+    console.error('Error initializing game:', error);
+    throw error;
+  }
+};

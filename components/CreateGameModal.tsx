@@ -2,13 +2,17 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { GameRole } from '../types';
 import { createGame } from '../firestoreService';
+import { initializeGameWithSeedData } from '../firestoreServiceMultiGame';
 import { initialOperationalAreas } from '../data/operationalAreas';
 import { initialLocations } from '../data/locations';
 import { initialOperationalData } from '../data/operationalData';
 import { initialTaskForces } from '../data/taskForces';
 import { initialUnits } from '../data/units';
-import { initialCards } from '../data/cards';
+import { initialCards, initialCommandPoints } from '../data/cards';
+import { initialPurchaseHistory } from '../data/purchaseHistory';
+import { initialCardPurchaseHistory } from '../data/cardPurchaseHistory';
 import { initialTurnState } from '../data/turnState';
+import { initialInfluenceMarker } from '../data/influenceMarker';
 
 interface CreateGameModalProps {
   onClose: () => void;
@@ -51,9 +55,20 @@ const CreateGameModal: React.FC<CreateGameModalProps> = ({ onClose, onGameCreate
         selectedRole === 'master' ? null : selectedFaction
       );
 
-      // Initialize game state (this will be moved to a separate initialization function)
-      // For now, we'll just navigate to the game
-      // The game state initialization will happen in the next phase
+      // Initialize game with seed data
+      await initializeGameWithSeedData(gameId, {
+        operationalAreas: initialOperationalAreas,
+        operationalData: initialOperationalData,
+        locations: initialLocations,
+        taskForces: initialTaskForces,
+        units: initialUnits,
+        cards: initialCards,
+        commandPoints: initialCommandPoints,
+        purchaseHistory: initialPurchaseHistory,
+        cardPurchaseHistory: initialCardPurchaseHistory,
+        turnState: initialTurnState,
+        influenceMarker: initialInfluenceMarker
+      });
 
       onGameCreated(gameId);
     } catch (err: any) {

@@ -8,52 +8,33 @@ import CardEditorModal from './components/CardEditorModal';
 import AdminLoginModal from './components/AdminLoginModal';
 import PlayerAssignmentModal from './components/PlayerAssignmentModal';
 import CombatStatisticsModal from './components/CombatStatisticsModal';
-import FactionSelector from './components/FactionSelector';
 import DeploymentNotificationModal from './components/DeploymentNotificationModal';
 import PlayedCardNotificationModal from './components/modals/PlayedCardNotificationModal';
 import { Position, Location, OperationalArea, OperationalData, MapLayer, TaskForce, Unit, Card, CommandPoints, PurchaseHistory, CardPurchaseHistory, PurchasedCards, DestructionRecord, TurnState, PendingDeployments, InfluenceMarker, SubmarineCampaignState, SubmarineEvent } from './types';
 import { LocationIcon, MenuIcon, EditIcon } from './components/Icons';
-import { initialLocations } from './data/locations';
-import { initialOperationalAreas } from './data/operationalAreas';
-import { initialOperationalData } from './data/operationalData';
-import { initialTaskForces } from './data/taskForces';
-import { initialUnits } from './data/units';
-import { initialCards, initialCommandPoints } from './data/cards';
-import { initialPurchaseHistory } from './data/purchaseHistory';
-import { initialCardPurchaseHistory } from './data/cardPurchaseHistory';
-import { initialTurnState } from './data/turnState';
-import { initialPendingDeployments } from './data/pendingDeployments';
-import { initialInfluenceMarker } from './data/influenceMarker';
 import { mapLayers } from './data/mapLayers';
 import { auth } from './firebase';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
+
+// Import multi-game service functions
 import {
-  subscribeToOperationalAreas,
-  subscribeToOperationalData,
-  subscribeToLocations,
-  subscribeToTaskForces,
-  subscribeToUnits,
-  subscribeToCards,
-  subscribeToCommandPoints,
-  subscribeToDestructionLog,
-  subscribeToTurnState,
-  subscribeToPurchasedCards,
-  subscribeToPendingDeployments,
-  subscribeToInfluenceMarker,
-  subscribeToSubmarineCampaign,
   updateOperationalAreas,
+  updateUnits,
+  updateTaskForces,
+  updateCommandPoints,
+  updateTurnState
+} from './firestoreServiceMultiGame';
+
+// Import legacy service functions that still need refactoring
+import {
   updateOperationalData,
   updateLocations,
-  updateTaskForces,
-  updateUnits,
   updateCards,
-  updateCommandPoints,
   updatePreviousCommandPoints,
   updatePurchaseHistory,
   updateCardPurchaseHistory,
   updatePurchasedCards,
   updateDestructionLog,
-  updateTurnState,
   updatePendingDeployments,
   updateInfluenceMarker,
   updateSubmarineCampaign,
@@ -62,11 +43,9 @@ import {
   addPlayedCardNotification,
   removePlayedCardNotification,
   deploySubmarineAndRemoveFromPurchased,
-  initializeGameData,
   resetGameData,
   cleanOrphanedUnits,
-  calculateCommandPoints,
-  registerPlayer
+  calculateCommandPoints
 } from './firestoreService';
 
 // Import services for business logic
@@ -76,8 +55,10 @@ import { DeploymentService } from './services/deploymentService';
 import { DestructionService } from './services/destructionService';
 
 // Import custom hooks
-import { useGameState } from './hooks/useGameState';
+import { useGameStateMultiGame } from './hooks/useGameStateMultiGame';
 import { useModal } from './hooks/useModal';
+import { useGame } from './contexts/GameContext';
+import { useAuth } from './contexts/AuthContext';
 
 // Default coordinates for the Indo-Pacific region
 const DEFAULT_COORDS: Position = [20.0, 121.5];
@@ -92,11 +73,15 @@ function usePrevious<T>(value: T): T | undefined {
 }
 
 function App() {
-  const [selectedFaction, setSelectedFaction] = useState<'us' | 'china' | null>(null);
-  const [playerName, setPlayerName] = useState<string>(() => {
-    // Load player name from localStorage on init
-    return localStorage.getItem('lcc_playerName') || '';
-  });
+  // Get game context (gameId, metadata, player role/faction)
+  const { gameId, gameMetadata, currentPlayerRole, currentPlayerFaction, isMaster, canControlFaction, leaveGame } = useGame();
+  const { userProfile } = useAuth();
+
+  // selectedFaction for backward compatibility with existing code
+  // Masters don't have a specific faction (they control both)
+  // Players have their assigned faction from GameContext
+  const selectedFaction = isMaster ? null : currentPlayerFaction;
+
   const [position, setPosition] = useState<Position>(DEFAULT_COORDS);
   const [zoom, setZoom] = useState<number>(5);
   const [loading, setLoading] = useState<boolean>(false);
@@ -120,20 +105,47 @@ function App() {
   const [arrivedUnitDeployments, setArrivedUnitDeployments] = useState<any[]>([]);
   const [turnSubmarineEvents, setTurnSubmarineEvents] = useState<import('./types').SubmarineEvent[]>([]);
 
-  // Use custom hook for Firestore game state management
-  // This encapsulates all 14 Firestore subscriptions in one hook
-  const gameState = useGameState(
-    initialOperationalAreas,
-    initialOperationalData,
-    initialLocations,
-    initialTaskForces,
-    initialUnits,
-    initialCards,
-    initialCommandPoints,
-    initialPurchaseHistory,
-    initialTurnState,
-    initialInfluenceMarker
-  );
+  // Use multi-game hook for Firestore game state management
+  // This encapsulates all 19 Firestore subscriptions for the current game
+  const gameState = useGameStateMultiGame(gameId);
+
+  // Show loading while game state is being fetched
+  if (gameState.loading || !gameId) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-400 mb-4"></div>
+          <p className="font-mono text-green-400 uppercase tracking-wider">LOADING GAME...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Wrapper functions that automatically pass gameId to update functions
+  const updateOperationalAreasWithGameId = useCallback(async (areas: OperationalArea[]) => {
+    if (!gameId) return;
+    await updateOperationalAreasWithGameId(gameId, areas);
+  }, [gameId]);
+
+  const updateUnitsWithGameId = useCallback(async (units: Unit[]) => {
+    if (!gameId) return;
+    await updateUnits(gameId, units);
+  }, [gameId]);
+
+  const updateTaskForcesWithGameId = useCallback(async (taskForces: TaskForce[]) => {
+    if (!gameId) return;
+    await updateTaskForcesWithGameId(gameId, taskForces);
+  }, [gameId]);
+
+  const updateCommandPointsWithGameId = useCallback(async (commandPoints: CommandPoints) => {
+    if (!gameId) return;
+    await updateCommandPointsWithGameId(gameId, commandPoints);
+  }, [gameId]);
+
+  const updateTurnStateWithGameId = useCallback(async (turnState: TurnState) => {
+    if (!gameId) return;
+    await updateTurnStateWithGameId(gameId, turnState);
+  }, [gameId]);
 
   // Destructure game state for easier access
   const {
@@ -175,12 +187,12 @@ function App() {
 
   // Calculate player's assigned operational area IDs
   const myAssignedAreaIds = useMemo(() => {
-    if (!playerName || !selectedFaction) return [];
+    if (!userProfile?.displayName || !selectedFaction) return [];
 
     return playerAssignments
-      .filter(pa => pa.playerName === playerName && pa.faction === selectedFaction)
+      .filter(pa => pa.playerName === userProfile.displayName && pa.faction === selectedFaction)
       .map(pa => pa.operationalAreaId);
-  }, [playerAssignments, playerName, selectedFaction]);
+  }, [playerAssignments, userProfile, selectedFaction]);
 
   // Track previous turn number and date for change detection
   const prevTurnNumber = usePrevious(turnState.turnNumber);
@@ -223,7 +235,7 @@ function App() {
 
         if (hasOrphans) {
           console.log('Task Force deleted - cleaning orphaned units');
-          updateUnits(cleanedUnits);
+          updateUnitsWithGameId(cleanedUnits);
         }
       }
 
@@ -341,21 +353,6 @@ function App() {
     return false;
   }, []);
 
-  const handleFactionSelect = useCallback(async (faction: 'us' | 'china', playerName: string) => {
-    setSelectedFaction(faction);
-    setPlayerName(playerName);
-    // Save player name to localStorage for persistence
-    localStorage.setItem('lcc_playerName', playerName);
-
-    // Register player in Firestore so admin can see them
-    try {
-      await registerPlayer(playerName, faction);
-    } catch (error) {
-      console.error('Error registering player:', error);
-      // Don't block the user if registration fails
-    }
-  }, []);
-
   const handleFilterChange = useCallback((country: string) => {
     setFilters(prev => ({ ...prev, [country]: !prev[country] }));
   }, []);
@@ -415,7 +412,7 @@ function App() {
     const pendingChanged = cleanedPending.cards.length !== pendingDeployments.cards.length;
 
     // Update Firestore - await to ensure completion before continuing
-    await updateOperationalAreas(updatedAreas);
+    await updateOperationalAreasWithGameId(updatedAreas);
 
     // Update pending deployments if there were changes
     if (pendingChanged) {
@@ -463,7 +460,7 @@ function App() {
       cleanedPending.taskForces.length !== pendingDeployments.taskForces.length;
 
     // Update Firestore - await to ensure completion before continuing
-    await updateTaskForces(updatedTaskForces);
+    await updateTaskForcesWithGameId(updatedTaskForces);
 
     // Update pending deployments if there were changes
     if (pendingChanged) {
@@ -485,7 +482,7 @@ function App() {
       cleanedPending.taskForces.length !== pendingDeployments.taskForces.length;
 
     // Update Firestore - await to ensure completion before continuing
-    await updateUnits(updatedUnits);
+    await updateUnitsWithGameId(updatedUnits);
 
     // Update pending deployments if there were changes
     if (pendingChanged) {
@@ -528,7 +525,7 @@ function App() {
         }
         return area;
       });
-      updateOperationalAreas(updatedAreas);
+      updateOperationalAreasWithGameId(updatedAreas);
     } else {
       // Add to pending deployments
       const timing = calculateActivationTiming(turnState, deploymentTime);
@@ -555,7 +552,7 @@ function App() {
   }, [cards, turnState, operationalAreas, selectedFaction, pendingDeployments, calculateActivationTiming]);
 
   const handleCommandPointsUpdate = useCallback((points: CommandPoints) => {
-    updateCommandPoints(points);
+    updateCommandPointsWithGameId(points);
   }, []);
 
   const handlePurchaseHistoryUpdate = useCallback((history: PurchaseHistory) => {
@@ -637,13 +634,13 @@ function App() {
 
     // Update operational areas if assets were deployed
     if (result.updatedOperationalAreas.length > 0) {
-      await updateOperationalAreas(result.updatedOperationalAreas);
+      await updateOperationalAreasWithGameId(result.updatedOperationalAreas);
     }
 
     // Update command points if changed by patrols
     if (result.updatedCommandPoints.us !== commandPoints.us ||
         result.updatedCommandPoints.china !== commandPoints.china) {
-      await updateCommandPoints(result.updatedCommandPoints);
+      await updateCommandPointsWithGameId(result.updatedCommandPoints);
     }
 
     // Update locations if damage was applied by attacks
@@ -666,7 +663,7 @@ function App() {
       // Calculate command points based on controlled bases (WITHOUT influence bonus)
       // Influence bonus is only applied at end of week, not during planning phase
       const newCommandPoints = calculateCommandPoints(locations, 0, false);
-      updateCommandPoints(newCommandPoints);
+      updateCommandPointsWithGameId(newCommandPoints);
 
       // FIX: Sync submarineCampaign.currentTurn with turnState.turnNumber
       if (submarineCampaign) {
@@ -840,7 +837,7 @@ function App() {
       });
       console.log('  🚀 Calling updateOperationalAreas with', updatedAreas.length, 'areas');
 
-      await updateOperationalAreas(updatedAreas);
+      await updateOperationalAreasWithGameId(updatedAreas);
 
       // Save for submarine orchestrator (prevents overwrite with stale data)
       areasWithArrivedCards = updatedAreas;
@@ -864,7 +861,7 @@ function App() {
         }
         return tf;
       });
-      await updateTaskForces(updatedTFs);
+      await updateTaskForcesWithGameId(updatedTFs);
     }
 
     // Activate arrived units (remove isPendingDeployment flag)
@@ -875,7 +872,7 @@ function App() {
         }
         return u;
       });
-      await updateUnits(updatedUnits);
+      await updateUnitsWithGameId(updatedUnits);
     }
 
     // CRITICAL: Process submarine operations in correct order for end-of-week
@@ -904,7 +901,7 @@ function App() {
       // Recalculate with influence bonus (uses current base states, including newly damaged)
       // IMPORTANT: Influence bonus is ONLY applied here (end of week), not during planning phase or mid-week
       const newCommandPoints = calculateCommandPoints(locations, influenceMarker.value, true);
-      updateCommandPoints(newCommandPoints);
+      updateCommandPointsWithGameId(newCommandPoints);
 
       console.log('📊 Week completed! Command Points recalculated from bases:');
       console.log('  - Previous CP:', commandPoints);
@@ -1059,10 +1056,6 @@ function App() {
     }
   };
 
-  if (!selectedFaction) {
-    return <FactionSelector onSelect={handleFactionSelect} />;
-  }
-
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white font-sans">
       <header className={`backdrop-blur-sm shadow-lg p-4 z-20 w-full flex items-center justify-between ${
@@ -1115,28 +1108,47 @@ function App() {
           <h1 className={`text-xl md:text-3xl font-bold ${
             selectedFaction === 'china' ? 'text-red-400' : 'text-cyan-400'
           }`}>
-            Littoral Commander Campaign
+            {gameMetadata?.name || 'Littoral Commander Campaign'}
           </h1>
-          {playerName && (
+          {userProfile && (
             <div className="text-sm font-mono text-green-400 mt-1 tracking-wide">
-              PLAYER: {playerName.toUpperCase()}
-              {myAssignedAreaIds.length > 0 && (
-                <span className="mx-2">|</span>
-              )}
-              {myAssignedAreaIds.length > 0 ? (
+              {isMaster && <span className="text-yellow-400 font-bold">MASTER</span>}
+              {!isMaster && <span>PLAYER</span>}: {userProfile.displayName.toUpperCase()}
+              {currentPlayerFaction && (
                 <>
+                  <span className="mx-2">|</span>
+                  <span className={currentPlayerFaction === 'china' ? 'text-red-400' : 'text-blue-400'}>
+                    {currentPlayerFaction.toUpperCase()}
+                  </span>
+                </>
+              )}
+              {myAssignedAreaIds.length > 0 && (
+                <>
+                  <span className="mx-2">|</span>
                   AREAS: {operationalAreas
                     .filter(area => myAssignedAreaIds.includes(area.id))
                     .map(area => area.name)
                     .join(', ')}
                 </>
-              ) : (
-                <span className="text-yellow-400">UNASSIGNED</span>
+              )}
+              {!isMaster && myAssignedAreaIds.length === 0 && (
+                <>
+                  <span className="mx-2">|</span>
+                  <span className="text-yellow-400">UNASSIGNED</span>
+                </>
               )}
             </div>
           )}
         </div>
-        <div className="w-32"></div> {/* Spacer for balance */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={leaveGame}
+            className="px-3 py-1.5 text-sm font-mono bg-gray-700 hover:bg-gray-600 text-white rounded border border-gray-600 transition-colors uppercase tracking-wide"
+            title="Leave game and return to lobby"
+          >
+            ← LEAVE GAME
+          </button>
+        </div>
       </header>
       <div className="flex flex-grow overflow-hidden relative">
         <Sidebar 

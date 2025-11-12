@@ -60,19 +60,6 @@ export class AssetDeployService {
     // Use provided submarines or fall back to campaign submarines
     const sourceSubmarines = submarines || submarineCampaign.deployedSubmarines;
 
-    // Log asset order statuses at the start of processing
-    const assetOrdersAtStart = sourceSubmarines
-      .filter(sub => sub.submarineType === 'asset' && sub.currentOrder)
-      .map(sub => ({
-        name: sub.submarineName,
-        orderType: sub.currentOrder?.orderType,
-        status: sub.currentOrder?.status,
-        executionTurn: sub.currentOrder?.executionTurn
-      }));
-    if (assetOrdersAtStart.length > 0) {
-      console.log('🔍 [ASSET DEPLOY START] Asset orders at phase start:', assetOrdersAtStart);
-    }
-
     // Filter assets with pending deploy orders (only if not already executed)
     const pendingDeploys = sourceSubmarines.filter(
       sub => sub.status === 'active' &&
@@ -82,6 +69,21 @@ export class AssetDeployService {
              sub.currentOrder.status === 'pending' &&
              !sub.currentOrder.executionTurn  // Only process if not already executed
     );
+
+    // DEBUG: Log what we found
+    if (sourceSubmarines.some(sub => sub.submarineType === 'asset')) {
+      console.log('🔍 [ASSET DEPLOY] Asset orders found:',
+        sourceSubmarines
+          .filter(sub => sub.submarineType === 'asset')
+          .map(sub => ({
+            name: sub.submarineName,
+            orderType: sub.currentOrder?.orderType,
+            status: sub.currentOrder?.status,
+            executionTurn: sub.currentOrder?.executionTurn,
+            willProcess: pendingDeploys.some(pd => pd.id === sub.id)
+          }))
+      );
+    }
 
     if (pendingDeploys.length === 0) {
       return {
@@ -121,11 +123,11 @@ export class AssetDeployService {
         areaName: targetArea.name
       });
 
-      // Create deployment event (visible to deploying faction)
+      // Create deployment event (visible only in Admin Report)
       const deploymentEvent = new EventBuilder()
         .setSubmarine(sub)
         .setTurnState(currentTurnState)
-        .setEventType('attack_success') // Use attack_success for display in ops log
+        .setEventType('asset_deployed') // Only visible in Admin Report, not Operations Log
         .setTarget(targetAreaId, targetArea.name, 'area')
         .setDescription(AssetTemplates.deploymentSuccess(sub.cardName, targetArea.name))
         .setExecutionTurn(currentTurnState.turnNumber)
@@ -134,7 +136,7 @@ export class AssetDeployService {
       events.push(deploymentEvent);
 
       // Mark order as completed
-      const completedSub = {
+      return {
         ...sub,
         currentOrder: {
           ...sub.currentOrder!,
@@ -143,14 +145,6 @@ export class AssetDeployService {
           executionDate: currentTurnState.currentDate
         }
       };
-
-      console.log(`🔧 [ASSET DEPLOY] Marking ${sub.submarineName} order as completed:`, {
-        before: sub.currentOrder?.status,
-        after: completedSub.currentOrder?.status,
-        executionTurn: completedSub.currentOrder?.executionTurn
-      });
-
-      return completedSub;
     });
 
     if (deployedAssets.length > 0) {

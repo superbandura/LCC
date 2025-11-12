@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
+import AppWrapper from './AppWrapper';
 import './index.css';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -21,6 +21,6 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <App />
+    <AppWrapper />
   </React.StrictMode>
 );

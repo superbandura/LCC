@@ -58,6 +58,7 @@ import {
   updateInfluenceMarker,
   updateSubmarineCampaign,
   updateSubmarineCampaignTurn,
+  updateSubmarineCampaignAswShips,
   addPlayedCardNotification,
   removePlayedCardNotification,
   deploySubmarineAndRemoveFromPurchased,
@@ -675,6 +676,14 @@ function App() {
         });
       }
 
+      // CRITICAL: Snapshot ASW ships BEFORE exiting planning phase
+      // This captures all units deployed during planning phase for submarine campaign
+      if (submarineCampaign) {
+        const aswShips = SubmarineCampaignOrchestrator.snapshotAswShips(units, taskForces, operationalAreas);
+        await updateSubmarineCampaignAswShips(aswShips);
+        console.log(`  ✅ ASW ships snapshot (planning phase): ${aswShips.length} ships locked for Turn 1`);
+      }
+
       console.log('Command Points calculated from bases (planning phase):', newCommandPoints);
       console.log('Influence bonus NOT applied (only at end of week)');
       console.log('Submarine campaign turn synchronized:', newTurnState.turnNumber);
@@ -842,9 +851,14 @@ function App() {
       console.log('  🎯 Next: Wait for Firestore subscription to fire...');
     }
 
+    // Hoist variables to function scope for use in ASW snapshot
+    // Default to current state, will be updated if arrivals occurred
+    let updatedTFs = taskForces;
+    let updatedUnits = units;
+
     // Activate arrived Task Forces (remove isPendingDeployment flag)
     if (arrivedTaskForcesList.length > 0) {
-      const updatedTFs = taskForces.map(tf => {
+      updatedTFs = taskForces.map(tf => {
         if (arrivedTaskForcesList.some(a => a.id === tf.id)) {
           return { ...tf, isPendingDeployment: false };
         }
@@ -855,7 +869,7 @@ function App() {
 
     // Activate arrived units (remove isPendingDeployment flag)
     if (arrivedUnitsList.length > 0) {
-      const updatedUnits = units.map(u => {
+      updatedUnits = units.map(u => {
         if (arrivedUnitsList.some(a => a.id === u.id)) {
           return { ...u, isPendingDeployment: false };
         }
@@ -870,11 +884,9 @@ function App() {
 
     // STEP 0: Snapshot ASW ships at turn start (locked until next turn)
     if (submarineCampaign) {
-      const aswShips = SubmarineCampaignOrchestrator.snapshotAswShips(units, taskForces, operationalAreas);
-      await updateSubmarineCampaign({
-        ...submarineCampaign,
-        aswShips
-      });
+      // Use hoisted variables that have already been updated with arrivals
+      const aswShips = SubmarineCampaignOrchestrator.snapshotAswShips(updatedUnits, updatedTFs, operationalAreas);
+      await updateSubmarineCampaignAswShips(aswShips);
       console.log(`  ✅ ASW ships snapshot: ${aswShips.length} ships locked for this turn`);
     }
 
@@ -910,25 +922,24 @@ function App() {
         console.log(`🔵 [BATCH UPDATE] Adding events: ${allEvents.length}`);
       }
 
-      // Log asset order statuses before saving
-      const assetOrders = submarineResult.updatedSubmarines
-        .filter(sub => sub.submarineType === 'asset' && sub.currentOrder)
-        .map(sub => ({
-          name: sub.submarineName,
-          orderType: sub.currentOrder?.orderType,
-          status: sub.currentOrder?.status,
-          executionTurn: sub.currentOrder?.executionTurn
-        }));
-      if (assetOrders.length > 0) {
-        console.log('🔍 [APP.TSX] Asset orders before Firestore save:', assetOrders);
-      }
-
       // ALWAYS update submarines (includes destroyed status), conditionally add events
       await updateSubmarineCampaign({
         ...submarineCampaign,
         deployedSubmarines: submarineResult.updatedSubmarines,
         events: allEvents.length > 0 ? [...submarineCampaign.events, ...allEvents] : submarineCampaign.events
       });
+
+      // DEBUG: Log asset order status after Firestore save
+      const assetOrdersAfterSave = submarineResult.updatedSubmarines
+        .filter(sub => sub.submarineType === 'asset' && sub.currentOrder)
+        .map(sub => ({
+          name: sub.submarineName,
+          status: sub.currentOrder?.status,
+          executionTurn: sub.currentOrder?.executionTurn
+        }));
+      if (assetOrdersAfterSave.length > 0) {
+        console.log('💾 [APP.TSX] Asset orders AFTER Firestore save:', assetOrdersAfterSave);
+      }
 
       if (allEvents.length > 0) {
         console.log(`🔵 [BATCH UPDATE] Total after update: ${submarineCampaign.events.length + allEvents.length}`);

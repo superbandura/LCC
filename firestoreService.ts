@@ -1,9 +1,24 @@
-import { doc, getDoc, onSnapshot, setDoc, updateDoc, deleteField, Unsubscribe } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, setDoc, updateDoc, deleteField, Unsubscribe, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "./firebase";
-import { OperationalArea, OperationalData, Location, TaskForce, Unit, Card, CommandPoints, PurchaseHistory, CardPurchaseHistory, PurchasedCards, DestructionRecord, DrawingAnnotation, TurnState, PendingDeployments, InfluenceMarker, SubmarineCampaignState, PlayedCardNotification, PlayerAssignment, RegisteredPlayer } from "./types";
+import { OperationalArea, OperationalData, Location, TaskForce, Unit, Card, CommandPoints, PurchaseHistory, CardPurchaseHistory, PurchasedCards, DestructionRecord, DrawingAnnotation, TurnState, PendingDeployments, InfluenceMarker, SubmarineCampaignState, PlayedCardNotification, PlayerAssignment, RegisteredPlayer, UserProfile, GameMetadata, GamePlayer, GameRole } from "./types";
 
-// Reference to the main game document
+// Reference to the main game document (legacy - kept for backward compatibility)
 const GAME_DOC_REF = doc(db, "game", "current");
+
+/**
+ * Get game document reference by game ID
+ * @param gameId Optional game ID. If not provided, uses legacy path "game/current"
+ * @returns Firestore document reference
+ */
+const getGameRef = (gameId?: string) => {
+  if (!gameId || gameId === 'legacy') {
+    // Legacy mode: use old path for backward compatibility
+    return doc(db, "game", "current");
+  } else {
+    // New mode: use games collection
+    return doc(db, "games", gameId);
+  }
+};
 
 // Helper functions to convert between nested arrays and flat structure
 // Firestore doesn't support nested arrays, so we need to flatten/unflatten
@@ -52,12 +67,15 @@ const areaFromFirestore = (fsArea: FirestoreOperationalArea): OperationalArea =>
 /**
  * Subscribe to operational areas changes in real-time
  * @param callback Function called when operational areas change
+ * @param gameId Optional game ID (defaults to legacy path if not provided)
  * @returns Unsubscribe function to stop listening
  */
 export const subscribeToOperationalAreas = (
-  callback: (areas: OperationalArea[]) => void
+  callback: (areas: OperationalArea[]) => void,
+  gameId?: string
 ): Unsubscribe => {
-  return onSnapshot(GAME_DOC_REF, (docSnapshot) => {
+  const gameRef = getGameRef(gameId);
+  return onSnapshot(gameRef, (docSnapshot) => {
     if (docSnapshot.exists()) {
       const data = docSnapshot.data();
       if (data.operationalAreas) {
@@ -87,12 +105,15 @@ export const subscribeToOperationalAreas = (
 /**
  * Subscribe to operational data changes in real-time
  * @param callback Function called when operational data changes
+ * @param gameId Optional game ID (defaults to legacy path if not provided)
  * @returns Unsubscribe function to stop listening
  */
 export const subscribeToOperationalData = (
-  callback: (data: Record<string, OperationalData>) => void
+  callback: (data: Record<string, OperationalData>) => void,
+  gameId?: string
 ): Unsubscribe => {
-  return onSnapshot(GAME_DOC_REF, (docSnapshot) => {
+  const gameRef = getGameRef(gameId);
+  return onSnapshot(gameRef, (docSnapshot) => {
     if (docSnapshot.exists()) {
       const data = docSnapshot.data();
       if (data.operationalData) {
@@ -107,9 +128,11 @@ export const subscribeToOperationalData = (
 /**
  * Update operational areas in Firestore
  * @param areas New operational areas array
+ * @param gameId Optional game ID (defaults to legacy path if not provided)
  */
 export const updateOperationalAreas = async (
-  areas: OperationalArea[]
+  areas: OperationalArea[],
+  gameId?: string
 ): Promise<void> => {
   try {
     // Convert to Firestore-compatible format (flatten nested arrays) and remove undefined fields
@@ -124,7 +147,8 @@ export const updateOperationalAreas = async (
     });
     console.log('  ⏰ Write timestamp:', new Date().toISOString());
 
-    await setDoc(GAME_DOC_REF, { operationalAreas: fsAreas }, { merge: true });
+    const gameRef = getGameRef(gameId);
+    await setDoc(gameRef, { operationalAreas: fsAreas }, { merge: true });
 
     // 🔍 LOG F: Debug Firestore write completed
     console.log('🔍 [FIRESTORE-WRITE] ✅ Write successful');
@@ -138,9 +162,11 @@ export const updateOperationalAreas = async (
 /**
  * Update operational data in Firestore
  * @param data New operational data object
+ * @param gameId Optional game ID (defaults to legacy path if not provided)
  */
 export const updateOperationalData = async (
-  data: Record<string, OperationalData>
+  data: Record<string, OperationalData>,
+  gameId?: string
 ): Promise<void> => {
   try {
     // Clean operational data (it's an object with nested objects)
@@ -148,7 +174,8 @@ export const updateOperationalData = async (
     for (const areaId in data) {
       cleanedOperationalData[areaId] = removeUndefinedFields(data[areaId]);
     }
-    await setDoc(GAME_DOC_REF, { operationalData: cleanedOperationalData }, { merge: true });
+    const gameRef = getGameRef(gameId);
+    await setDoc(gameRef, { operationalData: cleanedOperationalData }, { merge: true });
   } catch (error) {
     console.error("Error updating operational data:", error);
     throw error;
@@ -970,19 +997,6 @@ export const updateSubmarineCampaign = async (
     // Remove all undefined fields (Firestore doesn't accept them)
     sanitizedCampaign = removeUndefinedFields(sanitizedCampaign);
 
-    // Log asset order statuses before Firestore write
-    const assetOrdersBeforeWrite = sanitizedCampaign.deployedSubmarines
-      ?.filter(sub => sub.submarineType === 'asset' && sub.currentOrder)
-      .map(sub => ({
-        name: sub.submarineName,
-        orderType: sub.currentOrder?.orderType,
-        status: sub.currentOrder?.status,
-        executionTurn: sub.currentOrder?.executionTurn
-      })) || [];
-    if (assetOrdersBeforeWrite.length > 0) {
-      console.log('💾 [FIRESTORE] Asset orders before write:', assetOrdersBeforeWrite);
-    }
-
     await setDoc(GAME_DOC_REF, { submarineCampaign: sanitizedCampaign }, { merge: true });
   } catch (error) {
     console.error("Error updating submarine campaign:", error);
@@ -1004,6 +1018,24 @@ export const updateSubmarineCampaignTurn = async (
     });
   } catch (error) {
     console.error("Error updating submarine campaign turn:", error);
+    throw error;
+  }
+};
+
+/**
+ * Update only the aswShips field of submarine campaign (atomic partial update)
+ * Prevents race conditions and state overwrites during ASW ship snapshotting
+ * @param aswShips ASW ship deployments to snapshot
+ */
+export const updateSubmarineCampaignAswShips = async (
+  aswShips: AswShipDeployment[]
+): Promise<void> => {
+  try {
+    await updateDoc(GAME_DOC_REF, {
+      'submarineCampaign.aswShips': aswShips
+    });
+  } catch (error) {
+    console.error("Error updating submarine campaign ASW ships:", error);
     throw error;
   }
 };
@@ -1343,5 +1375,250 @@ export const registerPlayer = async (
     console.error('Error registering player:', error);
     throw error;
   }
+};
+
+// =======================================
+// USER PROFILE FUNCTIONS
+// =======================================
+
+/**
+ * Create a new user profile in Firestore
+ * @param userProfile User profile data
+ */
+export const createUserProfile = async (userProfile: UserProfile): Promise<void> => {
+  try {
+    const userRef = doc(db, 'users', userProfile.uid);
+    await setDoc(userRef, userProfile);
+    console.log('User profile created:', userProfile.uid);
+  } catch (error) {
+    console.error('Error creating user profile:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get a user profile by UID
+ * @param uid User's Firebase Auth UID
+ * @returns User profile or null if not found
+ */
+export const getUserProfile = async (uid: string): Promise<UserProfile | null> => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    const docSnapshot = await getDoc(userRef);
+    if (docSnapshot.exists()) {
+      return docSnapshot.data() as UserProfile;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting user profile:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update user's last login timestamp
+ * @param uid User's Firebase Auth UID
+ */
+export const updateUserLastLogin = async (uid: string): Promise<void> => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, {
+      lastLoginAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Error updating last login:', error);
+    throw error;
+  }
+};
+
+// =======================================
+// GAME MANAGEMENT FUNCTIONS
+// =======================================
+
+/**
+ * Create a new game
+ * @param gameName Name of the game
+ * @param creatorUid UID of the game creator
+ * @param creatorDisplayName Display name of the creator
+ * @param creatorRole Role of the creator in the game (player or master)
+ * @param creatorFaction Faction of the creator (null for master)
+ * @returns Game ID
+ */
+export const createGame = async (
+  gameName: string,
+  creatorUid: string,
+  creatorDisplayName: string,
+  creatorRole: GameRole,
+  creatorFaction: 'us' | 'china' | null
+): Promise<string> => {
+  try {
+    // Generate a unique game ID
+    const gameId = `game_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const gameRef = doc(db, 'games', gameId);
+
+    // Create game player for creator
+    const creatorPlayer: GamePlayer = {
+      uid: creatorUid,
+      displayName: creatorDisplayName,
+      role: creatorRole,
+      faction: creatorFaction,
+      joinedAt: new Date().toISOString(),
+    };
+
+    // Create game metadata
+    const gameMetadata: GameMetadata = {
+      id: gameId,
+      name: gameName,
+      creatorUid,
+      status: 'active',
+      visibility: 'public',
+      maxPlayers: 8,
+      createdAt: new Date().toISOString(),
+      lastActivityAt: new Date().toISOString(),
+      players: {
+        [creatorUid]: creatorPlayer,
+      },
+    };
+
+    // Initialize game with metadata only (game state will be initialized separately)
+    await setDoc(gameRef, { metadata: gameMetadata }, { merge: true });
+
+    console.log('Game created:', gameId, gameName);
+    return gameId;
+  } catch (error) {
+    console.error('Error creating game:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get all public games
+ * @returns Array of game metadata
+ */
+export const getPublicGames = async (): Promise<GameMetadata[]> => {
+  try {
+    const gamesRef = collection(db, 'games');
+    const q = query(gamesRef, where('metadata.visibility', '==', 'public'), where('metadata.status', '==', 'active'));
+    const querySnapshot = await getDocs(q);
+
+    const games: GameMetadata[] = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (data.metadata) {
+        games.push(data.metadata as GameMetadata);
+      }
+    });
+
+    return games;
+  } catch (error) {
+    console.error('Error getting public games:', error);
+    throw error;
+  }
+};
+
+/**
+ * Join a game
+ * @param gameId Game ID to join
+ * @param uid User's Firebase Auth UID
+ * @param displayName User's display name
+ * @param role User's role in the game (player or master)
+ * @param faction User's faction (null for master)
+ */
+export const joinGame = async (
+  gameId: string,
+  uid: string,
+  displayName: string,
+  role: GameRole,
+  faction: 'us' | 'china' | null
+): Promise<void> => {
+  try {
+    const gameRef = doc(db, 'games', gameId);
+    const docSnapshot = await getDoc(gameRef);
+
+    if (!docSnapshot.exists()) {
+      throw new Error('Game not found');
+    }
+
+    const data = docSnapshot.data();
+    const metadata = data.metadata as GameMetadata;
+
+    // Check if game is full
+    if (Object.keys(metadata.players).length >= metadata.maxPlayers) {
+      throw new Error('Game is full');
+    }
+
+    // Check if user is already in the game
+    if (metadata.players[uid]) {
+      throw new Error('User is already in this game');
+    }
+
+    // Add player to game
+    const newPlayer: GamePlayer = {
+      uid,
+      displayName,
+      role,
+      faction,
+      joinedAt: new Date().toISOString(),
+    };
+
+    metadata.players[uid] = newPlayer;
+    metadata.lastActivityAt = new Date().toISOString();
+
+    await updateDoc(gameRef, {
+      'metadata.players': metadata.players,
+      'metadata.lastActivityAt': metadata.lastActivityAt,
+    });
+
+    console.log('User joined game:', uid, gameId);
+  } catch (error) {
+    console.error('Error joining game:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get a game's metadata
+ * @param gameId Game ID
+ * @returns Game metadata or null if not found
+ */
+export const getGameMetadata = async (gameId: string): Promise<GameMetadata | null> => {
+  try {
+    const gameRef = doc(db, 'games', gameId);
+    const docSnapshot = await getDoc(gameRef);
+
+    if (docSnapshot.exists()) {
+      const data = docSnapshot.data();
+      return data.metadata as GameMetadata;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error getting game metadata:', error);
+    throw error;
+  }
+};
+
+/**
+ * Subscribe to a game's metadata in real-time
+ * @param gameId Game ID
+ * @param callback Function called when metadata changes
+ * @returns Unsubscribe function
+ */
+export const subscribeToGameMetadata = (
+  gameId: string,
+  callback: (metadata: GameMetadata | null) => void
+): Unsubscribe => {
+  const gameRef = doc(db, 'games', gameId);
+
+  return onSnapshot(gameRef, (docSnapshot) => {
+    if (docSnapshot.exists()) {
+      const data = docSnapshot.data();
+      callback(data.metadata as GameMetadata);
+    } else {
+      callback(null);
+    }
+  }, (error) => {
+    console.error('Error listening to game metadata:', error);
+  });
 };
 

@@ -49,7 +49,7 @@ const SubmarineDetailedReportModal: React.FC<SubmarineDetailedReportModalProps> 
   );
   // Asset deployment events
   const assetEvents = currentTurnEvents.filter(e =>
-    e.submarineType?.toLowerCase() === 'asset'
+    e.eventType === 'asset_deployed'
   );
 
   // Get pending attack orders (attacks that haven't executed yet)

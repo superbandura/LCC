@@ -78,7 +78,16 @@
       "Bash(git checkout:*)",
       "Bash(for file in F:/LCC/services/*.ts)",
       "Bash(for file in F:/LCC/hooks/*.ts)",
-      "Bash(powershell -ExecutionPolicy Bypass -File \"F:/LCC/temp_add_method.ps1\")"
+      "Bash(powershell -ExecutionPolicy Bypass -File \"F:/LCC/temp_add_method.ps1\")",
+      "Bash(git -C F:/LCC diff services/submarineCampaignOrchestrator.ts)",
+      "Bash(git -C F:/LCC status --short services/)",
+      "Bash(git -C F:/LCC log --oneline -10)",
+      "Bash(git -C F:/LCC show b093a44 --stat)",
+      "Bash(git -C F:/LCC show b093a44:services/submarineCampaignOrchestrator.ts)",
+      "Bash(git -C F:/LCC show HEAD:services/submarineCampaignOrchestrator.ts)",
+      "Bash(git -C F:/LCC log:*)",
+      "Bash(git -C F:/LCC show 377e137 --stat)",
+      "Bash(git -C F:/LCC diff 377e137^..377e137 services/asw/aswService.ts)"
     ],
     "deny": [],
     "ask": []

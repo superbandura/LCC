@@ -265,7 +265,7 @@ export type OrderStatus = 'pending' | 'executing' | 'completed' | 'failed';
 export type SubmarineOrderType = 'patrol' | 'attack' | 'deploy' | 'asw';
 
 // Types of submarine events
-export type SubmarineEventType = 'deployment' | 'attack_success' | 'attack_failure' | 'detected' | 'destroyed' | 'return' | 'communication_failure' | 'asw_failed' | 'patrol_failed';
+export type SubmarineEventType = 'deployment' | 'attack_success' | 'attack_failure' | 'detected' | 'destroyed' | 'return' | 'communication_failure' | 'asw_failed' | 'patrol_failed' | 'asset_deployed';
 
 // Status of deployed submarines
 export type SubmarineStatus = 'active' | 'destroyed' | 'returned';
@@ -413,5 +413,73 @@ export interface PlayerAssignment {
   operationalAreaId: string;    // ID of assigned operational area
   faction: 'us' | 'china';      // Player's faction
   assignedAt: string;           // ISO timestamp when assigned
+}
+
+// =======================================
+// MULTI-GAME AUTHENTICATION SYSTEM
+// =======================================
+
+// User role types
+export type UserRole = 'user' | 'admin';
+
+// Game role types
+export type GameRole = 'player' | 'master';
+
+// Game status types
+export type GameStatus = 'active' | 'archived' | 'completed';
+
+// User profile (stored in /users/{uid})
+export interface UserProfile {
+  uid: string;                  // Firebase Auth UID
+  email: string;                // User email
+  displayName: string;          // Display name
+  role: UserRole;               // Global user role (user or admin)
+  createdAt: string;            // ISO timestamp when account was created
+  lastLoginAt: string;          // ISO timestamp of last login
+}
+
+// Game player (role within a specific game)
+export interface GamePlayer {
+  uid: string;                  // Firebase Auth UID
+  displayName: string;          // Display name
+  role: GameRole;               // Role in this game (player or master)
+  faction: 'us' | 'china' | null; // Assigned faction (null for master)
+  joinedAt: string;             // ISO timestamp when joined game
+}
+
+// Game metadata (stored in /games/{gameId})
+export interface GameMetadata {
+  id: string;                   // Game ID
+  name: string;                 // Game name
+  creatorUid: string;           // UID of game creator
+  status: GameStatus;           // Game status
+  visibility: 'public' | 'private'; // Public (anyone can join) or private (invite only)
+  maxPlayers: number;           // Maximum number of players (default 8)
+  createdAt: string;            // ISO timestamp when game was created
+  lastActivityAt: string;       // ISO timestamp of last game activity
+  players: Record<string, GamePlayer>; // Map of uid -> GamePlayer
+}
+
+// Full game state (includes metadata + game state)
+export interface GameState {
+  metadata: GameMetadata;
+  operationalAreas: OperationalArea[];
+  operationalData: Record<string, OperationalData>;
+  locations: Location[];
+  taskForces: TaskForce[];
+  units: Unit[];
+  cards: Card[];
+  commandPoints: CommandPoints;
+  previousCommandPoints?: CommandPoints;
+  purchaseHistory: PurchaseHistory;
+  cardPurchaseHistory: CardPurchaseHistory;
+  purchasedCards: PurchasedCards;
+  destructionLog: DestructionRecord[];
+  turnState: TurnState;
+  pendingDeployments: PendingDeployments;
+  influenceMarker: InfluenceMarker;
+  submarineCampaign: SubmarineCampaignState;
+  playedCardNotifications: PlayedCardNotification[];
+  playerAssignments: PlayerAssignment[];
 }
 

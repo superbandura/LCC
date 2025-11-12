@@ -145,15 +145,65 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
         // Show communication failures
         if (event.eventType === 'communication_failure') return true;
 
-        // Show deployments (submarines, ASW cards, assets)
+        // Show deployments (submarines, ASW cards)
         if (event.eventType === 'deployment') return true;
 
-        // Hide everything else (asw_failed, patrol_failed - only for Admin Report)
+        // Hide everything else (asw_failed, patrol_failed, asset_deployed - only for Admin Report)
         return false;
       })
       .slice(-30)
       .reverse();
   }, [submarineCampaign?.events, selectedFaction]);
+
+  // Compute ASW ships on-the-fly from current game state (same logic as aswService.ts)
+  const factionASWShips = useMemo(() => {
+    if (!selectedFaction) return [];
+
+    // Helper function to check if unit is ASW-capable
+    const isASWCapable = (unit: Unit, faction: 'us' | 'china'): boolean => {
+      const ASW_SHIP_TYPES: Record<'us' | 'china', string[]> = {
+        us: ['ARLEIGH BURKE CLASS DDG', 'DDG(X)'],
+        china: ['TYPE 052D', 'TYPE 055 DDG', 'TYPE 054 FFG']
+      };
+      return ASW_SHIP_TYPES[faction].includes(unit.type);
+    };
+
+    const aswShips: AswShipDeployment[] = [];
+
+    // Iterate through all operational areas
+    for (const area of operationalAreas) {
+      // Find task forces in this area (exclude pending deployments)
+      const areaTaskForces = taskForces.filter(
+        tf => tf.operationalAreaId === area.id && !tf.isPendingDeployment
+      );
+
+      for (const tf of areaTaskForces) {
+        // Find units in this task force (exclude pending deployments)
+        const tfUnits = units.filter(
+          u => u.taskForceId === tf.id && !u.isPendingDeployment
+        );
+
+        for (const unit of tfUnits) {
+          // Check if unit is naval and has ASW capability
+          if (unit.category === 'naval' && isASWCapable(unit, tf.faction)) {
+            aswShips.push({
+              unitId: unit.id,
+              unitName: unit.name,
+              unitType: unit.type,
+              taskForceId: tf.id,
+              taskForceName: tf.name,
+              operationalAreaId: area.id,
+              operationalAreaName: area.name,
+              faction: tf.faction
+            });
+          }
+        }
+      }
+    }
+
+    // Filter by selected faction
+    return aswShips.filter(ship => ship.faction === selectedFaction);
+  }, [selectedFaction, units, taskForces, operationalAreas]);
 
   // Reset orders when modal opens (track transition to avoid race condition)
   const prevIsOpenRef = useRef(isOpen);
@@ -978,10 +1028,7 @@ const CombatStatisticsModal: React.FC<CombatStatisticsModalProps> = ({
         )
       : [];
 
-    // Filter ASW ships by selected faction
-    const factionASWShips = selectedFaction && submarineCampaign?.aswShips
-      ? submarineCampaign.aswShips.filter(ship => ship.faction === selectedFaction)
-      : [];
+    // factionASWShips is already computed at component level (line 159)
 
     const factionAssets = selectedFaction
       ? deployedSubmarines[selectedFaction].filter(s =>

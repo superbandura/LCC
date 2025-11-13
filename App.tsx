@@ -14,7 +14,7 @@ import { Position, Location, OperationalArea, OperationalData, MapLayer, TaskFor
 import { LocationIcon, MenuIcon, EditIcon } from './components/Icons';
 import { mapLayers } from './data/mapLayers';
 import { auth } from './firebase';
-import { onAuthStateChanged, signOut, User } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 
 // Import multi-game service functions
 import {
@@ -59,6 +59,7 @@ import { useGameStateMultiGame } from './hooks/useGameStateMultiGame';
 import { useModal } from './hooks/useModal';
 import { useGame } from './contexts/GameContext';
 import { useAuth } from './contexts/AuthContext';
+import { usePlayerPermissions } from './hooks/usePlayerPermissions';
 
 // Default coordinates for the Indo-Pacific region
 const DEFAULT_COORDS: Position = [20.0, 121.5];
@@ -82,6 +83,9 @@ function App() {
   // Players have their assigned faction from GameContext
   const selectedFaction = isMaster ? null : currentPlayerFaction;
 
+  // Check if user has global admin role (first registered user)
+  const isAdmin = userProfile?.role === 'admin';
+
   const [position, setPosition] = useState<Position>(DEFAULT_COORDS);
   const [zoom, setZoom] = useState<number>(5);
   const [loading, setLoading] = useState<boolean>(false);
@@ -90,10 +94,6 @@ function App() {
 
   // Modal state management (replaces 7 individual useState declarations)
   const modals = useModal();
-
-  // Admin authentication state
-  const [user, setUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   // State for base quick edit from popup
   const [selectedBaseForEdit, setSelectedBaseForEdit] = useState<string | null>(null);
@@ -108,6 +108,9 @@ function App() {
   // Use multi-game hook for Firestore game state management
   // This encapsulates all 19 Firestore subscriptions for the current game
   const gameState = useGameStateMultiGame(gameId);
+
+  // Get player permissions based on assignments and roles
+  const permissions = usePlayerPermissions(gameState.playerAssignments, gameState.operationalAreas);
 
   // Wrapper functions that automatically pass gameId to update functions
   // IMPORTANT: These must be defined BEFORE any conditional returns to comply with Rules of Hooks
@@ -189,16 +192,6 @@ function App() {
 
   // Track last date when modal was opened to prevent duplicate opens
   const lastModalOpenDate = useRef<string | null>(null);
-
-  // Listen to Firebase Auth state changes
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setIsAdmin(currentUser !== null); // If logged in, user is admin
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   // Track previous taskForces to detect deletions
   const prevTaskForcesRef = useRef<TaskForce[]>([]);
@@ -1004,7 +997,7 @@ function App() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      // User and isAdmin states will be updated by onAuthStateChanged listener
+      // AuthContext will handle user state cleanup
     } catch (err) {
       console.error("Error signing out:", err);
       setError("Error signing out");
@@ -1207,6 +1200,7 @@ function App() {
             onCardsUpdate={handleCardsUpdate}
             onTaskForcesUpdate={handleTaskForcesUpdate}
             isAdmin={isAdmin}
+            canAdvanceTurn={isAdmin || permissions.canAdvanceTurn}
             onEditBase={handleEditBase}
             turnState={turnState}
             onAdvanceTurn={handleAdvanceTurn}
@@ -1217,39 +1211,41 @@ function App() {
             sidebarOpen={sidebarOpen}
           />
           <div className="absolute bottom-16 right-4 z-[1000] flex flex-col space-y-2">
-            <button
-              onClick={() => modals.open('commandCenter')}
-              className="flex items-center justify-center w-16 h-12 bg-black/80 hover:bg-gray-900 text-green-400 hover:text-green-300 font-mono font-bold border-2 border-green-900 hover:border-green-700 transition-colors focus:outline-none"
-              aria-label="Command Center"
-            >
-              <span className="text-sm">CC</span>
-            </button>
-            <button
-              onClick={() => modals.open('taskForce')}
-              className="flex items-center justify-center w-16 h-12 bg-black/80 hover:bg-gray-900 text-red-400 hover:text-red-300 font-mono font-bold border-2 border-red-900 hover:border-red-700 transition-colors focus:outline-none"
-              aria-label="Manage Task Forces"
-            >
-              <span className="text-sm">TF</span>
-            </button>
-            {isAdmin && (
-              <>
-                <button
-                  onClick={() => modals.open('editAreas')}
-                  className="flex items-center justify-center w-16 h-12 bg-black/80 hover:bg-gray-900 text-blue-400 hover:text-blue-300 font-mono font-bold border-2 border-blue-900 hover:border-blue-700 transition-colors focus:outline-none"
-                  aria-label="Edit Operational Areas"
-                >
-                  <span className="text-sm">ED</span>
-                </button>
-                <button
-                  onClick={() => modals.open('playerAssignment')}
-                  className="flex items-center justify-center w-16 h-12 bg-black/80 hover:bg-gray-900 text-green-400 hover:text-green-300 font-mono font-bold border-2 border-green-900 hover:border-green-700 transition-colors focus:outline-none"
-                  aria-label="Player Assignments"
-                  title="Assign players to operational areas"
-                >
-                  <span className="text-sm">PA</span>
-                </button>
-              </>
+            {(isAdmin || permissions.canAccessCommandCenter) && (
+              <button
+                onClick={() => modals.open('commandCenter')}
+                className="flex items-center justify-center w-16 h-12 bg-black/80 hover:bg-gray-900 text-green-400 hover:text-green-300 font-mono font-bold border-2 border-green-900 hover:border-green-700 transition-colors focus:outline-none"
+                aria-label="Command Center"
+              >
+                <span className="text-sm">CC</span>
+              </button>
             )}
+            {(isAdmin || permissions.canAccessTaskForce) && (
+              <button
+                onClick={() => modals.open('taskForce')}
+                className="flex items-center justify-center w-16 h-12 bg-black/80 hover:bg-gray-900 text-red-400 hover:text-red-300 font-mono font-bold border-2 border-red-900 hover:border-red-700 transition-colors focus:outline-none"
+                aria-label="Manage Task Forces"
+              >
+                <span className="text-sm">TF</span>
+              </button>
+            )}
+            {isAdmin && (
+              <button
+                onClick={() => modals.open('editAreas')}
+                className="flex items-center justify-center w-16 h-12 bg-black/80 hover:bg-gray-900 text-blue-400 hover:text-blue-300 font-mono font-bold border-2 border-blue-900 hover:border-blue-700 transition-colors focus:outline-none"
+                aria-label="Edit Operational Areas"
+              >
+                <span className="text-sm">ED</span>
+              </button>
+            )}
+            <button
+              onClick={() => modals.open('playerAssignment')}
+              className="flex items-center justify-center w-16 h-12 bg-black/80 hover:bg-gray-900 text-green-400 hover:text-green-300 font-mono font-bold border-2 border-green-900 hover:border-green-700 transition-colors focus:outline-none"
+              aria-label="Player Assignments"
+              title="Assign players to operational areas"
+            >
+              <span className="text-sm">PA</span>
+            </button>
             <button
               onClick={() => modals.open('combatStats')}
               className="flex items-center justify-center w-16 h-12 bg-black/80 hover:bg-gray-900 text-purple-400 hover:text-purple-300 font-mono font-bold border-2 border-purple-900 hover:border-purple-700 transition-colors focus:outline-none"
@@ -1282,14 +1278,14 @@ function App() {
         initialSelectedBaseId={selectedBaseForEdit}
       />
 
-      {selectedFaction && (
+      {(isAdmin || permissions.canAccessTaskForce) && currentPlayerFaction && (
         <TaskForceModal
           isOpen={modals.isOpen('taskForce')}
           onClose={() => modals.close('taskForce')}
           taskForces={taskForces}
           onSave={handleTaskForcesUpdate}
           operationalAreas={operationalAreas}
-          selectedFaction={selectedFaction}
+          selectedFaction={currentPlayerFaction}
           units={units}
           onUnitsUpdate={handleUnitsUpdate}
           isAdmin={isAdmin}
@@ -1305,7 +1301,7 @@ function App() {
         />
       )}
 
-      {selectedFaction && (
+      {(isAdmin || permissions.canAccessCommandCenter) && currentPlayerFaction && (
         <CommandCenterModal
           isOpen={modals.isOpen('commandCenter')}
           onClose={() => modals.close('commandCenter')}
@@ -1316,7 +1312,7 @@ function App() {
           purchasedCards={purchasedCards}
           operationalAreas={operationalAreas}
           operationalData={operationalData}
-          selectedFaction={selectedFaction}
+          selectedFaction={currentPlayerFaction}
           onPurchaseCard={handleCardPurchase}
           onUpdatePoints={handleCommandPointsUpdate}
           onUpdatePurchaseHistory={handlePurchaseHistoryUpdate}
@@ -1351,7 +1347,7 @@ function App() {
       )}
 
       {/* Combat Statistics Modal */}
-      {selectedFaction && (
+      {currentPlayerFaction && (
         <CombatStatisticsModal
           isOpen={modals.isOpen('combatStats')}
           onClose={() => modals.close('combatStats')}
@@ -1375,14 +1371,14 @@ function App() {
       )}
 
       {/* Deployment Notification Modal */}
-      {selectedFaction && (
+      {currentPlayerFaction && (
         <DeploymentNotificationModal
           isOpen={modals.isOpen('deploymentNotification')}
           onClose={() => modals.close('deploymentNotification')}
           arrivedCards={arrivedCards}
           arrivedTaskForces={arrivedTaskForces}
           arrivedUnits={arrivedUnits}
-          faction={selectedFaction}
+          faction={currentPlayerFaction}
           operationalAreas={operationalAreas}
           units={units}
           taskForces={taskForces}
@@ -1404,13 +1400,16 @@ function App() {
       />
 
       {/* Player Assignment Modal */}
-      <PlayerAssignmentModal
-        isOpen={modals.isOpen('playerAssignment')}
-        onClose={() => modals.close('playerAssignment')}
-        operationalAreas={operationalAreas}
-        playerAssignments={playerAssignments}
-        registeredPlayers={registeredPlayers}
-      />
+      {gameId && (
+        <PlayerAssignmentModal
+          isOpen={modals.isOpen('playerAssignment')}
+          onClose={() => modals.close('playerAssignment')}
+          gameId={gameId}
+          operationalAreas={operationalAreas}
+          playerAssignments={playerAssignments}
+          registeredPlayers={registeredPlayers}
+        />
+      )}
 
       {/* Played Card Notification Modal */}
       {(() => {

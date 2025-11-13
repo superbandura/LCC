@@ -7,7 +7,7 @@
  * These functions will gradually replace the legacy single-game functions.
  */
 
-import { doc, getDoc, onSnapshot, setDoc, Unsubscribe } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, setDoc, updateDoc, Unsubscribe } from "firebase/firestore";
 import { db } from "./firebase";
 import {
   OperationalArea,
@@ -27,7 +27,8 @@ import {
   SubmarineCampaignState,
   PlayedCardNotification,
   PlayerAssignment,
-  RegisteredPlayer
+  RegisteredPlayer,
+  GameMetadata
 } from "./types";
 
 /**
@@ -541,6 +542,9 @@ export const initializeGameWithSeedData = async (
 
     const existingData = existingDoc.data();
 
+    // Get initial command points from metadata (with fallback to seedData)
+    const initialCommandPoints = existingData.metadata?.initialCommandPoints || seedData.commandPoints;
+
     // Convert operational areas to flat format for Firestore
     const flatOperationalAreas = seedData.operationalAreas.map(area => {
       const flatBounds = Array.isArray(area.bounds[0])
@@ -560,7 +564,7 @@ export const initializeGameWithSeedData = async (
       taskForces: seedData.taskForces,
       units: seedData.units,
       cards: seedData.cards,
-      commandPoints: seedData.commandPoints,
+      commandPoints: initialCommandPoints,
       purchaseHistory: seedData.purchaseHistory,
       cardPurchaseHistory: seedData.cardPurchaseHistory,
       purchasedCards: { us: [], china: [] },
@@ -582,6 +586,224 @@ export const initializeGameWithSeedData = async (
     console.log('Game initialized successfully:', gameId);
   } catch (error) {
     console.error('Error initializing game:', error);
+    throw error;
+  }
+};
+
+// =======================================
+// PLAYER MANAGEMENT
+// =======================================
+
+/**
+ * Update a player's faction in a game
+ * @param gameId Game ID
+ * @param uid User UID
+ * @param faction New faction to assign
+ */
+export const updatePlayerFaction = async (
+  gameId: string,
+  uid: string,
+  faction: 'us' | 'china'
+): Promise<void> => {
+  try {
+    const gameRef = doc(db, 'games', gameId);
+    const docSnapshot = await getDoc(gameRef);
+
+    if (!docSnapshot.exists()) {
+      throw new Error('Game not found');
+    }
+
+    const data = docSnapshot.data();
+    const metadata = data.metadata as GameMetadata;
+
+    if (!metadata.players[uid]) {
+      throw new Error('User is not in this game');
+    }
+
+    // Update player's faction
+    await updateDoc(gameRef, {
+      [`metadata.players.${uid}.faction`]: faction,
+      'metadata.lastActivityAt': new Date().toISOString(),
+    });
+
+    console.log('Player faction updated:', uid, faction, gameId);
+  } catch (error) {
+    console.error('Error updating player faction:', error);
+    throw error;
+  }
+};
+
+/**
+ * Change a player's faction and remove all their current area assignments
+ * @param gameId Game ID
+ * @param uid User UID
+ * @param playerName Player's display name
+ * @param newFaction New faction to assign
+ */
+export const changeFactionAndClearAssignments = async (
+  gameId: string,
+  uid: string,
+  playerName: string,
+  newFaction: 'us' | 'china'
+): Promise<void> => {
+  try {
+    const gameRef = doc(db, 'games', gameId);
+    const docSnapshot = await getDoc(gameRef);
+
+    if (!docSnapshot.exists()) {
+      throw new Error('Game not found');
+    }
+
+    const data = docSnapshot.data();
+    const metadata = data.metadata as GameMetadata;
+
+    if (!metadata.players[uid]) {
+      throw new Error('User is not in this game');
+    }
+
+    // 1. Remove all player assignments for this player
+    const currentAssignments = (data.playerAssignments as PlayerAssignment[]) || [];
+    const filteredAssignments = currentAssignments.filter(
+      a => a.playerName !== playerName
+    );
+
+    // 2. Update RegisteredPlayer faction
+    const currentRegistered = (data.registeredPlayers as RegisteredPlayer[]) || [];
+    const updatedRegistered = currentRegistered.map(rp =>
+      rp.playerName === playerName
+        ? { ...rp, faction: newFaction }
+        : rp
+    );
+
+    // 3. Atomic update of all three fields
+    await updateDoc(gameRef, {
+      playerAssignments: filteredAssignments,
+      [`metadata.players.${uid}.faction`]: newFaction,
+      registeredPlayers: updatedRegistered,
+      'metadata.lastActivityAt': new Date().toISOString(),
+    });
+
+    console.log('Faction changed and assignments cleared:', playerName, newFaction, gameId);
+  } catch (error) {
+    console.error('Error changing faction and clearing assignments:', error);
+    throw error;
+  }
+};
+
+/**
+ * Assign a player to an operational area
+ * @param gameId Game ID
+ * @param playerName Player's display name
+ * @param operationalAreaId Operational area ID
+ * @param faction Player's faction
+ */
+export const assignPlayerToAreaMultiGame = async (
+  gameId: string,
+  playerName: string,
+  operationalAreaId: string,
+  faction: 'us' | 'china'
+): Promise<void> => {
+  try {
+    const gameRef = getGameRef(gameId);
+    const docSnapshot = await getDoc(gameRef);
+
+    if (!docSnapshot.exists()) {
+      throw new Error('Game not found');
+    }
+
+    const data = docSnapshot.data();
+
+    // Get operational areas to check faction restriction
+    const fsAreas = data.operationalAreas as any[];
+    const operationalAreas: OperationalArea[] = fsAreas ? fsAreas.map((area: any) => {
+      // Convert from flat to nested bounds
+      if (Array.isArray(area.bounds) && area.bounds.length === 4) {
+        return {
+          ...area,
+          bounds: [
+            [area.bounds[0], area.bounds[1]],
+            [area.bounds[2], area.bounds[3]]
+          ]
+        };
+      }
+      return area;
+    }) : [];
+
+    const targetArea = operationalAreas.find(a => a.id === operationalAreaId);
+
+    // Validate faction match for Command Centers
+    if (targetArea?.isCommandCenter && targetArea.faction && targetArea.faction !== faction) {
+      const factionName = faction === 'us' ? 'US Navy' : 'PLAN';
+      const areaFactionName = targetArea.faction === 'us' ? 'US Navy' : 'PLAN';
+      throw new Error(`Cannot assign ${factionName} player to ${areaFactionName} Command Center`);
+    }
+
+    const assignments = (data.playerAssignments as PlayerAssignment[]) || [];
+
+    // Check if this exact assignment already exists
+    const existingIndex = assignments.findIndex(
+      (a: PlayerAssignment) =>
+        a.playerName === playerName &&
+        a.operationalAreaId === operationalAreaId &&
+        a.faction === faction
+    );
+
+    if (existingIndex === -1) {
+      // Add new assignment
+      const newAssignment: PlayerAssignment = {
+        playerName,
+        operationalAreaId,
+        faction
+      };
+      await setDoc(gameRef, {
+        playerAssignments: [...assignments, newAssignment]
+      }, { merge: true });
+      console.log('Player assigned to area:', playerName, operationalAreaId, faction, gameId);
+    } else {
+      console.log('Player already assigned to this area:', playerName, operationalAreaId);
+    }
+  } catch (error) {
+    console.error('Error assigning player to area:', error);
+    throw error;
+  }
+};
+
+/**
+ * Remove a player's assignment from an operational area
+ * @param gameId Game ID
+ * @param playerName Player's display name
+ * @param operationalAreaId Operational area ID
+ * @param faction Player's faction
+ */
+export const removePlayerAssignmentMultiGame = async (
+  gameId: string,
+  playerName: string,
+  operationalAreaId: string,
+  faction: 'us' | 'china'
+): Promise<void> => {
+  try {
+    const gameRef = getGameRef(gameId);
+    const docSnapshot = await getDoc(gameRef);
+
+    if (!docSnapshot.exists()) {
+      throw new Error('Game not found');
+    }
+
+    const data = docSnapshot.data();
+    const assignments = (data.playerAssignments as PlayerAssignment[]) || [];
+
+    // Filter out the matching assignment
+    const filtered = assignments.filter(
+      (a: PlayerAssignment) =>
+        !(a.playerName === playerName &&
+          a.operationalAreaId === operationalAreaId &&
+          a.faction === faction)
+    );
+
+    await setDoc(gameRef, { playerAssignments: filtered }, { merge: true });
+    console.log('Player assignment removed:', playerName, operationalAreaId, faction, gameId);
+  } catch (error) {
+    console.error('Error removing player assignment:', error);
     throw error;
   }
 };

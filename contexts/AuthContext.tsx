@@ -47,8 +47,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Update display name in Firebase Auth
       await updateProfile(userCredential.user, { displayName });
 
-      // Check if other users exist (NOW user is authenticated)
-      // This is safe to call after authentication
+      // Check if any Firestore user profiles exist
+      // NOTE: This checks /users collection in Firestore, NOT Firebase Auth users
+      // The current user doesn't have a Firestore profile yet, so won't be counted
+      // First user to sign up (usersExist=false) becomes admin
       const usersExist = await checkIfUsersExist();
 
       // Create user profile in Firestore
@@ -107,10 +109,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.warn('[AuthContext] User profile not found - creating automatically');
 
             // Try to create profile automatically from Firebase Auth data
+            // This happens when:
+            // 1. User created via Firebase Console/Admin SDK without Firestore profile
+            // 2. Database was reset but Firebase Auth users remain
+            // 3. Migration scenarios
             const displayName = user.displayName || user.email?.split('@')[0] || 'User';
             const email = user.email || '';
 
-            // Check if any users exist to determine if this should be admin
+            // Check if any Firestore user profiles exist (not Firebase Auth users)
+            // If no profiles exist in Firestore, this user becomes the first admin
+            // If profiles exist, this user gets 'user' role (they're not first)
             const usersExist = await checkIfUsersExist();
 
             const newProfile: UserProfile = {
@@ -123,7 +131,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             };
 
             await createUserProfile(newProfile);
-            console.log('[AuthContext] User profile created:', displayName, `(${usersExist ? 'user' : 'admin'})`);
+            console.log('[AuthContext] Auto-created user profile:', displayName, `role: ${usersExist ? 'user' : 'admin'}`);
             // Set user and profile TOGETHER, then mark as loaded
             setCurrentUser(user);
             setUserProfile(newProfile);

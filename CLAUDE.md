@@ -62,12 +62,13 @@ firebase deploy                 # Deploy to Firebase
 Each game has isolated Firestore document at `/games/{gameId}/state`. Requires Firebase Authentication.
 
 **Key Files**:
-- `AppWrapper.tsx`: Root component with AuthContext and GameContext providers (~110 lines)
-- `contexts/AuthContext.tsx`: Firebase Auth management (~160 lines)
-- `contexts/GameContext.tsx`: Game selection and metadata (~95 lines)
-- `firestoreService.ts`: Legacy Firestore operations (~1,613 lines, 21 subscription functions)
+- `AppWrapper.tsx`: Root component with AuthContext and GameContext providers (~99 lines)
+- `contexts/AuthContext.tsx`: Firebase Auth management (~143 lines)
+- `contexts/GameContext.tsx`: Game selection and metadata (~81 lines)
+- `firestoreService.ts`: Legacy Firestore operations (~1,616 lines, 21 subscription functions)
 - `firestoreServiceMultiGame.ts`: Multi-game Firestore operations (user/game management)
-- `hooks/useGameStateMultiGame.ts`: Multi-game state hook (~280 lines, 19 active subscriptions)
+- `hooks/useGameStateMultiGame.ts`: Multi-game state hook (~175 lines, 19 active subscriptions)
+- `hooks/usePlayerPermissions.ts`: Permission control hook (~122 lines)
 
 **Architecture**:
 - `AppWrapper`: Routes between AuthScreen → GameLobby → App based on auth/game state
@@ -88,10 +89,10 @@ All game state stored in Firestore document `game/current` and syncs real-time a
 
 ```
 F:\LCC/
-├── AppWrapper.tsx          # Root component with auth/game routing (~110 lines)
-├── contexts/               # React Context providers (~255 lines)
-│   ├── AuthContext.tsx    # Firebase Authentication (~160 lines)
-│   └── GameContext.tsx    # Game selection (~95 lines)
+├── AppWrapper.tsx          # Root component with auth/game routing (~99 lines)
+├── contexts/               # React Context providers (~224 lines)
+│   ├── AuthContext.tsx    # Firebase Authentication (~143 lines)
+│   └── GameContext.tsx    # Game selection (~81 lines)
 ├── components/              # React components
 │   ├── AuthScreen.tsx      # Login/signup interface (multi-game)
 │   ├── GameLobby.tsx       # Game selection/creation (multi-game)
@@ -100,19 +101,21 @@ F:\LCC/
 │   ├── DeleteGameModal.tsx # Delete/archive game (admin)
 │   ├── SuccessModal.tsx    # Success notifications
 │   ├── ErrorBoundary.tsx   # Application-wide error boundary
+│   ├── FactionChangeConfirmationModal.tsx # Confirm faction changes (~120 lines)
 │   ├── map/                # Map-related components
-│   │   ├── Map.tsx         # Main map component (~407 lines)
+│   │   ├── Map.tsx         # Main map component (~409 lines)
 │   │   ├── controls/       # Map controls (MapInitializer, ScaleControl, etc.)
 │   │   └── DataEditor/     # DataEditor tabs (TacticalTab, PatrolsTab, etc.)
 │   ├── modals/             # Modal dialogs
 │   ├── ui/                 # UI components
 │   └── shared/             # Reusable components
-├── hooks/                  # Custom React hooks (~1,065 lines)
+├── hooks/                  # Custom React hooks (~831 lines)
 │   ├── useGameState.ts    # Firestore state subscriptions - LEGACY (19 active, 279 lines)
-│   ├── useGameStateMultiGame.ts # Multi-game Firestore subscriptions (19 active, ~280 lines)
-│   ├── useModal.ts        # Modal state management (7 modals, 129 lines)
-│   ├── useFactionFilter.ts # Faction-based filtering (103 lines)
-│   └── useDeploymentNotifications.ts # Deployment queue notifications (174 lines)
+│   ├── useGameStateMultiGame.ts # Multi-game Firestore subscriptions (19 active, ~175 lines)
+│   ├── usePlayerPermissions.ts # Permission control hook (~122 lines)
+│   ├── useModal.ts        # Modal state management (7 modals, ~131 lines)
+│   ├── useFactionFilter.ts # Faction-based filtering (~103 lines)
+│   └── useDeploymentNotifications.ts # Deployment queue notifications (~174 lines)
 ├── services/               # Business logic layer (~4,000+ lines, 138 tests)
 │   ├── turnService.ts     # Turn management and capability resets
 │   ├── deploymentService.ts # Deployment queue and validation
@@ -153,12 +156,12 @@ Business logic in 10+ modular services (~4,000+ lines, 132 tests):
 
 **Submarine Campaign Services (Modular Architecture):**
 - **submarineCampaignOrchestrator.ts** (338 lines): Coordinates all 5 submarine campaign phases in correct sequence
-- **submarineService.ts** (1,118 lines, 21 tests): Shared utilities (communication failures, tactical network damage, ASW ship snapshots)
+- **submarineService.ts** (1,118 lines, 27 tests): Shared utilities (communication failures, tactical network damage, ASW ship snapshots)
 - **asw/aswService.ts** (313 lines): ASW Phase - Detection with 5% rate, 50% elimination, zone filtering
-- **attack/attackService.ts** (231 lines): Attack Phase - Base attacks with 50% success rate
-- **patrol/patrolService.ts** (168 lines): Patrol Phase - Patrol operations with 90% success rate
-- **mines/mineService.ts** (290 lines, 9 tests): Mine Phase - Maritime mine detection (5% rate, d20=1)
-- **assets/assetDeployService.ts** (132 lines, 9 tests): Asset Deploy Phase - Processes deploy orders for mines/sensors
+- **attack/attackService.ts** (219 lines): Attack Phase - Base attacks with 50% success rate
+- **patrol/patrolService.ts** (181 lines): Patrol Phase - Patrol operations with 90% success rate
+- **mines/mineService.ts** (317 lines, 9 tests): Mine Phase - Maritime mine detection (5% rate, d20=1)
+- **assets/assetDeployService.ts** (171 lines, 9 tests): Asset Deploy Phase - Processes deploy orders for mines/sensors
 - **events/EventBuilder.ts** (189 lines): Builder pattern for consistent event creation across all services
 - **events/EventTemplates.ts** (123 lines): Centralized message templates (Patrol, Attack, ASW, Mine)
 
@@ -166,11 +169,13 @@ All services pure functions with comprehensive Vitest coverage. See [docs/ARCHIT
 
 ### Custom Hooks
 
-Four hooks reduce component complexity and centralize logic (~736 lines total):
-- **useGameState** (279 lines): Manages **19 active Firestore subscriptions**, single source of truth for all game state
-- **useModal** (148 lines): Unified API for 7 modal states (`open()`, `close()`, `toggle()`, `isOpen()`)
-- **useFactionFilter** (111 lines): Memoized faction filtering for units, cards, task forces
-- **useDeploymentNotifications** (198 lines): Auto-opens modal when deployments queued
+Six hooks reduce component complexity and centralize logic (~984 lines total):
+- **useGameState** (279 lines, LEGACY): Manages **19 active Firestore subscriptions**, single source of truth for all game state
+- **useGameStateMultiGame** (175 lines): Multi-game Firestore subscriptions (19 active)
+- **usePlayerPermissions** (122 lines): Permission control based on roles and assignments
+- **useModal** (131 lines): Unified API for 7 modal states (`open()`, `close()`, `toggle()`, `isOpen()`)
+- **useFactionFilter** (103 lines): Memoized faction filtering for units, cards, task forces
+- **useDeploymentNotifications** (174 lines): Auto-opens modal when deployments queued
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for implementation details.
 

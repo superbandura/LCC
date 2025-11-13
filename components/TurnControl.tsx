@@ -4,7 +4,7 @@ import { TurnState } from '../types';
 interface TurnControlProps {
   turnState: TurnState;
   onAdvanceTurn: () => void;
-  isAdmin: boolean;
+  canAdvanceTurn: boolean;
   sidebarOpen?: boolean;
 }
 
@@ -14,7 +14,7 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 export const TurnControl: React.FC<TurnControlProps> = ({
   turnState,
   onAdvanceTurn,
-  isAdmin,
+  canAdvanceTurn,
   sidebarOpen = false,
 }) => {
 
@@ -28,7 +28,7 @@ export const TurnControl: React.FC<TurnControlProps> = ({
         style={{ pointerEvents: 'auto' }}
       >
         <div className="flex items-center gap-2 px-3 py-2">
-          {isAdmin && (
+          {canAdvanceTurn && (
             <button
               onClick={onAdvanceTurn}
               className="bg-black border-2 border-red-900 hover:border-red-700 text-red-400 hover:text-red-300 w-8 h-8 flex items-center justify-center text-xs font-mono font-bold transition-colors"
@@ -71,7 +71,7 @@ export const TurnControl: React.FC<TurnControlProps> = ({
       style={{ pointerEvents: 'auto' }}
     >
       <div className="flex items-center gap-2 px-3 py-2">
-        {isAdmin && (
+        {canAdvanceTurn && (
           <button
             onClick={onAdvanceTurn}
             className={`bg-black border-2 ${buttonBorderColor} ${buttonTextColor} w-8 h-8 flex items-center justify-center text-xs font-mono font-bold transition-colors`}

@@ -87,7 +87,8 @@
       "Bash(git -C F:/LCC show HEAD:services/submarineCampaignOrchestrator.ts)",
       "Bash(git -C F:/LCC log:*)",
       "Bash(git -C F:/LCC show 377e137 --stat)",
-      "Bash(git -C F:/LCC diff 377e137^..377e137 services/asw/aswService.ts)"
+      "Bash(git -C F:/LCC diff 377e137^..377e137 services/asw/aswService.ts)",
+      "Bash(del TestComponent.tsx)"
     ],
     "deny": [],
     "ask": []

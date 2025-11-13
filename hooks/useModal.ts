@@ -32,7 +32,9 @@ export type ModalId =
   | 'cardEditor'
   | 'adminLogin'
   | 'combatStats'
-  | 'deploymentNotification';
+  | 'deploymentNotification'
+  | 'playerAssignment'
+  | 'factionChange';
 
 export interface UseModalReturn {
   /**

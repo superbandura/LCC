@@ -21,6 +21,8 @@ export interface OperationalArea {
   fillOpacity?: number;
   assignedCards?: string[]; // Instance IDs de cartas asignadas (permite múltiples instancias de la misma carta)
   playedCards?: string[]; // IDs de cartas que han sido jugadas/activadas en esta área
+  isCommandCenter?: boolean; // Flag to identify Command Center areas (vs tactical operational areas)
+  faction?: 'us' | 'china'; // Faction that owns this area (for Command Centers)
 }
 
 export interface FactionDamage {
@@ -460,6 +462,7 @@ export interface GameMetadata {
   players: Record<string, GamePlayer>; // Map of uid -> GamePlayer
   hasPassword: boolean;         // Whether game is password protected
   password?: string;            // Game password (if hasPassword is true)
+  initialCommandPoints: CommandPoints; // Initial command points for each faction
 }
 
 // Full game state (includes metadata + game state)

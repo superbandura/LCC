@@ -76,5 +76,45 @@ export const initialOperationalAreas: OperationalArea[] = [
         130
       ]
     ]
+  },
+  {
+    "id": "command-center-us",
+    "name": "Command Center US Navy",
+    "bounds": [
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        0
+      ]
+    ],
+    "color": "#F59E0B",
+    "fillOpacity": 0,
+    "assignedCards": [],
+    "playedCards": [],
+    "isCommandCenter": true,
+    "faction": "us"
+  },
+  {
+    "id": "command-center-china",
+    "name": "Command Center PLAN",
+    "bounds": [
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        0
+      ]
+    ],
+    "color": "#F59E0B",
+    "fillOpacity": 0,
+    "assignedCards": [],
+    "playedCards": [],
+    "isCommandCenter": true,
+    "faction": "china"
   }
 ];

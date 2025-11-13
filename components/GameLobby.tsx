@@ -140,8 +140,7 @@ const GameLobby: React.FC<GameLobbyProps> = ({ onGameSelected }) => {
       const deletedGameName = gameToDelete.name;
       await deleteGame(gameToDelete.id);
       setGameToDelete(null);
-      // Reload games list after deletion
-      await loadGames();
+      // Games list will update automatically via real-time subscription
       // Show success modal
       setSuccessMessage(`GAME "${deletedGameName}" DELETED SUCCESSFULLY`);
       setShowSuccessModal(true);

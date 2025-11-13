@@ -23,6 +23,8 @@ const CreateGameModal: React.FC<CreateGameModalProps> = ({ onClose, onGameCreate
   const [gameName, setGameName] = useState('');
   const [hasPassword, setHasPassword] = useState(false);
   const [password, setPassword] = useState('');
+  const [usCommandPoints, setUsCommandPoints] = useState(50);
+  const [chinaCommandPoints, setChinaCommandPoints] = useState(50);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -45,12 +47,18 @@ const CreateGameModal: React.FC<CreateGameModalProps> = ({ onClose, onGameCreate
       setLoading(true);
       setError('');
 
-      // Create the game
+      // Create the game with configured command points
+      const configuredCommandPoints = {
+        us: usCommandPoints,
+        china: chinaCommandPoints
+      };
+
       const gameId = await createGame(
         gameName.trim(),
         currentUser.uid,
         userProfile.displayName,
-        hasPassword ? password.trim() : undefined
+        hasPassword ? password.trim() : undefined,
+        configuredCommandPoints
       );
 
       // Initialize game with seed data
@@ -61,7 +69,7 @@ const CreateGameModal: React.FC<CreateGameModalProps> = ({ onClose, onGameCreate
         taskForces: initialTaskForces,
         units: initialUnits,
         cards: initialCards,
-        commandPoints: initialCommandPoints,
+        commandPoints: configuredCommandPoints,
         purchaseHistory: initialPurchaseHistory,
         cardPurchaseHistory: initialCardPurchaseHistory,
         turnState: initialTurnState,
@@ -150,6 +158,45 @@ const CreateGameModal: React.FC<CreateGameModalProps> = ({ onClose, onGameCreate
               />
             </div>
           )}
+
+          {/* Initial Command Points */}
+          <div className="space-y-3">
+            <label className="block font-mono text-sm text-gray-300 uppercase tracking-wide">
+              INITIAL COMMAND POINTS
+            </label>
+
+            {/* US Command Points */}
+            <div>
+              <label className="block font-mono text-xs text-gray-400 uppercase tracking-wide mb-1">
+                US FACTION
+              </label>
+              <input
+                type="number"
+                value={usCommandPoints}
+                onChange={(e) => setUsCommandPoints(Math.max(10, Math.min(200, parseInt(e.target.value) || 50)))}
+                className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded font-mono text-green-400 focus:outline-none focus:border-green-500"
+                min={10}
+                max={200}
+                required
+              />
+            </div>
+
+            {/* China Command Points */}
+            <div>
+              <label className="block font-mono text-xs text-gray-400 uppercase tracking-wide mb-1">
+                CHINA FACTION
+              </label>
+              <input
+                type="number"
+                value={chinaCommandPoints}
+                onChange={(e) => setChinaCommandPoints(Math.max(10, Math.min(200, parseInt(e.target.value) || 50)))}
+                className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded font-mono text-green-400 focus:outline-none focus:border-green-500"
+                min={10}
+                max={200}
+                required
+              />
+            </div>
+          </div>
 
           {/* Info */}
           <div className="bg-green-900 bg-opacity-20 border border-green-600 rounded p-3">

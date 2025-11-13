@@ -31,6 +31,7 @@ interface MapProps {
   onCardsUpdate?: (cards: Card[]) => void;
   onTaskForcesUpdate?: (taskForces: TaskForce[]) => void;
   isAdmin?: boolean;
+  canAdvanceTurn?: boolean;
   onEditBase?: (locationId: string) => void;
   turnState: TurnState;
   onAdvanceTurn: () => void;
@@ -64,6 +65,7 @@ const Map: React.FC<MapProps> = ({
   onCardsUpdate,
   onTaskForcesUpdate,
   isAdmin = false,
+  canAdvanceTurn = false,
   onEditBase,
   turnState,
   onAdvanceTurn,
@@ -98,7 +100,7 @@ const Map: React.FC<MapProps> = ({
       <TurnControl
         turnState={turnState}
         onAdvanceTurn={onAdvanceTurn}
-        isAdmin={isAdmin}
+        canAdvanceTurn={canAdvanceTurn}
         sidebarOpen={sidebarOpen}
       />
       <MapContainer

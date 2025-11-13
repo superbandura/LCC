@@ -1457,13 +1457,15 @@ export const checkIfUsersExist = async (): Promise<boolean> => {
  * @param creatorUid UID of the game creator
  * @param creatorDisplayName Display name of the creator
  * @param password Optional password to protect the game
+ * @param initialCommandPoints Initial command points for each faction
  * @returns Game ID
  */
 export const createGame = async (
   gameName: string,
   creatorUid: string,
   creatorDisplayName: string,
-  password?: string
+  password?: string,
+  initialCommandPoints?: CommandPoints
 ): Promise<string> => {
   try {
     // Generate a unique game ID
@@ -1483,6 +1485,7 @@ export const createGame = async (
       players: {}, // Empty - creator will join via joinGame()
       hasPassword: !!password,
       ...(password && { password }), // Only include password field if it exists
+      initialCommandPoints: initialCommandPoints || { us: 50, china: 50 }, // Default to 50 if not provided
     };
 
     // Initialize game with metadata only (game state will be initialized separately)

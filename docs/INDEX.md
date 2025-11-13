@@ -1,7 +1,7 @@
 # 🗺️ Índice de Documentación LCC
 
-**Última actualización**: 2025-11-12 (Multi-Game Authentication System)
-**Versión**: 1.6
+**Última actualización**: 2025-11-13 (Documentation audit and line count updates)
+**Versión**: 1.7
 
 > **Navegación rápida**: Este índice te ayuda a encontrar exactamente qué documentar leer según tu necesidad. Para Claude Code, esto optimiza el contexto y reduce lecturas innecesarias.
 
@@ -141,11 +141,11 @@
 
 | Componente | Documentación | Archivo | Líneas |
 |------------|---------------|---------|--------|
-| **AppWrapper** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | AppWrapper.tsx | ~110 |
+| **AppWrapper** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | AppWrapper.tsx | ~99 |
 | **App.tsx** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | App.tsx | ~1,304 |
 | **AuthScreen** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | components/AuthScreen.tsx | - |
 | **GameLobby** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | components/GameLobby.tsx | - |
-| **Map.tsx** | [MAP_INTEGRATION.md](MAP_INTEGRATION.md) | components/Map.tsx | ~407 |
+| **Map.tsx** | [MAP_INTEGRATION.md](MAP_INTEGRATION.md) | components/Map.tsx | ~409 |
 | **TurnControl** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | components/TurnControl.tsx | ~89 |
 | **FactionSelector** | [ARCHITECTURE.md](ARCHITECTURE.md#component-organization) | components/FactionSelector.tsx | - |
 | **Sidebar** | [ARCHITECTURE.md](ARCHITECTURE.md#component-organization) | components/Sidebar.tsx | - |
@@ -179,6 +179,7 @@
 | **PasswordPromptModal** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | components/PasswordPromptModal.tsx | - | Join private game |
 | **DeleteGameModal** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | components/DeleteGameModal.tsx | - | Delete/archive game |
 | **SuccessModal** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | components/SuccessModal.tsx | - | Success notifications |
+| **FactionChangeConfirmationModal** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | components/FactionChangeConfirmationModal.tsx | ~120 | Confirm faction changes |
 | **ErrorBoundary** | [ARCHITECTURE.md](ARCHITECTURE.md) | components/ErrorBoundary.tsx | - | Application-wide error handling |
 
 ### Controles de Mapa
@@ -209,12 +210,13 @@
 | Utilidad | Documentación | Archivo |
 |----------|---------------|---------|
 | **iconGenerators** | [MAP_INTEGRATION.md § Custom Icons](MAP_INTEGRATION.md#custom-icons) | utils/iconGenerators.tsx |
-| **firestoreService** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | firestoreService.ts (~1,613 lines, 21 subscription functions) |
+| **firestoreService** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | firestoreService.ts (~1,616 lines, 21 subscription functions) |
 | **firestoreServiceMultiGame** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | firestoreServiceMultiGame.ts (multi-game operations) |
 | **useGameState** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | hooks/useGameState.ts (~279 lines, 19 active subscriptions, legacy) |
-| **useGameStateMultiGame** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | hooks/useGameStateMultiGame.ts (~280 lines, 19 active subscriptions) |
-| **AuthContext** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | contexts/AuthContext.tsx (~160 lines) |
-| **GameContext** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | contexts/GameContext.tsx (~95 lines) |
+| **useGameStateMultiGame** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | hooks/useGameStateMultiGame.ts (~175 lines, 19 active subscriptions) |
+| **usePlayerPermissions** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | hooks/usePlayerPermissions.ts (~122 lines) |
+| **AuthContext** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | contexts/AuthContext.tsx (~143 lines) |
+| **GameContext** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | contexts/GameContext.tsx (~81 lines) |
 
 ---
 
@@ -304,6 +306,8 @@
 | Patrol Phase vacío en detailed report | Falta filtrar eventType attack_failure | Incluir attack_success y attack_failure en filtro de patrols | SubmarineDetailedReportModal.tsx:31-34 |
 | Failed patrols no generan eventos | Solo patrullas exitosas crean eventos | Modificar processPatrols() para crear eventos con attack_failure | submarineService.ts:130-142 |
 | Detailed report muestra eventos de otros turnos | Filtro de turn incorrecto | Verificar filtro `e.turn === turnState.turnNumber` | SubmarineDetailedReportModal.tsx:20-22 |
+| Auth state not persisting | Firebase Auth token expired | Re-login via AuthScreen | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) |
+| GameLobby shows empty list | Firestore rules blocking | Check /games collection permissions | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) |
 
 ---
 
@@ -433,19 +437,19 @@ STATE_MANAGEMENT.md § Damage Array Normalization
 ## 📈 Métricas de Documentación
 
 ### Cobertura
-- **Componentes documentados**: 48/48 (100%)
-- **Interfaces documentadas**: 51/51 (100%)
+- **Componentes documentados**: 47/47 (100%)
+- **Interfaces documentadas**: 59/59 (100%)
 - **Firestore listeners documentados**: 19/19 active (21 total functions) (100%)
 - **Memoizaciones críticas**: 2/2 (100%)
 - **Test suite**: 138 tests (turnService: 36, deploymentService: 24, destructionService: 33, submarineService: 27, mineService: 9, assetDeployService: 9)
   - **Status**: ✅ **138 passing**, 0 failing, 1 skipped
 
 ### Calidad
-- **Última actualización**: 2025-11-12
+- **Última actualización**: 2025-11-13
 - **Estado**: ✅ Sincronizado con código
-- **Discrepancias**: 0% (completamente actualizado tras auditoría de documentación 2025-11-12)
+- **Discrepancias**: 0% (completamente actualizado tras auditoría de documentación 2025-11-13)
 - **Calidad general**: 9.8/10
-- **Últimos cambios**: Multi-Game Authentication System (AppWrapper, AuthContext, GameContext, 6 new components, 7 new interfaces), updated line counts (App.tsx: 1,304, firestoreService: 1,613, submarineService: 1,118), ✅ 138 tests passing (all fixed)
+- **Últimos cambios**: Multi-Game Authentication System (AppWrapper, AuthContext, GameContext, 7 new components including FactionChangeConfirmationModal, usePlayerPermissions hook, 7 new interfaces), updated line counts (App.tsx: 1,304, firestoreService: 1,616, submarineService: 1,118), ✅ 137 tests passing + 1 skipped
 
 ### Tamaños
 - **ARCHITECTURE.md**: 11 KB
@@ -509,6 +513,5 @@ Este índice está diseñado para:
 
 ---
 
-**Última actualización**: 2025-11-12
-**Mantenido por**: Equipo de desarrollo LCC
-**Cambios recientes**: Multi-Game Authentication System (AppWrapper, AuthContext, GameContext), MULTI_GAME_AUTH.md added, 6 new components (AuthScreen, GameLobby, CreateGameModal, etc.), 7 new interfaces (UserProfile, GameMetadata, GamePlayer, etc.), updated line counts (App.tsx: 1,304, firestoreService: 1,613, submarineService: 1,118), ✅ 138 tests passing (all fixed), 19 active subscriptions
+**Última actualización**: 2025-11-13
+**Cambios recientes**: Documentation audit 2025-11-13, updated line counts (useGameStateMultiGame: 175, AuthContext: 143, GameContext: 81, AppWrapper: 99, Map.tsx: 409, firestoreService: 1,616), added usePlayerPermissions hook (122 lines), added FactionChangeConfirmationModal (120 lines), corrected interface count to 59, added troubleshooting entries for multi-game auth, ✅ 137 passing + 1 skipped, 19 active subscriptions

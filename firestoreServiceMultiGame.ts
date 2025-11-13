@@ -502,6 +502,19 @@ export const updateTurnState = async (
   }
 };
 
+export const updatePurchasedCards = async (
+  gameId: string,
+  purchasedCards: PurchasedCards
+): Promise<void> => {
+  try {
+    const gameRef = getGameRef(gameId);
+    await setDoc(gameRef, { purchasedCards }, { merge: true });
+  } catch (error) {
+    console.error("Error updating purchased cards:", error);
+    throw error;
+  }
+};
+
 // =======================================
 // GAME INITIALIZATION
 // =======================================

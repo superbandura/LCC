@@ -67,7 +67,7 @@ Each game has isolated Firestore document at `/games/{gameId}/state`. Requires F
 - `contexts/GameContext.tsx`: Game selection and metadata (~81 lines)
 - `firestoreService.ts`: Legacy Firestore operations (~1,616 lines, 21 subscription functions)
 - `firestoreServiceMultiGame.ts`: Multi-game Firestore operations (user/game management)
-- `hooks/useGameStateMultiGame.ts`: Multi-game state hook (~175 lines, 19 active subscriptions)
+- `hooks/useGameStateMultiGame.ts: Multi-game state hook (~178 lines, 19 active subscriptions)
 - `hooks/usePlayerPermissions.ts`: Permission control hook (~122 lines)
 
 **Architecture**:
@@ -102,6 +102,8 @@ F:\LCC/
 │   ├── SuccessModal.tsx    # Success notifications
 │   ├── ErrorBoundary.tsx   # Application-wide error boundary
 │   ├── FactionChangeConfirmationModal.tsx # Confirm faction changes (~120 lines)
+│   ├── CampaignIntroModal.tsx      # Campaign narrative introduction
+│   ├── UnassignedPlayersWarningModal.tsx # Player assignment validation
 │   ├── map/                # Map-related components
 │   │   ├── Map.tsx         # Main map component (~409 lines)
 │   │   ├── controls/       # Map controls (MapInitializer, ScaleControl, etc.)
@@ -109,7 +111,7 @@ F:\LCC/
 │   ├── modals/             # Modal dialogs
 │   ├── ui/                 # UI components
 │   └── shared/             # Reusable components
-├── hooks/                  # Custom React hooks (~831 lines)
+├── hooks/                  # Custom React hooks (~989 lines)
 │   ├── useGameState.ts    # Firestore state subscriptions - LEGACY (19 active, 279 lines)
 │   ├── useGameStateMultiGame.ts # Multi-game Firestore subscriptions (19 active, ~175 lines)
 │   ├── usePlayerPermissions.ts # Permission control hook (~122 lines)

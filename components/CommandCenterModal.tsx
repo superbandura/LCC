@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CommandPoints, PurchaseHistory, CardPurchaseHistory, PurchasedCards, OperationalArea, CardType, Location, OperationalData, Unit, TaskForce, SubmarineCampaignState, TurnState, PendingDeployments } from '../types';
 import { CARD_TYPE_LABELS } from '../constants';
 import BoardUnitsModal from './BoardUnitsModal';
@@ -81,6 +81,9 @@ const CommandCenterModal: React.FC<CommandCenterModalProps> = ({
   // Local copy of units to ensure immediate updates after boarding
   const [editedUnits, setEditedUnits] = useState<Unit[]>(units);
 
+  // Local copy of cardPurchaseHistory for immediate UI updates (optimistic update)
+  const [localCardPurchaseHistory, setLocalCardPurchaseHistory] = useState<CardPurchaseHistory>(cardPurchaseHistory);
+
   // State for Command Points flash animation
   const [isFlashing, setIsFlashing] = useState(false);
   const [prevCommandPoints, setPrevCommandPoints] = useState(commandPoints);
@@ -128,6 +131,13 @@ const CommandCenterModal: React.FC<CommandCenterModalProps> = ({
       setEditedUnits([...units]);
     }
   }, [units]);
+
+  // Sync localCardPurchaseHistory when modal opens (fresh session)
+  React.useEffect(() => {
+    if (isOpen) {
+      setLocalCardPurchaseHistory(cardPurchaseHistory);
+    }
+  }, [isOpen]);
 
   // Detect Command Points decrease and trigger flash animation
   React.useEffect(() => {
@@ -300,7 +310,7 @@ const CommandCenterModal: React.FC<CommandCenterModalProps> = ({
   // Get purchase limit indicator for a card
   const getPurchaseLimitIndicator = (card: Card): string => {
     // Use lifetime purchase history instead of counting cards in circulation
-    const currentCount = cardPurchaseHistory[selectedFaction][card.id] || 0;
+    const currentCount = localCardPurchaseHistory[selectedFaction][card.id] || 0;
 
     if (card.maxPurchases === 0) {
       return '∞'; // Unlimited
@@ -322,12 +332,14 @@ const CommandCenterModal: React.FC<CommandCenterModalProps> = ({
     const isCombatAirPatrolCard = selectedCard?.id === combatAirPatrolCardId;
 
     if (!isCombatAirPatrolCard) {
-      // For non-Combat Air Patrol cards, return all areas
-      return operationalAreas;
+      // For non-Combat Air Patrol cards, return all areas EXCEPT Command Centers
+      return operationalAreas.filter(area => !area.isCommandCenter);
     }
 
-    // For Combat Air Patrol cards, filter out areas that already have the card
+    // For Combat Air Patrol cards, filter out Command Centers and areas that already have the card
     return operationalAreas.filter(area => {
+      // Exclude Command Centers
+      if (area.isCommandCenter) return false;
       // Check if Combat Air Patrol card has been assigned (but not played yet)
       const isCardAssigned = area.assignedCards?.includes(combatAirPatrolCardId) || false;
 
@@ -441,7 +453,7 @@ const CommandCenterModal: React.FC<CommandCenterModalProps> = ({
 
     // Check explicit purchase limit (maxPurchases > 0)
     if (card.maxPurchases !== undefined && card.maxPurchases > 0) {
-      const currentCount = cardPurchaseHistory[selectedFaction][card.id] || 0;
+      const currentCount = localCardPurchaseHistory[selectedFaction][card.id] || 0;
 
       if (currentCount >= card.maxPurchases) {
         return {
@@ -458,7 +470,7 @@ const CommandCenterModal: React.FC<CommandCenterModalProps> = ({
     // Check implicit limit (maxPurchases === undefined)
     // Apply default limit of 1 purchase for cards without explicit limit
     if (card.maxPurchases === undefined) {
-      const currentCount = cardPurchaseHistory[selectedFaction][card.id] || 0;
+      const currentCount = localCardPurchaseHistory[selectedFaction][card.id] || 0;
 
       if (currentCount > 0) {
         return {
@@ -526,6 +538,9 @@ const CommandCenterModal: React.FC<CommandCenterModalProps> = ({
         [selectedCard.id]: currentCardCount + 1
       }
     };
+    // Update local state immediately for instant UI feedback
+    setLocalCardPurchaseHistory(updatedCardPurchaseHistory);
+    // Update Firestore (will sync back via useEffect)
     onUpdateCardPurchaseHistory(updatedCardPurchaseHistory);
 
     // Reset selection

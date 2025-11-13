@@ -142,11 +142,11 @@
 | Componente | Documentación | Archivo | Líneas |
 |------------|---------------|---------|--------|
 | **AppWrapper** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | AppWrapper.tsx | ~99 |
-| **App.tsx** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | App.tsx | ~1,304 |
+| **App.tsx** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | App.tsx | ~1,378 |
 | **AuthScreen** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | components/AuthScreen.tsx | - |
 | **GameLobby** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | components/GameLobby.tsx | - |
 | **Map.tsx** | [MAP_INTEGRATION.md](MAP_INTEGRATION.md) | components/Map.tsx | ~409 |
-| **TurnControl** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | components/TurnControl.tsx | ~89 |
+| **TurnControl** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | components/TurnControl.tsx | ~101 |
 | **FactionSelector** | [ARCHITECTURE.md](ARCHITECTURE.md#component-organization) | components/FactionSelector.tsx | - |
 | **Sidebar** | [ARCHITECTURE.md](ARCHITECTURE.md#component-organization) | components/Sidebar.tsx | - |
 
@@ -154,7 +154,7 @@
 
 | Modal | Documentación | Archivo | Líneas | Propósito |
 |-------|---------------|---------|--------|-----------|
-| **EditAreasModal** | [MAP_INTEGRATION.md](MAP_INTEGRATION.md) | components/EditAreasModal.tsx | ~601 | Editar áreas y bases |
+| **EditAreasModal** | [MAP_INTEGRATION.md](MAP_INTEGRATION.md) | components/EditAreasModal.tsx | ~642 | Editar áreas y bases |
 | **TaskForceModal** | [UNIT_SYSTEM.md § Task Force Management](UNIT_SYSTEM.md#task-force-management-taskforcemodal) | components/TaskForceModal.tsx | ~1156 | Gestionar Task Forces |
 | **CommandCenterModal** | [CARD_SYSTEM.md § Purchase Phase](CARD_SYSTEM.md#1-purchase-phase-commandcentermodal) | components/CommandCenterModal.tsx | - | Comprar cartas |
 | **CardEditorModal** | [CARD_SYSTEM.md § Card Management](CARD_SYSTEM.md#card-management-admin) | components/CardEditorModal.tsx | - | Editar cartas (admin) |
@@ -180,6 +180,8 @@
 | **DeleteGameModal** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | components/DeleteGameModal.tsx | - | Delete/archive game |
 | **SuccessModal** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | components/SuccessModal.tsx | - | Success notifications |
 | **FactionChangeConfirmationModal** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | components/FactionChangeConfirmationModal.tsx | ~120 | Confirm faction changes |
+| **CampaignIntroModal** | [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) | components/CampaignIntroModal.tsx | ~116 | Campaign narrative introduction |
+| **UnassignedPlayersWarningModal** | [MULTI_GAME_AUTH.md](MULTI_GAME_AUTH.md) | components/UnassignedPlayersWarningModal.tsx | ~77 | Player assignment validation |
 | **ErrorBoundary** | [ARCHITECTURE.md](ARCHITECTURE.md) | components/ErrorBoundary.tsx | - | Application-wide error handling |
 
 ### Controles de Mapa
@@ -437,19 +439,19 @@ STATE_MANAGEMENT.md § Damage Array Normalization
 ## 📈 Métricas de Documentación
 
 ### Cobertura
-- **Componentes documentados**: 47/47 (100%)
-- **Interfaces documentadas**: 59/59 (100%)
+- **Componentes documentados**: 49/49 (100%)
+- **Interfaces y types**: 51/51 (39 interfaces + 12 type aliases) (100%)
 - **Firestore listeners documentados**: 19/19 active (21 total functions) (100%)
 - **Memoizaciones críticas**: 2/2 (100%)
 - **Test suite**: 138 tests (turnService: 36, deploymentService: 24, destructionService: 33, submarineService: 27, mineService: 9, assetDeployService: 9)
-  - **Status**: ✅ **138 passing**, 0 failing, 1 skipped
+  - **Status**: ✅ **137 passing**, 1 skipped, 0 failing
 
 ### Calidad
 - **Última actualización**: 2025-11-13
 - **Estado**: ✅ Sincronizado con código
 - **Discrepancias**: 0% (completamente actualizado tras auditoría de documentación 2025-11-13)
 - **Calidad general**: 9.8/10
-- **Últimos cambios**: Multi-Game Authentication System (AppWrapper, AuthContext, GameContext, 7 new components including FactionChangeConfirmationModal, usePlayerPermissions hook, 7 new interfaces), updated line counts (App.tsx: 1,304, firestoreService: 1,616, submarineService: 1,118), ✅ 137 tests passing + 1 skipped
+- **Últimos cambios**: Campaign Intro System (CampaignIntroModal, UnassignedPlayersWarningModal), Multi-Game Authentication System (AppWrapper, AuthContext, GameContext, FactionChangeConfirmationModal, usePlayerPermissions hook), updated line counts (App.tsx: 1,378, firestoreService: 1,740, submarineService: 1,118), ✅ 137 tests passing + 1 skipped
 
 ### Tamaños
 - **ARCHITECTURE.md**: 11 KB

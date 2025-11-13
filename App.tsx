@@ -24,7 +24,8 @@ import {
   updateUnits,
   updateTaskForces,
   updateCommandPoints,
-  updateTurnState
+  updateTurnState,
+  updatePurchasedCards
 } from './firestoreServiceMultiGame';
 
 // Import legacy service functions that still need refactoring
@@ -35,7 +36,6 @@ import {
   updatePreviousCommandPoints,
   updatePurchaseHistory,
   updateCardPurchaseHistory,
-  updatePurchasedCards,
   updateDestructionLog,
   updatePendingDeployments,
   updateInfluenceMarker,
@@ -1278,7 +1278,7 @@ function App() {
             sidebarOpen={sidebarOpen}
           />
           <div className="absolute bottom-16 right-4 z-[1000] flex flex-col space-y-2">
-            {(isAdmin || permissions.canAccessCommandCenter) && (
+            {(isAdmin || permissions.canAccessCommandCenter) && (turnState.isPlanningPhase || turnState.turnNumber > 0) && (
               <button
                 onClick={() => modals.open('commandCenter')}
                 className="flex items-center justify-center w-16 h-12 bg-black/80 hover:bg-gray-900 text-green-400 hover:text-green-300 font-mono font-bold border-2 border-green-900 hover:border-green-700 transition-colors focus:outline-none"
@@ -1287,7 +1287,7 @@ function App() {
                 <span className="text-sm">CC</span>
               </button>
             )}
-            {(isAdmin || permissions.canAccessTaskForce) && (
+            {(isAdmin || permissions.canAccessTaskForce) && (turnState.isPlanningPhase || turnState.turnNumber > 0) && (
               <button
                 onClick={() => modals.open('taskForce')}
                 className="flex items-center justify-center w-16 h-12 bg-black/80 hover:bg-gray-900 text-red-400 hover:text-red-300 font-mono font-bold border-2 border-red-900 hover:border-red-700 transition-colors focus:outline-none"
@@ -1364,7 +1364,7 @@ function App() {
           calculateActivationTiming={calculateActivationTiming}
           cards={cards}
           purchasedCards={purchasedCards}
-          onPurchasedCardsUpdate={updatePurchasedCards}
+          onPurchasedCardsUpdate={(cards) => updatePurchasedCards(gameId, cards)}
         />
       )}
 
@@ -1384,7 +1384,7 @@ function App() {
           onUpdatePoints={handleCommandPointsUpdate}
           onUpdatePurchaseHistory={handlePurchaseHistoryUpdate}
           onUpdateCardPurchaseHistory={handleCardPurchaseHistoryUpdate}
-          onUpdatePurchasedCards={updatePurchasedCards}
+          onUpdatePurchasedCards={(cards) => updatePurchasedCards(gameId, cards)}
           onOpenCardEditor={() => modals.open('cardEditor')}
           isAdmin={isAdmin}
           locations={locations}

@@ -1,10 +1,50 @@
 // Generated operational area data - DO NOT EDIT MANUALLY
 // Este archivo contiene las áreas operacionales del mapa
-// Total: 4 áreas
+// Total: 6 áreas (4 operational + 2 command centers)
 // Última actualización: 2025-11-13T12:07:08.166Z
 import { OperationalArea } from '../types';
 
 export const initialOperationalAreas: OperationalArea[] = [
+  {
+    "id": "command-center-us",
+    "name": "Command Center US Navy",
+    "bounds": [
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        0
+      ]
+    ],
+    "color": "#F59E0B",
+    "fillOpacity": 0.05,
+    "assignedCards": [],
+    "playedCards": [],
+    "isCommandCenter": true,
+    "faction": "us"
+  },
+  {
+    "id": "command-center-china",
+    "name": "Command Center PLAN",
+    "bounds": [
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        0
+      ]
+    ],
+    "color": "#F59E0B",
+    "fillOpacity": 0.05,
+    "assignedCards": [],
+    "playedCards": [],
+    "isCommandCenter": true,
+    "faction": "china"
+  },
   {
     "assignedCards": [],
     "fillOpacity": 0.05,

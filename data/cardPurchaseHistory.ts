@@ -12,6 +12,6 @@ import { CardPurchaseHistory } from '../types';
  * Both factions start with empty purchase history at the beginning of a new game.
  */
 export const initialCardPurchaseHistory: CardPurchaseHistory = {
-  us: {},
-  china: {},
+  "china": {},
+  "us": {}
 };

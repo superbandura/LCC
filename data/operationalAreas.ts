@@ -1,13 +1,16 @@
 // Generated operational area data - DO NOT EDIT MANUALLY
 // Este archivo contiene las áreas operacionales del mapa
 // Total: 4 áreas
-// Última actualización: 2025-11-05T08:00:32.088Z
+// Última actualización: 2025-11-13T12:07:08.166Z
 import { OperationalArea } from '../types';
 
 export const initialOperationalAreas: OperationalArea[] = [
   {
     "assignedCards": [],
+    "fillOpacity": 0.05,
     "playedCards": [],
+    "name": "Strait of Malacca",
+    "id": "malacca-strait",
     "bounds": [
       [
         3.7,
@@ -18,16 +21,10 @@ export const initialOperationalAreas: OperationalArea[] = [
         106.4
       ]
     ],
-    "fillOpacity": 0.05,
-    "name": "Estrecho de Malaca",
-    "color": "#FBBF24",
-    "id": "malacca-strait"
+    "color": "#FBBF24"
   },
   {
-    "color": "#FBBF24",
-    "id": "taiwan-strait",
-    "playedCards": [],
-    "name": "Estrecho de Taiwán",
+    "color": "#c2c2c2",
     "bounds": [
       [
         26.5,
@@ -38,10 +35,19 @@ export const initialOperationalAreas: OperationalArea[] = [
         122.5
       ]
     ],
+    "playedCards": [],
+    "id": "taiwan-strait",
+    "name": "Taiwan Strait",
     "assignedCards": [],
     "fillOpacity": 0.05
   },
   {
+    "id": "luzon-strait",
+    "assignedCards": [],
+    "playedCards": [],
+    "color": "#FBBF24",
+    "fillOpacity": 0.05,
+    "name": "Luzon Strait",
     "bounds": [
       [
         20.49,
@@ -51,21 +57,12 @@ export const initialOperationalAreas: OperationalArea[] = [
         15.92,
         123.5
       ]
-    ],
-    "playedCards": [],
-    "name": "Estrecho de Luzón",
-    "id": "luzon-strait",
-    "assignedCards": [],
-    "fillOpacity": 0.05,
-    "color": "#FBBF24"
+    ]
   },
   {
-    "fillOpacity": 0.05,
-    "color": "#FBBF24",
     "playedCards": [],
+    "fillOpacity": 0.05,
     "id": "ryukyu-east",
-    "assignedCards": [],
-    "name": "Ryukyu Este",
     "bounds": [
       [
         29,
@@ -75,46 +72,9 @@ export const initialOperationalAreas: OperationalArea[] = [
         25,
         130
       ]
-    ]
-  },
-  {
-    "id": "command-center-us",
-    "name": "Command Center US Navy",
-    "bounds": [
-      [
-        0,
-        0
-      ],
-      [
-        0,
-        0
-      ]
     ],
-    "color": "#F59E0B",
-    "fillOpacity": 0,
-    "assignedCards": [],
-    "playedCards": [],
-    "isCommandCenter": true,
-    "faction": "us"
-  },
-  {
-    "id": "command-center-china",
-    "name": "Command Center PLAN",
-    "bounds": [
-      [
-        0,
-        0
-      ],
-      [
-        0,
-        0
-      ]
-    ],
-    "color": "#F59E0B",
-    "fillOpacity": 0,
-    "assignedCards": [],
-    "playedCards": [],
-    "isCommandCenter": true,
-    "faction": "china"
+    "color": "#FBBF24",
+    "name": "Eastern Ryukyus",
+    "assignedCards": []
   }
 ];

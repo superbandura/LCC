@@ -80,9 +80,12 @@ export interface GameState {
 /**
  * Hook to subscribe to all game state from Firestore for a specific game
  * @param gameId Game ID to subscribe to (required for multi-game)
+ * @param editBaseData If true, edits game/current instead of the specific game (admin mode)
  * @returns Game state object with loading flag
  */
-export function useGameStateMultiGame(gameId: string | null): GameState {
+export function useGameStateMultiGame(gameId: string | null, editBaseData?: boolean): GameState {
+  // Determine which game document to use
+  const effectiveGameId = editBaseData ? 'legacy' : gameId;
   // State for all Firestore-synced data
   const [operationalAreas, setOperationalAreas] = useState<OperationalArea[]>([]);
   const [operationalData, setOperationalData] = useState<Record<string, OperationalData>>({});
@@ -130,25 +133,25 @@ export function useGameStateMultiGame(gameId: string | null): GameState {
     const unsubscribers: (() => void)[] = [];
 
     // Subscribe to all game state fields
-    unsubscribers.push(subscribeToOperationalAreas(gameId, setOperationalAreas));
-    unsubscribers.push(subscribeToOperationalData(gameId, setOperationalData));
-    unsubscribers.push(subscribeToLocations(gameId, setLocations));
-    unsubscribers.push(subscribeToTaskForces(gameId, setTaskForces));
-    unsubscribers.push(subscribeToUnits(gameId, setUnits));
-    unsubscribers.push(subscribeToCards(gameId, setCards));
-    unsubscribers.push(subscribeToCommandPoints(gameId, setCommandPoints));
-    unsubscribers.push(subscribeToPreviousCommandPoints(gameId, setPreviousCommandPoints));
-    unsubscribers.push(subscribeToPurchaseHistory(gameId, setPurchaseHistory));
-    unsubscribers.push(subscribeToCardPurchaseHistory(gameId, setCardPurchaseHistory));
-    unsubscribers.push(subscribeToPurchasedCards(gameId, setPurchasedCards));
-    unsubscribers.push(subscribeToDestructionLog(gameId, setDestructionLog));
-    unsubscribers.push(subscribeToTurnState(gameId, setTurnState));
-    unsubscribers.push(subscribeToPendingDeployments(gameId, setPendingDeployments));
-    unsubscribers.push(subscribeToInfluenceMarker(gameId, setInfluenceMarker));
-    unsubscribers.push(subscribeToSubmarineCampaign(gameId, setSubmarineCampaign));
-    unsubscribers.push(subscribeToPlayedCardNotificationsQueue(gameId, setPlayedCardNotifications));
-    unsubscribers.push(subscribeToPlayerAssignments(gameId, setPlayerAssignments));
-    unsubscribers.push(subscribeToRegisteredPlayers(gameId, setRegisteredPlayers));
+    unsubscribers.push(subscribeToOperationalAreas(effectiveGameId, setOperationalAreas));
+    unsubscribers.push(subscribeToOperationalData(effectiveGameId, setOperationalData));
+    unsubscribers.push(subscribeToLocations(effectiveGameId, setLocations));
+    unsubscribers.push(subscribeToTaskForces(effectiveGameId, setTaskForces));
+    unsubscribers.push(subscribeToUnits(effectiveGameId, setUnits));
+    unsubscribers.push(subscribeToCards(effectiveGameId, setCards));
+    unsubscribers.push(subscribeToCommandPoints(effectiveGameId, setCommandPoints));
+    unsubscribers.push(subscribeToPreviousCommandPoints(effectiveGameId, setPreviousCommandPoints));
+    unsubscribers.push(subscribeToPurchaseHistory(effectiveGameId, setPurchaseHistory));
+    unsubscribers.push(subscribeToCardPurchaseHistory(effectiveGameId, setCardPurchaseHistory));
+    unsubscribers.push(subscribeToPurchasedCards(effectiveGameId, setPurchasedCards));
+    unsubscribers.push(subscribeToDestructionLog(effectiveGameId, setDestructionLog));
+    unsubscribers.push(subscribeToTurnState(effectiveGameId, setTurnState));
+    unsubscribers.push(subscribeToPendingDeployments(effectiveGameId, setPendingDeployments));
+    unsubscribers.push(subscribeToInfluenceMarker(effectiveGameId, setInfluenceMarker));
+    unsubscribers.push(subscribeToSubmarineCampaign(effectiveGameId, setSubmarineCampaign));
+    unsubscribers.push(subscribeToPlayedCardNotificationsQueue(effectiveGameId, setPlayedCardNotifications));
+    unsubscribers.push(subscribeToPlayerAssignments(effectiveGameId, setPlayerAssignments));
+    unsubscribers.push(subscribeToRegisteredPlayers(effectiveGameId, setRegisteredPlayers));
 
     // Mark as loaded after subscriptions are set up
     setTimeout(() => setLoading(false), 500);
@@ -157,7 +160,7 @@ export function useGameStateMultiGame(gameId: string | null): GameState {
     return () => {
       unsubscribers.forEach((unsubscribe) => unsubscribe());
     };
-  }, [gameId]);
+  }, [effectiveGameId]); // Re-subscribe when gameId or editBaseData changes
 
   return {
     operationalAreas,

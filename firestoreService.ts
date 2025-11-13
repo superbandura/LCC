@@ -816,7 +816,18 @@ export const updateDestructionLog = async (
   log: DestructionRecord[]
 ): Promise<void> => {
   try {
-    await setDoc(GAME_DOC_REF, { destructionLog: log }, { merge: true });
+    // Sanitize log entries to remove undefined fields (Firestore doesn't support undefined)
+    const sanitizedLog = log.map(record => {
+      const sanitized: Record<string, any> = {};
+      Object.entries(record).forEach(([key, value]) => {
+        if (value !== undefined) {
+          sanitized[key] = value;
+        }
+      });
+      return sanitized as DestructionRecord;
+    });
+
+    await setDoc(GAME_DOC_REF, { destructionLog: sanitizedLog }, { merge: true });
   } catch (error) {
     console.error("Error updating destruction log:", error);
     throw error;
@@ -1479,7 +1490,6 @@ export const createGame = async (
       creatorUid,
       status: 'active',
       visibility: 'public',
-      maxPlayers: 8,
       createdAt: new Date().toISOString(),
       lastActivityAt: new Date().toISOString(),
       players: {}, // Empty - creator will join via joinGame()
@@ -1638,11 +1648,6 @@ export const joinGame = async (
     const data = docSnapshot.data();
     const metadata = data.metadata as GameMetadata;
 
-    // Check if game is full
-    if (Object.keys(metadata.players).length >= metadata.maxPlayers) {
-      throw new Error('Game is full');
-    }
-
     // Check if user is already in the game
     if (metadata.players[uid]) {
       throw new Error('User is already in this game');
@@ -1768,6 +1773,143 @@ export const deleteGame = async (gameId: string): Promise<void> => {
     console.log('Game deleted:', gameId);
   } catch (error) {
     console.error('Error deleting game:', error);
+    throw error;
+  }
+};
+
+// ============================================================================
+// BASE DATA MANAGER FUNCTIONS (for game/current)
+// ============================================================================
+
+/**
+ * Load complete base game data from game/current document
+ * @returns Complete game state from base data
+ */
+export const loadBaseGameData = async (): Promise<{
+  locations: Location[];
+  operationalAreas: OperationalArea[];
+  cards: Card[];
+  units: Unit[];
+}> => {
+  try {
+    const docSnap = await getDoc(GAME_DOC_REF);
+
+    if (!docSnap.exists()) {
+      throw new Error('Base game document (game/current) does not exist');
+    }
+
+    const data = docSnap.data();
+
+    // Convert areas from Firestore format
+    const fsAreas = (data.operationalAreas || []) as FirestoreOperationalArea[];
+    const operationalAreas = fsAreas.map(areaFromFirestore);
+
+    return {
+      locations: (data.locations || []) as Location[],
+      operationalAreas,
+      cards: (data.cards || []) as Card[],
+      units: (data.units || []) as Unit[],
+    };
+  } catch (error) {
+    console.error('Error loading base game data:', error);
+    throw error;
+  }
+};
+
+/**
+ * Save complete base game data to game/current document
+ * @param data Partial game state to save
+ */
+export const saveBaseGameData = async (data: {
+  locations?: Location[];
+  operationalAreas?: OperationalArea[];
+  cards?: Card[];
+  units?: Unit[];
+}): Promise<void> => {
+  try {
+    const updateData: any = {};
+
+    if (data.locations) {
+      updateData.locations = data.locations.map(removeUndefinedFields);
+    }
+
+    if (data.operationalAreas) {
+      updateData.operationalAreas = data.operationalAreas
+        .map(areaToFirestore)
+        .map(removeUndefinedFields);
+    }
+
+    if (data.cards) {
+      updateData.cards = data.cards.map(removeUndefinedFields);
+    }
+
+    if (data.units) {
+      updateData.units = data.units.map(removeUndefinedFields);
+    }
+
+    await setDoc(GAME_DOC_REF, updateData, { merge: true });
+    console.log('Base game data saved successfully');
+  } catch (error) {
+    console.error('Error saving base game data:', error);
+    throw error;
+  }
+};
+
+/**
+ * Export base game data to TypeScript files in data/ directory
+ * This function would need to be implemented with Node.js file system operations
+ * For now, it returns the data formatted as TypeScript code strings
+ */
+export const exportBaseDataToFiles = async (): Promise<{
+  locations: string;
+  operationalAreas: string;
+  cards: string;
+  units: string;
+}> => {
+  try {
+    const data = await loadBaseGameData();
+
+    // Format data as TypeScript code
+    const locationsCode = `import { Location } from '../types';\n\nexport const locations: Location[] = ${JSON.stringify(data.locations, null, 2)};\n`;
+    const areasCode = `import { OperationalArea } from '../types';\n\nexport const operationalAreas: OperationalArea[] = ${JSON.stringify(data.operationalAreas, null, 2)};\n`;
+    const cardsCode = `import { Card } from '../types';\n\nexport const cards: Card[] = ${JSON.stringify(data.cards, null, 2)};\n`;
+    const unitsCode = `import { Unit } from '../types';\n\nexport const units: Unit[] = ${JSON.stringify(data.units, null, 2)};\n`;
+
+    return {
+      locations: locationsCode,
+      operationalAreas: areasCode,
+      cards: cardsCode,
+      units: unitsCode,
+    };
+  } catch (error) {
+    console.error('Error exporting base data:', error);
+    throw error;
+  }
+};
+
+/**
+ * Import base game data from data/ TypeScript files
+ * This would need to dynamically import the data files
+ */
+export const importBaseDataFromFiles = async (): Promise<void> => {
+  try {
+    // Dynamically import data files
+    const locationsModule = await import('./data/locations');
+    const areasModule = await import('./data/operationalAreas');
+    const cardsModule = await import('./data/cards');
+    const unitsModule = await import('./data/units');
+
+    // Save to Firestore
+    await saveBaseGameData({
+      locations: locationsModule.locations,
+      operationalAreas: areasModule.operationalAreas,
+      cards: cardsModule.cards,
+      units: unitsModule.units,
+    });
+
+    console.log('Base data imported from data/ files successfully');
+  } catch (error) {
+    console.error('Error importing base data from files:', error);
     throw error;
   }
 };

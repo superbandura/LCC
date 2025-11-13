@@ -90,10 +90,9 @@ interface GameMetadata {
   creatorUid: string;                   // UID of creator
   status: 'active' | 'archived' | 'completed';
   visibility: 'public' | 'private';     // Join permissions
-  maxPlayers: number;                   // Default: 8
   createdAt: string;                    // ISO timestamp
   lastActivityAt: string;               // ISO timestamp
-  players: Record<string, GamePlayer>;  // uid → GamePlayer
+  players: Record<string, GamePlayer>;  // uid → GamePlayer (unlimited)
   hasPassword: boolean;                 // Password protected?
   password?: string;                    // Game password (if protected)
 }
@@ -459,8 +458,7 @@ async function joinGame(
 
 **Validation**:
 - If game has password, validates password match
-- Checks game has available slots (< maxPlayers)
-- Prevents duplicate joins
+- Prevents duplicate joins (no player limit)
 
 **Called**: In GameLobby when user joins game
 
@@ -700,7 +698,6 @@ const newGameMetadata: GameMetadata = {
   creatorUid: currentUser.uid,
   status: 'active',
   visibility: 'public',
-  maxPlayers: 8,
   createdAt: new Date().toISOString(),
   lastActivityAt: new Date().toISOString(),
   players: {

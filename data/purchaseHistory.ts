@@ -10,6 +10,6 @@ import { PurchaseHistory } from '../types';
  * Both factions start with 0 purchases at the beginning of a new game.
  */
 export const initialPurchaseHistory: PurchaseHistory = {
-  "china": 0,
-  "us": 0
+  "us": 0,
+  "china": 0
 };

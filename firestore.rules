@@ -151,11 +151,10 @@ service cloud.firestore {
                        isValidMetadataUpdate();
 
       // Allow authenticated users to join games (add themselves to metadata.players)
+      // No limit on number of players - unlimited players allowed
       allow update: if isAuthenticated() &&
                        // User is NOT already a member
                        !(request.auth.uid in resource.data.metadata.players) &&
-                       // Game is not full (max 2 players)
-                       resource.data.metadata.players.keys().size() < 2 &&
                        // Only modifying players and lastActivityAt
                        request.resource.data.metadata.diff(resource.data.metadata).affectedKeys()
                          .hasOnly(['players', 'lastActivityAt']) &&
@@ -212,10 +211,12 @@ service cloud.firestore {
     // =======================================
 
     match /game/current {
-      // Legacy single-game document
-      // Allow read/write for authenticated users (for backward compatibility during migration)
-      // TODO: Remove this after migration is complete
-      allow read, write: if isAuthenticated();
+      // Legacy single-game document - BASE DATA for campaign
+      // Public read access allowed for sync scripts and public reference data
+      // Can be made more restrictive in the future if needed
+      allow read: if true;
+      allow write: if isAuthenticated() &&
+                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     match /game/{document=**} {

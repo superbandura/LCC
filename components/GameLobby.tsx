@@ -276,7 +276,6 @@ const GameLobby: React.FC<GameLobbyProps> = ({ onGameSelected }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {games.map((game) => {
               const playerCount = Object.keys(game.players).length;
-              const isFull = playerCount >= game.maxPlayers;
               const isJoining = joiningGameId === game.id;
               const isAlreadyInGame = currentUser && game.players[currentUser.uid];
               const isAdmin = userProfile?.role === 'admin';
@@ -319,8 +318,8 @@ const GameLobby: React.FC<GameLobbyProps> = ({ onGameSelected }) => {
 
                   {/* Player Count - centered */}
                   <div className="text-center mb-4">
-                    <span className={`font-mono text-sm uppercase tracking-wide ${isFull ? 'text-red-400' : 'text-green-400'}`}>
-                      {playerCount} / {game.maxPlayers} PLAYERS
+                    <span className="font-mono text-sm uppercase tracking-wide text-green-400">
+                      {playerCount} {playerCount === 1 ? 'PLAYER' : 'PLAYERS'}
                     </span>
                   </div>
 
@@ -335,7 +334,7 @@ const GameLobby: React.FC<GameLobbyProps> = ({ onGameSelected }) => {
                   ) : (
                     <button
                       onClick={() => handleEnterGame(game)}
-                      disabled={isFull || isJoining}
+                      disabled={isJoining}
                       className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-mono font-bold py-3 rounded uppercase tracking-wider text-sm transition-colors"
                     >
                       {isJoining ? 'JOINING...' : 'JOIN GAME'}

@@ -34,7 +34,9 @@ export type ModalId =
   | 'combatStats'
   | 'deploymentNotification'
   | 'playerAssignment'
-  | 'factionChange';
+  | 'factionChange'
+  | 'campaignIntro'
+  | 'unassignedPlayersWarning';
 
 export interface UseModalReturn {
   /**

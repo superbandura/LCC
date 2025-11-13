@@ -37,6 +37,7 @@ const EditAreasModal: React.FC<EditAreasModalProps> = ({
   const [editedAreas, setEditedAreas] = useState<OperationalArea[]>([]);
   const [editedLocations, setEditedLocations] = useState<Location[]>([]);
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
 
   // States for bases management
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
@@ -135,6 +136,21 @@ const EditAreasModal: React.FC<EditAreasModalProps> = ({
 
     const newAreas = [...editedAreas];
     newAreas[selectedAreaIndex] = { ...newAreas[selectedAreaIndex], ...updatedProps };
+
+    // Check for duplicate names if name is being changed
+    if (updatedProps.name !== undefined) {
+      const trimmedName = updatedProps.name.trim().toLowerCase();
+      const isDuplicate = newAreas.some((area, index) =>
+        index !== selectedAreaIndex && area.name.trim().toLowerCase() === trimmedName
+      );
+
+      if (isDuplicate && trimmedName !== '') {
+        setNameError('This name is already used by another area');
+      } else {
+        setNameError(null);
+      }
+    }
+
     setEditedAreas(newAreas);
     onPreview(newAreas[selectedAreaIndex]);
   };
@@ -246,6 +262,21 @@ const EditAreasModal: React.FC<EditAreasModalProps> = ({
   };
 
   const handleSave = () => {
+    // Check if there's a current validation error
+    if (nameError) {
+      alert('Error: Please fix the duplicate area name before saving.');
+      return;
+    }
+
+    // Validate for duplicate area names (double-check)
+    const areaNames = editedAreas.map(area => area.name.trim().toLowerCase());
+    const duplicates = areaNames.filter((name, index) => areaNames.indexOf(name) !== index);
+
+    if (duplicates.length > 0) {
+      alert('Error: Duplicate area names found. Each operational area must have a unique name.');
+      return;
+    }
+
     onSave(editedAreas);
     onLocationsUpdate(editedLocations);
     onClose();
@@ -315,6 +346,23 @@ const EditAreasModal: React.FC<EditAreasModalProps> = ({
               {selectedArea && (
                 <div className={`bg-gray-700/50 p-4 rounded-md space-y-4 ${!isAdmin ? 'pointer-events-none opacity-60' : ''}`}>
                   <h3 className="font-semibold text-lg text-white">Editando: {selectedArea.name}</h3>
+
+                  {/* --- Area Name --- */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1">Area Name</label>
+                    <input
+                      type="text"
+                      value={selectedArea.name}
+                      onChange={(e) => handleFormChange({ name: e.target.value })}
+                      className={`w-full bg-gray-900 text-white p-2 rounded border ${
+                        nameError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-600 focus:ring-cyan-500 focus:border-cyan-500'
+                      }`}
+                      placeholder="Enter operational area name"
+                    />
+                    {nameError && (
+                      <p className="mt-1 text-sm text-red-400">{nameError}</p>
+                    )}
+                  </div>
 
                   {/* --- Coordenadas --- */}
                   <div className="grid grid-cols-2 gap-4">

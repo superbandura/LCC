@@ -1,326 +1,305 @@
 // Generated location data - DO NOT EDIT MANUALLY
 // Este archivo contiene las bases militares del juego
 // Total: 21 bases (EE. UU.: 10, China: 11)
-// Última actualización: 2025-11-05T08:00:32.087Z
+// Última actualización: 2025-11-13T12:07:08.165Z
 import { Location } from '../types';
 
 export const initialLocations: Location[] = [
   {
-    "description": "La instalación aérea estadounidense más grande y activa de Asia Oriental, conocida como la \"piedra angular del Pacífico\".",
     "commandPoints": 30,
-    "name": "Base Aérea Kadena",
+    "type": "U.S. Air Force Air Base",
+    "name": "Kadena Air Base",
+    "description": "The largest and most active U.S. air installation in East Asia, widely known as the “Keystone of the Pacific”.",
+    "currentDamage": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
     "damagePoints": 8,
+    "country": "EE. UU.",
+    "region": "Okinawa, Japan",
+    "id": "kadena-ab",
     "coords": [
       26.3548,
       127.7687
-    ],
-    "region": "Okinawa (Japón)",
-    "currentDamage": [
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false
-    ],
-    "country": "EE. UU.",
-    "id": "kadena-ab",
-    "type": "Base Aérea (USAF)"
+    ]
   },
   {
-    "country": "EE. UU.",
-    "currentDamage": [
-      false,
-      false,
-      false,
-      false
-    ],
-    "description": "Base aérea del USMC utilizada por helicópteros y convertiplanos. Su ubicación urbana ha generado controversia.",
-    "type": "Base Aérea (USMC)",
-    "region": "Okinawa (Japón)",
     "coords": [
       26.2743,
       127.7561
     ],
     "damagePoints": 4,
+    "name": "Futenma Air Station",
+    "currentDamage": [
+      false,
+      false,
+      false,
+      false
+    ],
+    "region": "Okinawa, Japan",
     "commandPoints": 10,
-    "name": "Estación Aérea Futenma",
-    "id": "futenma-as"
+    "id": "futenma-as",
+    "type": "U.S. Marine Corps Air Base",
+    "description": "A USMC aviation facility operating helicopters and tilt-rotor aircraft. Its urban location has long been a source of controversy.",
+    "country": "EE. UU."
   },
   {
+    "type": "U.S. Marine Corps Ground Base",
+    "description": "The principal Marine Corps ground installation in southern Okinawa, and headquarters of the III Marine Expeditionary Force.",
+    "currentDamage": [
+      false,
+      false,
+      false,
+      false
+    ],
     "commandPoints": 10,
-    "id": "camp-foster",
     "name": "Camp Foster",
-    "damagePoints": 4,
-    "description": "Principal base terrestre del Cuerpo de Marines en el sur de Okinawa, sede del cuartel general de la III Fuerza Expedicionaria.",
     "country": "EE. UU.",
     "coords": [
       26.2917,
       127.7719
     ],
-    "type": "Base Terrestre (USMC)",
-    "currentDamage": [
-      false,
-      false,
-      false,
-      false
-    ],
-    "region": "Okinawa (Japón)"
+    "damagePoints": 4,
+    "region": "Okinawa, Japan",
+    "id": "camp-foster"
   },
   {
+    "description": "A military port serving as an embarkation and resupply point for amphibious units of the 7th Fleet.",
+    "id": "white-beach",
+    "country": "EE. UU.",
+    "commandPoints": 20,
     "coords": [
       26.302725630972436,
       127.90978431701662
     ],
-    "name": "Instalación Naval White Beach",
-    "region": "Okinawa (Japón)",
-    "country": "EE. UU.",
-    "damagePoints": 4,
     "currentDamage": [
       false,
       false,
       false,
       false
     ],
-    "id": "white-beach",
-    "commandPoints": 20,
-    "type": "Puerto Militar",
-    "description": "Puerto militar que sirve como punto de embarque y aprovisionamiento para unidades anfibias de la 7.ª Flota."
+    "name": "White Beach Naval Facility",
+    "damagePoints": 4,
+    "type": "Naval Facility",
+    "region": "Okinawa, Japan"
   },
   {
-    "commandPoints": 2,
-    "region": "Taiwán",
-    "country": "EE. UU.",
     "currentDamage": [
       false,
       false
     ],
-    "name": "Campos de Entrenamiento",
-    "id": "us-training-taiwan",
-    "type": "Asesores Militares",
+    "region": "Taiwan",
+    "type": "Military Advisors",
     "coords": [
       24.8106547494941,
       121.4896059036255
     ],
-    "description": "Presencia limitada de instructores y asesores militares para entrenar al Ejército taiwanés.",
-    "damagePoints": 2
+    "commandPoints": 2,
+    "name": "Training Areas",
+    "description": "A limited presence of instructors and military advisors tasked with training the Taiwanese Army.",
+    "damagePoints": 2,
+    "id": "us-training-taiwan",
+    "country": "EE. UU."
   },
   {
-    "type": "Instalaciones Militares",
+    "description": "A ring of ballistic-missile facilities along China’s southeastern coast, facing Taiwan.",
+    "type": "Military Installations",
     "id": "china-missiles-fujian",
-    "name": "Bases de Misiles en la Costa",
-    "country": "China",
     "commandPoints": 5,
-    "description": "Anillo de instalaciones de misiles balísticos en la costa sudeste de China, frente a Taiwán.",
-    "currentDamage": [
-      false,
-      false,
-      false,
-      false
-    ],
+    "name": "Coastal Missile Bases",
     "coords": [
       23.325814712327432,
       116.08715415000917
     ],
     "damagePoints": 4,
-    "region": "Taiwán"
-  },
-  {
-    "country": "EE. UU.",
+    "country": "China",
+    "region": "China",
     "currentDamage": [
       false,
       false,
       false,
-      false,
-      false,
       false
-    ],
-    "name": "Comando Logístico (Sembawang)",
-    "description": "Sede del Comando del Grupo Logístico del Pacífico Occidental (Task Force 73) para dar apoyo a la 7.ª Flota.",
+    ]
+  },
+  {
+    "description": "Headquarters of the Western Pacific Logistics Group (Task Force 73), providing support to the 7th Fleet.",
+    "name": "Logistics Command (Sembawang)",
+    "region": "Singapore",
     "id": "sembawang-singapore",
     "coords": [
       1.4680376473292454,
       103.81680965423584
     ],
+    "country": "EE. UU.",
+    "type": "Naval Logistics Facility",
     "damagePoints": 6,
-    "region": "Singapur",
-    "type": "Instalación Logística Naval",
+    "currentDamage": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
     "commandPoints": 30
   },
   {
+    "description": "Provides pier access for the rotational deployment of U.S. Littoral Combat Ships (LCS).",
+    "region": "Singapore",
     "id": "changi-naval-base",
+    "name": "Changi Naval Base",
+    "damagePoints": 4,
+    "type": "Military Port",
+    "currentDamage": [
+      false,
+      false,
+      false,
+      false
+    ],
     "coords": [
       1.3178140169645716,
       104.02567863464357
     ],
     "commandPoints": 20,
-    "region": "Singapur",
-    "description": "Acceso a muelles para el despliegue rotatorio de buques de combate litorales (LCS) de EE. UU.",
-    "country": "EE. UU.",
-    "damagePoints": 4,
-    "name": "Base Naval de Changi",
-    "type": "Acceso a Muelle",
-    "currentDamage": [
-      false,
-      false,
-      false,
-      false
-    ]
+    "country": "EE. UU."
   },
   {
-    "name": "Base Naval Camilo Osias",
+    "region": "Northern Philippines (Luzon)",
+    "name": "Camilo Osias Naval Base",
+    "description": "A Philippine Navy installation designated for rotational U.S. forces under the EDCA agreement, located directly facing Taiwan.",
     "currentDamage": [
       false,
       false,
       false
     ],
-    "country": "EE. UU.",
-    "id": "camilo-osias-nb",
     "commandPoints": 10,
-    "description": "Base de la Armada Filipina habilitada para uso rotatorio de fuerzas de EE. UU. bajo el acuerdo EDCA, ubicada frente a Taiwán.",
-    "type": "Base Naval (Acceso EDCA)",
-    "damagePoints": 3,
-    "region": "Norte de Filipinas (Luzón)",
     "coords": [
       18.51064188615365,
       122.14910209178926
-    ]
+    ],
+    "type": "Naval Base (EDCA Access)",
+    "damagePoints": 3,
+    "country": "EE. UU.",
+    "id": "camilo-osias-nb"
   },
   {
-    "description": "Aeropuerto civil/militar en Cagayán, con acceso estadounidense bajo EDCA para apoyar operaciones aéreas.",
-    "country": "EE. UU.",
-    "region": "Norte de Filipinas (Luzón)",
+    "description": "A civil–military airfield in Cagayan, with U.S. access under EDCA to support air operations.",
+    "name": "Lal-lo Airfield",
     "coords": [
       18.180899548635754,
       121.74746274948122
     ],
-    "type": "Aeródromo (Acceso EDCA)",
-    "damagePoints": 2,
+    "id": "lallo-airfield",
+    "country": "EE. UU.",
     "currentDamage": [
       false,
       false
     ],
-    "name": "Aeródromo de Lal-lo",
-    "id": "lallo-airfield",
+    "damagePoints": 2,
+    "type": "Airfield (EDCA Access)",
+    "region": "Northern Philippines (Luzon)",
     "commandPoints": 2
   },
   {
+    "currentDamage": [
+      false,
+      false,
+      false,
+      false
+    ],
+    "region": "Northern Philippines (Luzon)",
+    "commandPoints": 5,
+    "id": "camp-dela-cruz",
+    "country": "EE. UU.",
+    "description": "A Philippine Army installation in Isabela, designated for U.S. access and joint training exercises.",
     "coords": [
       17.071800141462457,
       121.86738967895509
     ],
-    "region": "Norte de Filipinas (Luzón)",
-    "name": "Campamento Melchor Dela Cruz",
-    "damagePoints": 4,
-    "id": "camp-dela-cruz",
-    "description": "Instalación del Ejército Filipino en Isabela, habilitada para acceso y ejercicios conjuntos con EE. UU.",
-    "type": "Base Terrestre (Acceso EDCA)",
-    "country": "EE. UU.",
+    "type": "Military Base",
+    "name": "Camp Melchor Dela Cruz",
+    "damagePoints": 4
+  },
+  {
+    "type": "Forward Outpost",
     "commandPoints": 5,
+    "damagePoints": 4,
     "currentDamage": [
       false,
       false,
       false,
       false
-    ]
-  },
-  {
-    "country": "China",
-    "commandPoints": 5,
+    ],
+    "description": "An atoll under de facto Chinese control since 2012, with continuous Coast Guard patrol presence.",
     "coords": [
       10.911723633679353,
       114.06735420227052
     ],
+    "country": "China",
     "id": "scarborough-shoal",
-    "name": "Base Spratly",
-    "currentDamage": [
-      false,
-      false,
-      false,
-      false
-    ],
-    "region": "Archipiélago Spratly",
-    "damagePoints": 4,
-    "description": "Atolón bajo control de facto chino desde 2012, con patrullaje permanente de la Guardia Costera.",
-    "type": "Base avanzada"
+    "region": "Spratly Archipelago",
+    "name": "Spratly Base"
   },
   {
-    "name": "Base Shantou",
-    "region": "Costa este de China",
-    "description": "Cuartel general de una División Aérea subordinada al 7º Ejército Aéreo de la Región Militar de Guangzhou. Lanzamiento de drones señuelo J-6/J-7 convertidos\n(UCAV) contra defensas taiwanesas ; apoyo\naéreo al sur de Taiwán y estrecho de Luzón.",
     "commandPoints": 10,
-    "damagePoints": 4,
-    "type": "Base aérea",
+    "type": "Air Base",
     "currentDamage": [
       false,
       false,
       false,
       false
     ],
+    "damagePoints": 4,
     "id": "luzon-strait-patrols",
+    "country": "China",
+    "name": "Shantou Base",
+    "region": "China",
     "coords": [
       23.427612763814942,
       116.76091432571413
     ],
-    "country": "China"
+    "description": "Headquarters of an Air Division subordinate to the 7th Air Army of the Guangzhou Military Region. Launch site for converted J-6/J-7 decoy drones (UCAVs) against Taiwanese air defenses, and provider of air support over southern Taiwan and the Luzon Strait."
   },
   {
-    "name": "Base Naval Sanya",
-    "coords": [
-      18.214206437930105,
-      109.53884124755861
-    ],
+    "id": "custom-1761995950315",
     "region": "Hainan",
     "country": "China",
-    "type": "Base Naval",
-    "damagePoints": 4,
-    "description": "Base de submarinos nucleares (SSBN/SSN) y del portaaviones Shandong ; proyección de poder en Mar Meridional y contra flotas de EE. UU.; conexión con bases Spratly",
-    "commandPoints": 25,
-    "id": "custom-1761995950315",
     "currentDamage": [
       false,
       false,
       false,
       false
+    ],
+    "type": "Naval Base",
+    "name": "Sanya Naval Base",
+    "damagePoints": 4,
+    "commandPoints": 25,
+    "description": "Home to China’s nuclear submarine force (SSBN/SSN) and the aircraft carrier Shandong; supports power projection in the South China Sea and operations against U.S. naval forces; linked operationally with the Spratly outposts.",
+    "coords": [
+      18.214206437930105,
+      109.53884124755861
     ]
   },
   {
-    "type": "Base aérea",
-    "country": "China",
-    "commandPoints": 10,
-    "name": "Base aérea de Huian",
+    "type": "Air Base",
     "damagePoints": 4,
-    "id": "custom-1761996668729",
-    "description": "Base recientemente ampliada. Pista extendida y bunkers de municiones para alta resistencia",
+    "description": "Recently expanded facility featuring an extended runway and hardened munitions bunkers.",
+    "name": "Huian Air Base",
     "coords": [
       25.027671825726596,
       118.80694627761842
     ],
-    "currentDamage": [
-      false,
-      false,
-      false,
-      false
-    ],
-    "region": "Costa este de China"
-  },
-  {
-    "id": "custom-1761996786665",
-    "name": "Base aérea de Longtian",
-    "damagePoints": 5,
-    "coords": [
-      25.572640206881996,
-      119.46104049682619
-    ],
-    "region": "Costa este de China",
-    "type": "Base aérea",
-    "commandPoints": 10,
+    "region": "China",
+    "id": "custom-1761996668729",
     "country": "China",
-    "description": "Operaciones de caza/bombardeo sobre el norte de Taiwán; refugios endurecidos y pista dual para sostener salidas incluso bajo ataque.",
+    "commandPoints": 10,
     "currentDamage": [
-      false,
       false,
       false,
       false,
@@ -328,73 +307,95 @@ export const initialLocations: Location[] = [
     ]
   },
   {
+    "description": "Conducts fighter–bomber operations over northern Taiwan; equipped with hardened shelters and a dual runway to sustain sorties even under attack.",
+    "coords": [
+      25.572640206881996,
+      119.46104049682619
+    ],
+    "region": "China",
+    "damagePoints": 5,
+    "country": "China",
+    "type": "Air Base",
+    "currentDamage": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "name": "Longtian Air Base",
+    "commandPoints": 10,
+    "id": "custom-1761996786665"
+  },
+  {
+    "description": "Auxiliary base with potential military use.",
+    "commandPoints": 5,
+    "id": "custom-1761996997961",
+    "country": "China",
+    "damagePoints": 3,
+    "region": "China",
+    "currentDamage": [
+      false,
+      false,
+      false
+    ],
     "coords": [
       26.003814299278265,
       119.31308984756471
     ],
-    "name": "Base aérea de Fuzhou",
-    "type": "Base aérea",
-    "country": "China",
-    "commandPoints": 5,
-    "currentDamage": [
-      false,
-      false,
-      false
-    ],
-    "description": "Base auxiliar con posible uso militar. ",
-    "region": "Costa este de China",
-    "damagePoints": 3,
-    "id": "custom-1761996997961"
+    "name": "Fuzhou Air Base",
+    "type": "Air Base"
   },
   {
-    "damagePoints": 3,
-    "description": "Base naval de patrulleras rápidas y destructores ligeros. ",
     "currentDamage": [
       false,
       false,
       false
     ],
-    "type": "Base naval",
+    "region": "China",
+    "description": "Naval base for fast patrol craft and light destroyers.",
+    "country": "China",
     "id": "custom-1761997117112",
+    "damagePoints": 3,
+    "commandPoints": 25,
+    "type": "Naval Base",
+    "name": "Zhidhui Naval Base",
     "coords": [
       26.638865911059725,
       119.66354191303255
-    ],
-    "region": "Costa este de China",
-    "country": "China",
-    "name": "Base naval de Zhidhui",
-    "commandPoints": 25
+    ]
   },
   {
+    "description": "Primary port for destroyers, frigates, and submarines of the Eastern Theater; responsible for controlling the northern sector of the Taiwan Strait.",
+    "currentDamage": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
     "commandPoints": 30,
-    "description": "Principal puerto de destructores, fragatas y\nsubmarinos del Teatro Oriental ; control del\nEstrecho de Taiwán norte. ",
+    "id": "custom-1761997279599",
+    "country": "China",
+    "damagePoints": 8,
+    "region": "China",
+    "name": "Zhoushan Naval Base",
+    "type": "Naval Base",
     "coords": [
       29.962216840718312,
       122.1763050556183
-    ],
-    "region": "Costa este de China",
-    "country": "China",
-    "damagePoints": 8,
-    "name": "Base naval Zhoushan",
-    "id": "custom-1761997279599",
-    "currentDamage": [
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false
-    ],
-    "type": "Base naval"
+    ]
   },
   {
-    "description": "Base naval de Zhanjiang, situada en la provincia de Guangdong, China, es la sede de la Flota del Mar del Sur de la Armada del Ejército Popular de Liberación (EPL). Es un puerto estratégico importante para China, utilizado para ejercicios navales conjuntos como los realizados con Rusia, y para operaciones de apoyo, como el establecimiento de la primera base militar china en el extranjero en Yibuti. ",
     "commandPoints": 50,
-    "id": "custom-1761997491910",
-    "type": "Base naval",
-    "country": "China",
+    "damagePoints": 8,
+    "region": "China",
+    "description": "Zhanjiang Naval Base, located in Guangdong Province, China, serves as the headquarters of the PLA Navy’s South Sea Fleet. It is a key strategic port used for major naval exercises—including joint drills with Russia—and for support operations such as the establishment of China’s first overseas military base in Djibouti.",
+    "type": "Naval Base",
+    "name": "Zhangjiang Naval Base",
     "currentDamage": [
       false,
       false,
@@ -405,31 +406,30 @@ export const initialLocations: Location[] = [
       false,
       false
     ],
-    "damagePoints": 8,
-    "name": "Base naval de Zhangjiang",
     "coords": [
       21.227328144454148,
       110.44401168823244
     ],
-    "region": "China"
+    "id": "custom-1761997491910",
+    "country": "China"
   },
   {
+    "description": "Short-range ballistic missiles oriented toward central Taiwan (tactical targets). Serves as a first-strike capability against Taiwanese airbases and radar sites.",
+    "coords": [
+      25.94180763056617,
+      117.25760579109193
+    ],
+    "damagePoints": 3,
+    "commandPoints": 5,
     "region": "China",
-    "name": "Base de misiles de Yong´an",
-    "description": "Misiles balísticos de corto alcance apuntando al\ncentro de Taiwán (objetivos tácticos) . Fuerza de\nprimer golpe contra bases aéreas y radares\ntaiwaneses.",
-    "country": "China",
+    "name": "Yong’an Missile Base",
+    "type": "Launch Platform",
     "currentDamage": [
       false,
       false,
       false
     ],
-    "commandPoints": 5,
-    "damagePoints": 3,
-    "coords": [
-      25.94180763056617,
-      117.25760579109193
-    ],
     "id": "custom-1761999685239",
-    "type": "Plataforma de lanzamiento."
+    "country": "China"
   }
 ];

@@ -18,9 +18,31 @@ export const TurnControl: React.FC<TurnControlProps> = ({
   sidebarOpen = false,
 }) => {
 
-  // CASE 1: Planning Phase
   const leftPosition = sidebarOpen ? 'left-[340px]' : 'left-24';
 
+  // CASE 1: Pre-Planning Phase (pulsing button with no text)
+  if (turnState.isPrePlanningPhase) {
+    return (
+      <div
+        className={`absolute top-3 ${leftPosition} z-[1000] bg-black/80 border-2 border-gray-800 transition-all duration-300`}
+        style={{ pointerEvents: 'auto' }}
+      >
+        <div className="flex items-center gap-2 px-3 py-2">
+          {canAdvanceTurn && (
+            <button
+              onClick={onAdvanceTurn}
+              className="bg-black border-2 border-green-600 hover:border-green-500 text-green-400 hover:text-green-300 w-8 h-8 flex items-center justify-center text-xs font-mono font-bold transition-colors animate-pulse"
+              title="Begin Campaign Planning"
+            >
+              ▶
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // CASE 2: Planning Phase
   if (turnState.isPlanningPhase) {
     return (
       <div
@@ -45,7 +67,7 @@ export const TurnControl: React.FC<TurnControlProps> = ({
     );
   }
 
-  // CASE 2: Normal turns
+  // CASE 3: Normal turns
   // Parse current date
   const currentDate = new Date(turnState.currentDate);
   const dayName = DAYS_OF_WEEK[currentDate.getDay()];

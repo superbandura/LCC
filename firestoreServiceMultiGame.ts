@@ -30,13 +30,19 @@ import {
   RegisteredPlayer,
   GameMetadata
 } from "./types";
+import { TurnService } from "./services/turnService";
 
 /**
  * Get game document reference by game ID
- * @param gameId Game ID
+ * @param gameId Game ID (use 'legacy' for game/current)
  * @returns Firestore document reference
  */
 const getGameRef = (gameId: string) => {
+  // Special case: 'legacy' maps to the old game/current path
+  if (gameId === 'legacy') {
+    return doc(db, "game", "current");
+  }
+  // Normal case: multi-game path
   return doc(db, "games", gameId);
 };
 
@@ -299,19 +305,9 @@ export const subscribeToTurnState = (
   return onSnapshot(gameRef, (docSnapshot) => {
     if (docSnapshot.exists()) {
       const data = docSnapshot.data();
-      callback((data.turnState as TurnState) || {
-        currentDate: '2030-06-02',
-        dayOfWeek: 1,
-        turnNumber: 0,
-        isPlanningPhase: true
-      });
+      callback((data.turnState as TurnState) || TurnService.getInitialTurnState());
     } else {
-      callback({
-        currentDate: '2030-06-02',
-        dayOfWeek: 1,
-        turnNumber: 0,
-        isPlanningPhase: true
-      });
+      callback(TurnService.getInitialTurnState());
     }
   }, (error) => {
     console.error("Error listening to turn state:", error);

@@ -22,7 +22,7 @@ interface MapProps {
   onCoordinatesSelected?: (coords: Position) => void;
   selectedCoordinates?: Position | null;
   onLocationsUpdate?: (locations: Location[]) => void;
-  selectedFaction: 'us' | 'china';
+  selectedFaction: 'us' | 'china' | null;
   taskForces: TaskForce[];
   units: Unit[];
   cards: Card[];

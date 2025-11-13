@@ -179,6 +179,7 @@ export interface TurnState {
   currentDate: string; // ISO date string (e.g., "2030-06-02")
   dayOfWeek: number; // 1-7 (1=lunes, 7=domingo)
   turnNumber: number; // Contador de semanas completadas (0 = Planificación)
+  isPrePlanningPhase?: boolean; // true = pre-planning phase (before planning), false/undefined = not pre-planning
   isPlanningPhase?: boolean; // true = turno especial de planificación, false/undefined = turno normal
 }
 
@@ -456,10 +457,9 @@ export interface GameMetadata {
   creatorUid: string;           // UID of game creator
   status: GameStatus;           // Game status
   visibility: 'public' | 'private'; // Public (anyone can join) or private (invite only)
-  maxPlayers: number;           // Maximum number of players (default 8)
   createdAt: string;            // ISO timestamp when game was created
   lastActivityAt: string;       // ISO timestamp of last game activity
-  players: Record<string, GamePlayer>; // Map of uid -> GamePlayer
+  players: Record<string, GamePlayer>; // Map of uid -> GamePlayer (unlimited players)
   hasPassword: boolean;         // Whether game is password protected
   password?: string;            // Game password (if hasPassword is true)
   initialCommandPoints: CommandPoints; // Initial command points for each faction

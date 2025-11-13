@@ -10,6 +10,8 @@ import PlayerAssignmentModal from './components/PlayerAssignmentModal';
 import CombatStatisticsModal from './components/CombatStatisticsModal';
 import DeploymentNotificationModal from './components/DeploymentNotificationModal';
 import PlayedCardNotificationModal from './components/modals/PlayedCardNotificationModal';
+import CampaignIntroModal from './components/CampaignIntroModal';
+import UnassignedPlayersWarningModal from './components/UnassignedPlayersWarningModal';
 import { Position, Location, OperationalArea, OperationalData, MapLayer, TaskForce, Unit, Card, CommandPoints, PurchaseHistory, CardPurchaseHistory, PurchasedCards, DestructionRecord, TurnState, PendingDeployments, InfluenceMarker, SubmarineCampaignState, SubmarineEvent } from './types';
 import { LocationIcon, MenuIcon, EditIcon } from './components/Icons';
 import { mapLayers } from './data/mapLayers';
@@ -76,12 +78,12 @@ function usePrevious<T>(value: T): T | undefined {
 function App() {
   // Get game context (gameId, metadata, player role/faction)
   const { gameId, gameMetadata, currentPlayerRole, currentPlayerFaction, isMaster, canControlFaction, leaveGame } = useGame();
-  const { userProfile } = useAuth();
+  const { userProfile, currentUser } = useAuth();
 
   // selectedFaction for backward compatibility with existing code
-  // Masters don't have a specific faction (they control both)
-  // Players have their assigned faction from GameContext
-  const selectedFaction = isMaster ? null : currentPlayerFaction;
+  // All users (including masters) use their assigned faction from GameContext
+  // This allows faction members (including masters assigned to a faction) to see their faction's data
+  const selectedFaction = currentPlayerFaction;
 
   // Check if user has global admin role (first registered user)
   const isAdmin = userProfile?.role === 'admin';
@@ -105,9 +107,13 @@ function App() {
   const [arrivedUnitDeployments, setArrivedUnitDeployments] = useState<any[]>([]);
   const [turnSubmarineEvents, setTurnSubmarineEvents] = useState<import('./types').SubmarineEvent[]>([]);
 
+  // Admin mode: Toggle between editing current game or base data (game/current)
+  const [isEditingBaseData, setIsEditingBaseData] = useState<boolean>(false);
+
   // Use multi-game hook for Firestore game state management
   // This encapsulates all 19 Firestore subscriptions for the current game
-  const gameState = useGameStateMultiGame(gameId);
+  // When isEditingBaseData is true, subscribes to game/current instead
+  const gameState = useGameStateMultiGame(gameId, isEditingBaseData);
 
   // Get player permissions based on assignments and roles
   const permissions = usePlayerPermissions(gameState.playerAssignments, gameState.operationalAreas);
@@ -636,11 +642,32 @@ function App() {
 
   const handleAdvanceTurn = async () => {
     // Use TurnService to calculate new turn state
-    const { newTurnState, completedWeek, isPlanningPhaseTransition } = TurnService.advanceTurn(turnState);
+    const { newTurnState, completedWeek, isPlanningPhaseTransition, isPrePlanningPhaseTransition } = TurnService.advanceTurn(turnState);
 
-    // CASE 1: Handle Planning Phase → Turn 1 transition
+    // CASE 1: Handle Pre-Planning Phase → Planning Phase transition
+    if (isPrePlanningPhaseTransition) {
+      updateTurnStateWithGameId(newTurnState);
+      // Open campaign intro modal for all players
+      modals.open('campaignIntro');
+      console.log('Pre-planning phase completed! Entering Planning Phase');
+      return; // Exit early
+    }
+
+    // CASE 2: Handle Planning Phase → Turn 1 transition
     if (isPlanningPhaseTransition) {
-      updateTurnState(newTurnState);
+      // Validate that all registered players have been assigned to operational areas
+      const unassignedPlayers = registeredPlayers.filter(rp =>
+        !playerAssignments.some(pa => pa.playerName === rp.playerName)
+      );
+
+      // If there are unassigned players, block advancement and show warning
+      if (unassignedPlayers.length > 0) {
+        console.log('❌ Cannot advance: unassigned players detected:', unassignedPlayers);
+        modals.open('unassignedPlayersWarning');
+        return; // Block turn advancement
+      }
+
+      updateTurnStateWithGameId(newTurnState);
 
       // Calculate command points based on controlled bases (WITHOUT influence bonus)
       // Influence bonus is only applied at end of week, not during planning phase
@@ -669,7 +696,7 @@ function App() {
       return; // Exit early
     }
 
-    // CASE 2: Normal day advancement
+    // CASE 3: Normal day advancement
 
     // Process pending deployments BEFORE updating turn state
     // Use calculateArrivals function to get arrivals for selected faction
@@ -927,7 +954,7 @@ function App() {
 
     // STEP 6: Update turn state AND sync submarine campaign turn
     console.log('✅ All operations complete. Updating turn state...');
-    updateTurnState(newTurnState);
+    updateTurnStateWithGameId(newTurnState);
 
     // Sync submarineCampaign.currentTurn with turnState.turnNumber (atomic partial update)
     await updateSubmarineCampaignTurn(newTurnState.turnNumber);
@@ -1084,7 +1111,7 @@ function App() {
               <span className={`text-xs px-2 py-1 text-white rounded-full font-semibold ${
                 selectedFaction === 'china' ? 'bg-red-600' : 'bg-cyan-600'
               }`}>
-                {user?.email?.split('@')[0] || 'Admin'}
+                {currentUser?.email?.split('@')[0] || 'Admin'}
               </span>
             )}
           </div>
@@ -1096,6 +1123,20 @@ function App() {
               title="Reset Game to Initial Values"
             >
               🔄
+            </button>
+          )}
+          {/* Base Data Editor Toggle - only visible for admin */}
+          {isAdmin && (
+            <button
+              onClick={() => setIsEditingBaseData(!isEditingBaseData)}
+              className={`px-3 py-1.5 text-xs font-mono font-bold uppercase tracking-wider rounded transition-colors ${
+                isEditingBaseData
+                  ? 'bg-yellow-600 hover:bg-yellow-700 text-gray-900 border border-yellow-400'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white border border-blue-500'
+              }`}
+              title={isEditingBaseData ? "Editing BASE DATA (game/current)" : "Editing current game"}
+            >
+              {isEditingBaseData ? '⚙️ EDIT: BASE' : '📝 EDIT: GAME'}
             </button>
           )}
         </div>
@@ -1145,6 +1186,32 @@ function App() {
           </button>
         </div>
       </header>
+
+      {/* Base Data Editor Warning Banner */}
+      {isEditingBaseData && (
+        <div className="bg-yellow-600 border-b-2 border-yellow-500 px-6 py-3 z-30">
+          <div className="flex items-center justify-between max-w-7xl mx-auto">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">⚙️</span>
+              <div>
+                <p className="font-mono font-bold text-gray-900 uppercase tracking-wider text-sm">
+                  ADMIN MODE: EDITING BASE DATA (game/current)
+                </p>
+                <p className="font-mono text-xs text-gray-800 mt-0.5">
+                  Changes will affect all new games after /sincro export
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsEditingBaseData(false)}
+              className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-yellow-400 font-mono font-bold text-xs uppercase tracking-wider rounded border border-gray-700 transition-colors"
+            >
+              Exit Base Editor
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-grow overflow-hidden relative">
         <Sidebar 
           locations={filteredLocations} 
@@ -1410,6 +1477,21 @@ function App() {
           registeredPlayers={registeredPlayers}
         />
       )}
+
+      {/* Campaign Intro Modal */}
+      <CampaignIntroModal
+        isOpen={modals.isOpen('campaignIntro')}
+        onClose={() => modals.close('campaignIntro')}
+      />
+
+      {/* Unassigned Players Warning Modal */}
+      <UnassignedPlayersWarningModal
+        isOpen={modals.isOpen('unassignedPlayersWarning')}
+        onClose={() => modals.close('unassignedPlayersWarning')}
+        unassignedPlayers={registeredPlayers.filter(rp =>
+          !playerAssignments.some(pa => pa.playerName === rp.playerName)
+        )}
+      />
 
       {/* Played Card Notification Modal */}
       {(() => {

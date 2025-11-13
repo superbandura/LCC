@@ -16,6 +16,7 @@ export interface TurnAdvancementResult {
   newTurnState: TurnState;
   completedWeek: boolean;
   isPlanningPhaseTransition: boolean;
+  isPrePlanningPhaseTransition: boolean; // Pre-planning → Planning transition
 }
 
 /**
@@ -25,10 +26,30 @@ export interface TurnAdvancementResult {
 export class TurnService {
   /**
    * Advance the turn by one day
-   * Handles both planning phase transitions and normal day advancement
+   * Handles pre-planning, planning phase transitions and normal day advancement
    */
   static advanceTurn(currentTurnState: TurnState): TurnAdvancementResult {
-    // CASE 1: Transition from Planning Phase → Turn 1
+    // CASE 1: Transition from Pre-Planning Phase → Planning Phase
+    if (currentTurnState.isPrePlanningPhase) {
+      const newTurnState: TurnState = {
+        currentDate: currentTurnState.currentDate || '2030-06-01', // Keep current or default
+        dayOfWeek: currentTurnState.dayOfWeek || 0,
+        turnNumber: 0, // Still in planning
+        isPrePlanningPhase: false, // Exit pre-planning phase
+        isPlanningPhase: true, // Enter planning phase
+      };
+
+      console.log('Pre-planning phase completed! Entering Planning Phase');
+
+      return {
+        newTurnState,
+        completedWeek: false,
+        isPlanningPhaseTransition: false,
+        isPrePlanningPhaseTransition: true
+      };
+    }
+
+    // CASE 2: Transition from Planning Phase → Turn 1
     if (currentTurnState.isPlanningPhase) {
       const newTurnState: TurnState = {
         currentDate: '2030-06-02', // Start date of the game
@@ -42,11 +63,12 @@ export class TurnService {
       return {
         newTurnState,
         completedWeek: false,
-        isPlanningPhaseTransition: true
+        isPlanningPhaseTransition: true,
+        isPrePlanningPhaseTransition: false
       };
     }
 
-    // CASE 2: Normal day advancement
+    // CASE 3: Normal day advancement
     // Parse current date and add 1 day
     const currentDate = new Date(currentTurnState.currentDate);
     currentDate.setDate(currentDate.getDate() + 1);
@@ -75,7 +97,8 @@ export class TurnService {
     return {
       newTurnState,
       completedWeek,
-      isPlanningPhaseTransition: false
+      isPlanningPhaseTransition: false,
+      isPrePlanningPhaseTransition: false
     };
   }
 
@@ -117,6 +140,10 @@ export class TurnService {
    * Format turn state for display
    */
   static formatTurnDisplay(turnState: TurnState): string {
+    if (turnState.isPrePlanningPhase) {
+      return 'Pre-Planning Phase';
+    }
+
     if (turnState.isPlanningPhase) {
       return 'Planning Phase';
     }
@@ -163,7 +190,11 @@ export class TurnService {
   /**
    * Get the current phase of the game
    */
-  static getGamePhase(turnState: TurnState): 'planning' | 'early-game' | 'mid-game' | 'late-game' {
+  static getGamePhase(turnState: TurnState): 'pre-planning' | 'planning' | 'early-game' | 'mid-game' | 'late-game' {
+    if (turnState.isPrePlanningPhase) {
+      return 'pre-planning';
+    }
+
     if (turnState.isPlanningPhase) {
       return 'planning';
     }
@@ -177,5 +208,18 @@ export class TurnService {
     }
 
     return 'late-game';
+  }
+
+  /**
+   * Get the initial turn state with pre-planning phase enabled
+   */
+  static getInitialTurnState(): TurnState {
+    return {
+      currentDate: '2030-06-01',
+      dayOfWeek: 0,
+      turnNumber: 0,
+      isPrePlanningPhase: true,
+      isPlanningPhase: false,
+    };
   }
 }

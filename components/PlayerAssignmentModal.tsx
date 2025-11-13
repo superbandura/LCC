@@ -71,6 +71,13 @@ const PlayerAssignmentModal: React.FC<PlayerAssignmentModalProps> = ({
     return registeredPlayers.some(rp => rp.playerName === playerName);
   };
 
+  // Calculate unassigned players
+  const unassignedPlayers = useMemo(() => {
+    return registeredPlayers.filter(rp =>
+      !playerAssignments.some(pa => pa.playerName === rp.playerName)
+    );
+  }, [registeredPlayers, playerAssignments]);
+
   const selectedArea = operationalAreas.find(a => a.id === selectedAreaId);
 
   // Handle self-assignment
@@ -174,6 +181,43 @@ const PlayerAssignmentModal: React.FC<PlayerAssignmentModalProps> = ({
           <div className="flex flex-1 overflow-hidden">
             {/* Left Panel: Operational Areas List */}
             <div className="w-1/3 border-r-2 border-green-600 overflow-y-auto">
+              {/* Unassigned Players Section */}
+              {unassignedPlayers.length > 0 && (
+                <div className="p-4 border-b-2 border-yellow-600 bg-yellow-900/10">
+                  <h3 className="text-lg font-mono font-bold uppercase text-yellow-400 mb-3 tracking-wider flex items-center gap-2">
+                    <span>⚠</span>
+                    UNASSIGNED PLAYERS
+                    <span className="text-xs px-2 py-1 rounded bg-yellow-600 text-black">
+                      {unassignedPlayers.length}
+                    </span>
+                  </h3>
+                  <div className="space-y-2">
+                    {unassignedPlayers.map((player, index) => (
+                      <div
+                        key={index}
+                        className="bg-gray-800/50 border-2 border-yellow-600/50 p-2 rounded"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-sm text-yellow-200">{player.playerName}</span>
+                          <span
+                            className={`font-mono text-xs font-bold uppercase px-2 py-1 border rounded ${
+                              player.faction === 'us'
+                                ? 'text-blue-400 border-blue-600 bg-blue-900/20'
+                                : 'text-red-400 border-red-600 bg-red-900/20'
+                            }`}
+                          >
+                            {player.faction === 'us' ? 'US NAVY' : 'PLAN'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs font-mono text-yellow-300 mt-3 leading-relaxed">
+                    These players must select an operational area before the campaign can begin.
+                  </p>
+                </div>
+              )}
+
               {/* Command Centers */}
               <div className="p-4 border-b border-green-700">
                 <h3 className="text-lg font-mono font-bold uppercase text-yellow-400 mb-3 tracking-wider">
